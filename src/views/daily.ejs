@@ -16,6 +16,7 @@
     if (h.kind === 'track') return 'No target this month';
     if (h.kind === 'ratio') return 'Target ' + Math.round(h.target * 100) + '%';
     if (h.kind === 'perday') return 'Target ' + num(h.target) + ' on storefront days';
+    if (h.kind === 'day' && h.target === 0) return 'Weekend target – any today is extra';
     if (h.kind === 'day') return f.type === 'yes_no' ? 'Every day' : 'Target ' + show(h.target);
     return (h.period === 'week' ? 'Week target ' : 'Month target ') + show(h.targetFull);
   }
@@ -106,6 +107,6 @@
     <% } %>
   </form>
 </main>
-<script src="/js/daily.js?v=4" defer></script>
+<script src="/js/daily.js?v=5" defer></script>
 </body>
 </html>

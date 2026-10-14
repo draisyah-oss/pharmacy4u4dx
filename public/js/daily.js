@@ -79,6 +79,7 @@
 
     if (h.kind === 'day') {
       if (v === null) return { state: '', text: '', fill: 0 };
+      if (h.target === 0) return { state: v > 0 ? 'good' : '', text: v > 0 ? 'Extra – counts towards the week' : '', fill: v > 0 ? 1 : 0 };
       var ok = v >= h.target - 1e-9;
       if (isYesNo) return { state: ok ? 'good' : 'short', text: ok ? 'Done' : 'Not done today', fill: ok ? 1 : 0.04 };
       var gap = h.target - v;

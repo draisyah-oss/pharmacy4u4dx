@@ -30,6 +30,12 @@ test('validation catches a measure pointing at a field that does not exist', () 
   assert.ok(errors.some((e) => e.includes('"walkn"')), errors.join('\n'));
 });
 
+test('validation: weekend targets only on daily sum measures', () => {
+  const seed = clone(readSeed());
+  seed.branches[0].measures.find((m) => m.target_per === 'week').weekend_targets = { '2026-10': 5 };
+  assert.ok(validateSeed(seed).errors.some((e) => e.includes('weekend_targets only work')));
+});
+
 test('validation catches a ratio measure with no denominator', () => {
   const seed = clone(readSeed());
   const ratio = seed.branches[0].measures.find((m) => m.calc === 'ratio_percent');
@@ -105,6 +111,10 @@ test('targets, blanks and branch numbers load exactly as in seed.json', async ()
   assert.equal(await target('WM', 'L3', '2026-10'), 0.45);
   assert.equal(await target('JH', 'Y0', '2026-10'), null); // blank = track only
   assert.equal(await target('JH', 'Y3', '2026-11'), 21);
+  const weekend = (await db.query(
+    `SELECT t.target, t.weekend_target FROM measure_targets t JOIN measures m ON m.id = t.measure_id
+     JOIN branches b ON b.id = m.branch_id WHERE b.code = 'BR' AND m.code = 'T1' AND t.month = '2026-10'`)).rows[0];
+  assert.deepEqual(weekend, { target: 1250, weekend_target: 1650 });
 
   const base = (await db.query(
     `SELECT bl.baseline_end_date, bl.sales_before_start FROM branch_baselines bl

@@ -321,3 +321,44 @@ test('HQ: done of total – 18 of 20 POs checked = 90% ▲', () => {
   near(r.actual, 0.9);
   assert.equal(r.status, 'watch');
 });
+
+// ───────────── Weekday / weekend targets (BR, core JD revision 14 Oct) ─────────────
+
+test('BR walk-in: RM 1,250 on weekdays, RM 1,650 on Sat–Sun in October', () => {
+  const t1 = measure('BR', 'T1');
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-16', t1.weekend_targets), 1250); // Friday
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-17', t1.weekend_targets), 1650); // Saturday
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-18', t1.weekend_targets), 1650); // Sunday
+  // November has no weekend figure yet → the same every day
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-07', t1.weekend_targets), 1490);
+});
+
+test('BR walk-in week 12–18 Oct: 5 × 1,250 + 2 × 1,650 = RM 9,550', () => {
+  const r = calc.evaluateMeasure({ measure: measure('BR', 'T1'), entries: NO_ENTRIES, ...WEEK });
+  near(r.target, 9550);
+});
+
+test('BR POCT lead: 3 each Saturday and Sunday, nothing due on weekdays (6 a week)', () => {
+  const n1 = measure('BR', 'N1');
+  assert.equal(calc.dailyTarget(n1.targets, 'day', '2026-10-14', n1.weekend_targets), 0);
+  assert.equal(calc.dailyTarget(n1.targets, 'day', '2026-10-17', n1.weekend_targets), 3);
+  // to Friday nothing is due yet, so 1 weekday test isn't "behind"
+  const friday = calc.evaluateMeasure({ measure: n1, entries: calc.indexEntries(calc.rowsFromDays({ '2026-10-14': { poct: 1 } })), from: '2026-10-12', to: '2026-10-16', trackerStart: START });
+  assert.equal(friday.target, 0);
+  assert.notEqual(friday.status, 'off_track');
+  const entries = calc.indexEntries(calc.rowsFromDays({ '2026-10-17': { poct: 3 }, '2026-10-18': { poct: 2 }, '2026-10-14': { poct: 1 } }));
+  const r = calc.evaluateMeasure({ measure: measure('BR', 'N1'), entries, ...WEEK });
+  assert.equal(r.actual, 6);
+  near(r.target, 6);
+  assert.equal(r.status, 'on_track');
+});
+
+test('BR October total sales target RM 60k includes Shopee, zakat, Grabmart and Alpine', () => {
+  const br = branch('BR');
+  assert.equal(br.monthly_total_target['2026-10'], 60000);
+  assert.deepEqual(br.total_sales_fields, ['walkin', 'zakat', 'shopee', 'grab', 'alpine']);
+  assert.equal(measure('BR', 'M3').targets['2026-10'], 7500);
+  assert.equal(measure('BR', 'A5').targets['2026-10'], 10000);
+  assert.equal(measure('BR', 'AL').targets['2026-10'], 500);
+  assert.equal(br.measures.filter((m) => /^P\d$/.test(m.id)).length, 8);
+});

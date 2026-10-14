@@ -16,13 +16,15 @@ async function loadBranch(db, code) {
 
 async function loadMeasures(db, branchId) {
   const { rows } = await db.query(
-    `SELECT m.*, COALESCE(json_object_agg(t.month, t.target) FILTER (WHERE t.month IS NOT NULL), '{}') AS targets
+    `SELECT m.*, COALESCE(json_object_agg(t.month, t.target) FILTER (WHERE t.month IS NOT NULL), '{}') AS targets,
+       COALESCE(json_object_agg(t.month, t.weekend_target) FILTER (WHERE t.weekend_target IS NOT NULL), '{}') AS weekend_targets
      FROM measures m LEFT JOIN measure_targets t ON t.measure_id = m.id
      WHERE m.branch_id = $1 AND m.active
      GROUP BY m.id ORDER BY m.sort_order`,
     [branchId]
   );
-  return rows.map((m) => ({ ...m, targets: typeof m.targets === 'string' ? JSON.parse(m.targets) : m.targets }));
+  const obj = (v) => (typeof v === 'string' ? JSON.parse(v) : v);
+  return rows.map((m) => ({ ...m, targets: obj(m.targets), weekend_targets: obj(m.weekend_targets) }));
 }
 
 // The hint under each input: what "on target" means for this field on this date.
@@ -41,7 +43,7 @@ function buildHint(field, measures, entries, date, trackerStart) {
   if (m.calc === 'ratio_percent') return { ...base, kind: 'ratio', den: m.denominator_field, target };
   if (m.calc === 'ratio_per_day') return { ...base, kind: 'perday', gate: m.denominator_field, target };
 
-  if (m.target_per === 'day') return { ...base, kind: 'day', target };
+  if (m.target_per === 'day') return { ...base, kind: 'day', target: calc.dailyTarget(m.targets, 'day', date, m.weekend_targets) };
 
   // Weekly or monthly target: progress so far this week/month, counted from the tracker start.
   const periodStart = m.target_per === 'week' ? calc.weekStart(date) : calc.monthStart(calc.monthOf(date));
@@ -51,7 +53,7 @@ function buildHint(field, measures, entries, date, trackerStart) {
   let targetToDate = 0;
   let targetFull = 0;
   for (const d of calc.dateRange(from, periodEnd)) {
-    const t = calc.dailyTarget(m.targets, m.target_per, d) || 0;
+    const t = calc.dailyTarget(m.targets, m.target_per, d, m.weekend_targets) || 0;
     targetFull += t;
     if (d <= date) targetToDate += t;
     if (d < date) soFar += entries.get(d, field.key) || 0;

@@ -6,6 +6,10 @@
 //
 // `targets` is the measure's month map, e.g. { '2026-10': 1730, '2026-11': 1910 }.
 // A missing or null month target means "track only" for that day.
+//
+// Daily targets can have a separate weekend figure (weekendTargets, same month map): on
+// Saturdays and Sundays that number is used instead, e.g. BR walk-in RM 1,250 on weekdays
+// and RM 1,650 at weekends. A month with no weekend figure uses the same target every day.
 
 const { monthOf, daysInMonth } = require('./dates');
 
@@ -14,14 +18,19 @@ function monthTarget(targets, date) {
   return t === undefined || t === null ? null : Number(t);
 }
 
+const isWeekend = (date) => [0, 6].includes(new Date(`${date}T00:00:00Z`).getUTCDay());
+
 // Target for one day of a SUM measure.
-function dailyTarget(targets, targetPer, date) {
+function dailyTarget(targets, targetPer, date, weekendTargets) {
   const t = monthTarget(targets, date);
   if (t === null) return null;
-  if (targetPer === 'day') return t;
+  if (targetPer === 'day') {
+    const w = isWeekend(date) ? monthTarget(weekendTargets, date) : null;
+    return w === null ? t : w;
+  }
   if (targetPer === 'week') return t / 7;
   if (targetPer === 'month') return t / daysInMonth(monthOf(date));
   throw new Error(`Unknown target_per "${targetPer}"`);
 }
 
-module.exports = { monthTarget, dailyTarget };
+module.exports = { monthTarget, dailyTarget, isWeekend };

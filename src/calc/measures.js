@@ -23,7 +23,7 @@ function countedDays(from, to, trackerStart) {
   return start > to ? [] : dateRange(start, to);
 }
 
-// measure: { calc, target_per, numerator_field, denominator_field, targets }
+// measure: { calc, target_per, numerator_field, denominator_field, targets, weekend_targets? }
 // entries: result of indexEntries(rows)
 function evaluateMeasure({ measure, entries, from, to, trackerStart }) {
   const { calc, target_per: targetPer, numerator_field: num, denominator_field: den } = measure;
@@ -52,7 +52,7 @@ function evaluateMeasure({ measure, entries, from, to, trackerStart }) {
   if (calc === 'sum') {
     numerator = sum(trace.map((t) => valueOr0(t.numerator)));
     actual = numerator;
-    if (hasTarget) target = sum(days.map((d) => dailyTarget(targets, targetPer, d)));
+    if (hasTarget) target = sum(days.map((d) => dailyTarget(targets, targetPer, d, measure.weekend_targets)));
   } else if (calc === 'ratio_percent' || calc === 'ratio_per_day') {
     // ratio_per_day: the numerator only counts on days where the denominator is > 0
     // (health checks are only counted on storefront days, 2 staff on duty).

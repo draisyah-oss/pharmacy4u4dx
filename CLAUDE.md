@@ -41,6 +41,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 
 ## Calculation rules (must match the Excel trackers)
 - Monthly targets spread evenly per day; weekly targets per day ÷ 7. Weeks run Monday–Sunday.
+- A daily measure can have `weekend_targets` (same month map): Saturdays and Sundays use that number instead. BR October walk-in: RM 1,250 weekdays, RM 1,650 weekends. BR POCT lead: 0 weekdays, 3 each weekend day (weekday tests are top-up). Stored in measure_targets.weekend_target (migration 003).
 - `calc = sum`: week actual = sum of the field; week target = sum of daily targets for days in the week.
 - `calc = ratio_percent`: actual = sum(numerator) ÷ sum(denominator); target is a % (e.g. 45% of transactions with 2+ items, 100% zakat on time).
 - `calc = ratio_per_day`: same as ratio, shown as a number, not % (Ampang storefront: checks per day with 2 staff on duty). The numerator only counts on days where the denominator is > 0 (checks on a 1-staff day don't count).
@@ -68,5 +69,12 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Branch staff can't open the scoreboard (daily log only); managers see their own branch; HQ/admin all.
 - Every number links to /scoreboard/trace (inline with JS, full page without).
 
+## BR update (14 Oct, core JD revision sheet)
+- October total RM 60k = retail + Grabmart RM 42k (walk-in 1,250 weekdays / 1,650 weekends), Shopee RM 7.5k (BR plan, Ainur leads; CEO target 12k), Alpine RM 0.5k (new, Alya), zakat RM 10k (BR aim, Amirah leads the value, Alya the fulfilment; CEO target 5k). YTD targets moved up by RM 5.8k.
+- 8 BR target products (p1–p8) with margins in the notes; Qushairi leads the tracking. Grabmart added (Qushairi: items, orders, sales – no target yet).
+- Intraday checkpoints (weekday 1pm RM 300 / 6pm RM 600; weekend 1pm RM 450 / 6pm RM 850) are in wig_detail only – not tracked, the daily log is at closing.
+- Nov/Dec BR targets are still the 4DX plan numbers until revised.
+
 ## Open items
+- BR names: the sheet spells Ainnur and Qusyairy; the app uses Ainur and Qushairi (usernames ainur, qushairi). Confirm.
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).

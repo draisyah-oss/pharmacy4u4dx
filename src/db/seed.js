@@ -76,6 +76,13 @@ function validateSeed(seed) {
         if (!MONTH_RE.test(month)) err(`${mat}: target month "${month}" must be YYYY-MM`);
         if (t !== null && typeof t !== 'number') err(`${mat}: target for ${month} must be a number or null`);
       }
+      if (m.weekend_targets) {
+        if (m.target_per !== 'day' || m.calc !== 'sum') err(`${mat}: weekend_targets only work for daily sum measures`);
+        for (const [month, t] of Object.entries(m.weekend_targets)) {
+          if (!MONTH_RE.test(month)) err(`${mat}: weekend target month "${month}" must be YYYY-MM`);
+          if (t !== null && typeof t !== 'number') err(`${mat}: weekend target for ${month} must be a number or null`);
+        }
+      }
       if (m.owner !== 'Team' && !people.has(m.owner)) {
         err(`${mat}: owner "${m.owner}" is not a person in this branch`);
       }
@@ -210,10 +217,11 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
             m.calc, m.numerator_field, m.denominator_field, m.note, mi + 1]
         );
         summary.measures++;
-        for (const [month, target] of Object.entries(m.targets || {})) {
+        const weekend = m.weekend_targets || {};
+        for (const month of [...new Set([...Object.keys(m.targets || {}), ...Object.keys(weekend)])].sort()) {
           await tx.query(
-            'INSERT INTO measure_targets (measure_id, month, target) VALUES ($1,$2,$3)',
-            [measure.id, month, target]
+            'INSERT INTO measure_targets (measure_id, month, target, weekend_target) VALUES ($1,$2,$3,$4)',
+            [measure.id, month, (m.targets || {})[month] ?? null, weekend[month] ?? null]
           );
           summary.targets++;
         }

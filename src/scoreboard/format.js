@@ -28,8 +28,12 @@ function targetBasis(row) {
   if (t === null || t === undefined) return 'No target – tracked only';
   if (row.calc === 'ratio_percent') return `Target ${grouped(t * 100, 1)}%`;
   if (row.calc === 'ratio_per_day') return `${grouped(t, 1)} per storefront day`;
-  const amount = row.money ? `RM ${grouped(t, 0)}` : grouped(t, 1);
-  return `${amount} a ${row.targetPer}`;
+  const show = (n) => (row.money ? `RM ${grouped(n, 0)}` : grouped(n, 1));
+  if (row.targetPer === 'day' && row.weekendTarget !== null && row.weekendTarget !== undefined) {
+    if (t === 0) return `${show(row.weekendTarget)} each Sat and Sun`;
+    return `${show(t)} a weekday, ${show(row.weekendTarget)} Sat–Sun`;
+  }
+  return `${show(t)} a ${row.targetPer}`;
 }
 
 const symbol = (status) => (STATUS[status] ? STATUS[status].symbol : '');
