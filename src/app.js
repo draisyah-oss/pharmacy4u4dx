@@ -5,6 +5,7 @@ const express = require('express');
 const { loadUser, requireLogin, checkCsrf } = require('./auth/sessions');
 const { loginRoutes } = require('./auth/routes');
 const { dailyRoutes } = require('./daily/routes');
+const { scoreboardRoutes } = require('./scoreboard/routes');
 const calc = require('./calc');
 
 // options.now lets tests pretend it's a particular day.
@@ -64,6 +65,7 @@ function createApp(db, { now = () => new Date() } = {}) {
   });
 
   app.use(dailyRoutes(db, { now, trackerStart }));
+  app.use(scoreboardRoutes(db, { now, trackerStart }));
 
   // Setup status page (admin).
   app.get('/status', async (req, res, next) => {

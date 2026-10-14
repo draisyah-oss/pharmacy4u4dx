@@ -1,14 +1,18 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <main class="page narrow">
-  <h1>Daily entry</h1>
-  <p class="muted">Open a branch to see or fix its numbers for <%= fmtDate(today) %>.</p>
+  <h1>Branches</h1>
+  <p class="muted">Open a branch's daily entry for <%= fmtDate(today) %>, or its scoreboard.</p>
   <div class="pick-list">
     <% branches.forEach(function (b) { %>
-      <a class="pick" href="/daily?branch=<%= encodeURIComponent(b.code) %>">
+      <div class="pick pick-two">
         <span class="pick-main"><%= b.name %></span>
         <span class="pick-sub"><%= b.today_entries ? b.today_entries + ' of ' + b.fields + ' numbers in today' : 'Nothing in yet today' %></span>
-      </a>
+        <span class="pick-links">
+          <a class="button secondary small-button" href="/daily?branch=<%= encodeURIComponent(b.code) %>">Daily entry</a>
+          <a class="button small-button" href="/scoreboard?branch=<%= encodeURIComponent(b.code) %>">Scoreboard</a>
+        </span>
+      </div>
     <% }) %>
   </div>
   <% if (user.role === 'admin') { %><p class="login-alt"><a href="/status">Setup check</a></p><% } %>

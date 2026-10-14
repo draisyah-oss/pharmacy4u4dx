@@ -1,0 +1,24 @@
+<%
+  const weekHref = '/scoreboard/trace?type=measure&code=' + encodeURIComponent(row.code) + '&from=' + board.weekStart + '&to=' + board.asOf + branchQs;
+  const mtdHref = '/scoreboard/trace?type=measure&code=' + encodeURIComponent(row.code) + '&from=' + board.mtdFrom + '&to=' + board.asOf + branchQs;
+  const cell = function (r, href, which) { %>
+    <div class="m-col m-<%= which %>">
+      <span class="m-k"><%= which === 'week' ? 'Week' : 'Month to date' %></span>
+      <% if (board.started) { %>
+        <a class="m-actual" href="<%= href %>" data-trace aria-label="<%= row.label %>, <%= which === 'week' ? 'this week' : 'month to date' %>: <%= fmt.value(row, r.actual) %>. Show daily entries"><%= fmt.value(row, r.actual) %></a>
+        <span class="m-target"><% if (r.target !== null) { %>of <%= fmt.value(row, r.target) %><% } else { %>no target<% } %></span>
+        <span class="m-pct s-<%= r.status %>"><%= fmt.pct(r.pct) %><span class="m-sym" title="<%= fmt.statusLabel(r.status) %>"><%= fmt.symbol(r.status) %></span></span>
+      <% } else { %>
+        <span class="m-actual is-empty">–</span>
+      <% } %>
+    </div>
+<% } %>
+<div class="m-row s-row-<%= board.started ? row.week.status : 'no_data' %><%= row.top ? ' is-top' : '' %>" data-row="<%= row.code %>">
+  <div class="m-name">
+    <span class="m-label"><%= row.label %></span>
+    <span class="m-meta"><% if (row.top) { %><span class="m-owner"><%= row.owner %></span><% } %><span class="m-basis"><%= fmt.targetBasis(row) %></span></span>
+  </div>
+  <% cell(row.week, weekHref, 'week') %>
+  <% cell(row.mtd, mtdHref, 'mtd') %>
+  <div class="trace-slot" hidden></div>
+</div>

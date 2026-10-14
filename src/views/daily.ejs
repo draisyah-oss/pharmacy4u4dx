@@ -1,5 +1,6 @@
 <%- include('partials/head', { bodyClass: 'daily-body' }) %>
 <%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'daily' }) %>
 <%
   const branchQs = (user.role === 'admin' || user.role === 'hq') ? '&branch=' + encodeURIComponent(branch.code) : '';
   const isToday = date === today;

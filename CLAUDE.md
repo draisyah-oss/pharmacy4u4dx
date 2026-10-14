@@ -32,7 +32,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 
 ## Screens
 1. **Daily entry** (per branch) – BUILT (src/daily, views/daily.ejs, public/js/daily.js): today's date, one card per person with only their fields, big number inputs, yes/no toggles. Shows green/red against today's target as they type (weekly/monthly targets: week-to-date progress). Can edit the last 7 days.
-2. **Branch scoreboard** (per branch, per week): grouped by person, week actual vs target, % achieved, status (✔ ≥100%, ▲ 90–99%, ✕ <90%), month-to-date. WIG and lead measures in bold at the top. Running totals (e.g. chronic database, Google reviews, TikTok followers) as progress bars.
+2. **Branch scoreboard** (per branch, per week) – BUILT (src/scoreboard, /scoreboard, /scoreboard/trace): grouped by person, week actual vs target, % achieved, status (✔ ≥100%, ▲ 90–99%, ✕ <90%), month-to-date. WIG and lead measures in bold at the top. Running totals (e.g. chronic database, Google reviews, TikTok followers) as progress bars.
 3. **Weekly check-in** (per branch, Mondays): MTD sales vs target, required sales/day, stock turnover, OOS list, one win, one issue needing HQ help. Zakat fields hidden for branches with no `zakat_field` (Bangi, Ampang).
 4. **Commitments**: last week's commitments with Done Y/N, then one new commitment per person.
 5. **Group scoreboard** (managers' Monday session): one row per branch – MTD %, required sales/day, walk-in % of target, Lead 1 %, Lead 2 %, stock turnover, OOS count, zakat pending (– for branches without zakat) – plus company total, wins/issues, and 12-week trend grids.
@@ -60,6 +60,13 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Every number on a scoreboard must be traceable to the entries behind it (click through to the daily rows).
 - Mobile first: daily entry must be usable one-handed on a phone.
 - Write tests for the calculation rules before building the screens.
+
+## Scoreboard decisions (14 Oct)
+- Week chooser lists every week from the tracker's first week to this week. The current week counts days to today once any of today's numbers are in, otherwise to yesterday.
+- Top section = measures of kind WIG, labels with "LEAD n", or Lead measures on the branch's lead1/lead2 fields. Everything else grouped by owner (Team, then people).
+- Month sales are coloured by pace (MTD vs month target × days gone ÷ days in month), with the full-month % shown.
+- Branch staff can't open the scoreboard (daily log only); managers see their own branch; HQ/admin all.
+- Every number links to /scoreboard/trace (inline with JS, full page without).
 
 ## Open items
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).

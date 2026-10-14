@@ -1,0 +1,79 @@
+<%
+  const t = trace;
+  const d = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' });
+  const dayLink = (iso) => editLinks ? '<a href="/daily?date=' + iso + branchQs + '">' + d(iso) + '</a>' : d(iso);
+  const show = (n) => n === null || n === undefined ? '–' : (t.money ? fmt.money(n) : fmt.number(n, 2));
+  const period = d(t.from) + ' – ' + d(t.to);
+%>
+<div class="trace">
+  <div class="trace-head">
+    <p class="trace-title"><%= t.label %></p>
+    <p class="muted small"><%= t.kind === 'running' ? 'Since ' + d(t.from) + ', to ' + d(t.to) : period %>. These are the daily entries behind the number.</p>
+    <button type="button" class="trace-close link-button" data-trace-close>Close</button>
+  </div>
+  <div class="trace-scroll">
+  <% if (t.kind === 'measure') { %>
+    <table>
+      <thead><tr>
+        <th>Day</th><th class="n"><%= t.numeratorLabel %></th>
+        <% if (t.denominatorLabel) { %><th class="n"><%= t.denominatorLabel %></th><% } %>
+        <th class="n"><%= t.calc === 'sum' ? 'Day target' : 'Target' %></th><th>Entered by</th>
+      </tr></thead>
+      <tbody>
+        <% t.days.forEach(function (row) { %>
+          <tr class="<%= row.counted ? '' : 'is-uncounted' %>">
+            <td><%- dayLink(row.date) %></td>
+            <td class="n"><%= row.numerator === null ? 'not entered' : show(row.numerator) %></td>
+            <% if (t.denominatorLabel) { %><td class="n"><%= row.denominator === null ? 'not entered' : fmt.number(row.denominator, 2) %></td><% } %>
+            <td class="n"><%= row.target === null ? '–' : (t.calc === 'ratio_percent' ? fmt.number(row.target * 100, 1) + '%' : show(row.target)) %></td>
+            <td><%= row.enteredBy || '' %><%= row.counted ? '' : ' (not counted – no storefront)' %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr>
+          <th>Total</th>
+          <th class="n"><%= show(t.result.numerator) %></th>
+          <% if (t.denominatorLabel) { %><th class="n"><%= fmt.number(t.result.denominator, 2) %></th><% } %>
+          <th class="n"><%= t.result.target === null ? '–' : fmt.value({ calc: t.calc, money: t.money }, t.result.target) %></th>
+          <th></th>
+        </tr>
+      </tfoot>
+    </table>
+    <p class="trace-sum">
+      <% if (t.calc === 'sum') { %>
+        Actual <b><%= show(t.result.actual) %></b><% if (t.result.target !== null) { %> vs target <b><%= show(t.result.target) %></b> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>.
+      <% } else if (t.calc === 'ratio_percent') { %>
+        <%= show(t.result.numerator) %> ÷ <%= fmt.number(t.result.denominator, 2) %> = <b><%= fmt.value({ calc: t.calc }, t.result.actual) %></b><% if (t.result.target !== null) { %> vs target <%= fmt.value({ calc: t.calc }, t.result.target) %> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>.
+      <% } else { %>
+        <%= show(t.result.numerator) %> ÷ <%= fmt.number(t.result.denominator, 0) %> storefront days = <b><%= fmt.value({ calc: t.calc }, t.result.actual) %></b> a day<% if (t.result.target !== null) { %> vs target <%= fmt.number(t.result.target, 1) %> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>.
+      <% } %>
+      <% if (t.result.partialTarget) { %>Only days in a month with a target are counted.<% } %>
+    </p>
+
+  <% } else if (t.kind === 'sales') { %>
+    <table>
+      <thead><tr><th>Day</th><% t.fields.forEach(function (f) { %><th class="n"><%= f.label.replace(/ \(RM\)$/, '') %></th><% }) %><th class="n">Total</th></tr></thead>
+      <tbody>
+        <% if (t.before) { %><tr class="is-baseline"><td>Up to <%= d(t.baselineEnd) %></td><td colspan="<%= t.fields.length %>">Sales before the tracker started</td><td class="n"><%= fmt.money(t.before) %></td></tr><% } %>
+        <% t.days.forEach(function (row) { %>
+          <tr><td><%- dayLink(row.date) %></td><% t.fields.forEach(function (f) { %><td class="n"><%= row.byField[f.key] === null ? '–' : fmt.money(row.byField[f.key]) %></td><% }) %><td class="n"><b><%= fmt.money(row.total) %></b></td></tr>
+        <% }) %>
+      </tbody>
+      <tfoot><tr><th>Total</th><th colspan="<%= t.fields.length %>"></th><th class="n"><%= fmt.money(t.total) %></th></tr></tfoot>
+    </table>
+
+  <% } else { %>
+    <table>
+      <thead><tr><th>Day</th><th class="n"><%= t.fieldLabel %></th><th class="n">Running total</th><th>Entered by</th></tr></thead>
+      <tbody>
+        <tr class="is-baseline"><td>Start</td><td class="n"></td><td class="n"><%= t.startMissing ? 'not set' : fmt.number(t.start, 0) %></td><td></td></tr>
+        <% t.days.forEach(function (row) { %>
+          <tr><td><%- dayLink(row.date) %></td><td class="n"><%= row.value === null ? '–' : fmt.number(row.value, 0) %></td><td class="n"><%= fmt.number(row.total, 0) %></td><td><%= row.enteredBy || '' %></td></tr>
+        <% }) %>
+      </tbody>
+      <tfoot><tr><th>Now</th><th></th><th class="n"><%= fmt.number(t.total, 0) %> of <%= fmt.number(t.endTarget, 0) %></th><th></th></tr></tfoot>
+    </table>
+  <% } %>
+  </div>
+</div>

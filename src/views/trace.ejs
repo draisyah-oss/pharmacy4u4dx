@@ -1,0 +1,8 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<main class="page board">
+  <a class="back-link" href="<%= back %>">Back to scoreboard</a>
+  <%- include('partials/trace', { trace, fmt, editLinks, branchQs }) %>
+</main>
+</body>
+</html>

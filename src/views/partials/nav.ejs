@@ -1,0 +1,8 @@
+<% if (user && user.role !== 'branch_staff') {
+     const here = typeof navActive !== 'undefined' ? navActive : '';
+     const bq = (user.role === 'admin' || user.role === 'hq') && typeof branch !== 'undefined' && branch ? '?branch=' + encodeURIComponent(branch.code) : ''; %>
+  <nav class="tabs" aria-label="Sections">
+    <a href="/daily<%= bq %>" class="tab<%= here === 'daily' ? ' is-current' : '' %>"<%= here === 'daily' ? ' aria-current="page"' : '' %>>Daily entry</a>
+    <a href="/scoreboard<%= bq %>" class="tab<%= here === 'scoreboard' ? ' is-current' : '' %>"<%= here === 'scoreboard' ? ' aria-current="page"' : '' %>>Scoreboard</a>
+  </nav>
+<% } %>

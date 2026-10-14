@@ -1,0 +1,107 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'scoreboard' }) %>
+<%
+  const s = board.sales;
+  const salesWeekHref = '/scoreboard/trace?type=sales&from=' + board.weekStart + '&to=' + board.asOf + branchQs;
+  const salesMtdHref = '/scoreboard/trace?type=sales&from=' + board.mtdFrom + '&to=' + board.asOf + branchQs;
+  const monthName = new Date(board.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' });
+%>
+<div class="daybar">
+  <% if (canPickBranch) { %>
+    <nav class="strip branch-strip" aria-label="Choose a branch">
+      <% branches.forEach(function (b) { %>
+        <a href="/scoreboard?branch=<%= encodeURIComponent(b.code) %>&week=<%= board.weekStart %>" class="strip-pill<%= b.code === branch.code ? ' is-current' : '' %>"><%= b.code %></a>
+      <% }) %>
+    </nav>
+  <% } %>
+  <nav class="strip week-strip" aria-label="Choose a week">
+    <% weeks.forEach(function (w) { %>
+      <a href="/scoreboard?week=<%= w.week %><%= branchQs %>" class="strip-pill<%= w.current ? ' is-current' : '' %>"<%= w.current ? ' aria-current="true"' : '' %>><%= w.label %></a>
+    <% }) %>
+  </nav>
+</div>
+
+<main class="page board">
+  <header class="board-head">
+    <h1><%= branch.name %> <span class="board-week">week <%= fmt.weekLabel(board.weekStart, board.weekEnd) %></span></h1>
+    <p class="muted board-asof">
+      <% if (!board.started) { %>No days counted yet – this week starts once the first day is closed.
+      <% } else if (board.asOf < board.weekEnd) { %>Counted to <%= fmtDate(board.asOf) %>. Week targets are for the days so far.
+      <% } else { %>Full week, Monday to Sunday.<% } %>
+    </p>
+    <p class="board-wig"><%= branch.wig %></p>
+  </header>
+
+  <section class="sales" aria-label="Total branch sales">
+    <div class="sales-main">
+      <span class="sales-k"><%= monthName %> sales so far</span>
+      <a class="sales-big" href="<%= salesMtdHref %>" data-trace><%= fmt.money(s.mtd) %></a>
+      <% if (s.monthTarget) { %>
+        <span class="sales-of"><%= fmt.pct(s.pct) %> of <%= fmt.money(s.monthTarget) %></span>
+        <div class="bar" aria-hidden="true">
+          <span class="s-<%= s.status %>" style="width:<%= Math.min((s.pct || 0) * 100, 100) %>%"></span>
+          <% if (s.paceTarget) { %><i class="run-mark" style="left:<%= Math.min(s.paceTarget / s.monthTarget, 1) * 100 %>%"></i><% } %>
+        </div>
+        <% if (board.started && s.paceTarget) { %>
+          <span class="sales-pace s-<%= s.status %>"><%= s.pacePct >= 1 ? 'Ahead of pace' : 'Behind pace' %>: <%= fmt.money(s.paceTarget) %> needed by <%= fmtDate(board.asOf) %> (<%= fmt.pct(s.pacePct) %> <%= fmt.symbol(s.status) %>)</span>
+        <% } %>
+      <% } %>
+    </div>
+    <dl class="sales-facts">
+      <div><dt>Needed per day</dt><dd><%= s.perDay === null ? '–' : (s.perDay === 0 ? 'Target reached' : fmt.money(s.perDay)) %><% if (s.daysLeft && s.perDay) { %><span class="dd-note">for the last <%= s.daysLeft %> days</span><% } %></dd></div>
+      <div><dt>This week</dt><dd><a href="<%= salesWeekHref %>" data-trace><%= fmt.money(s.weekTotal) %></a></dd></div>
+    </dl>
+    <div class="trace-slot" hidden></div>
+  </section>
+
+  <div class="legend" aria-label="Status key">
+    <span><b class="s-on_track">✔</b> 100% or more</span><span><b class="s-watch">▲</b> 90–99%</span><span><b class="s-off_track">✕</b> under 90%, needs a commitment</span>
+  </div>
+
+  <section class="group group-top" aria-labelledby="top-h">
+    <h2 id="top-h">WIG and lead measures</h2>
+    <div class="m-head" aria-hidden="true"><span></span><span>Week</span><span>Month to date</span></div>
+    <% board.top.forEach(function (row) { %><%- include('partials/measure-row', { row, board, fmt, branchQs }) %><% }) %>
+  </section>
+
+  <% if (board.running.length) { %>
+    <section class="group" aria-labelledby="run-h">
+      <h2 id="run-h">Running totals</h2>
+      <% board.running.forEach(function (r) {
+           const href = '/scoreboard/trace?type=running&code=' + encodeURIComponent(r.code) + '&from=' + board.weekStart + '&to=' + (board.started ? board.asOf : board.weekStart) + branchQs;
+           const fill = r.endTarget ? Math.min(r.total / r.endTarget, 1) * 100 : 0;
+           const mark = r.endTarget && r.expectedByNow !== null ? Math.min(r.expectedByNow / r.endTarget, 1) * 100 : null; %>
+        <div class="run" data-row="run-<%= r.code %>">
+          <div class="run-top">
+            <span class="run-label"><%= r.label %></span>
+            <a class="run-total" href="<%= href %>" data-trace><%= fmt.number(r.total, 0) %></a><span class="run-of">of <%= fmt.number(r.endTarget, 0) %></span>
+          </div>
+          <div class="bar run-bar" aria-hidden="true">
+            <span class="<%= r.onPace === null ? '' : (r.onPace ? 's-on_track' : 's-off_track') %>" style="width:<%= fill %>%"></span>
+            <% if (mark !== null) { %><i class="run-mark" style="left:<%= mark %>%"></i><% } %>
+          </div>
+          <p class="run-note small">
+            <% if (r.startMissing) { %>Start value not set yet – ask admin to add it.
+            <% } else if (r.onPace === null) { %><%= fmt.number(r.remaining, 0) %> to go.
+            <% } else { %><span class="<%= r.onPace ? 's-on_track' : 's-off_track' %>"><%= r.onPace ? 'Ahead of pace' : 'Behind pace' %></span>: should be <%= fmt.number(r.expectedByNow, 0) %> by now.
+              <% if (r.remaining > 0 && r.perDayNeeded) { %><%= fmt.number(r.perDayNeeded, 1) %> a day gets to <%= fmt.number(r.endTarget, 0) %> by <%= fmtDate(r.endDate, { weekday: undefined }) %>.<% } %>
+            <% } %>
+          </p>
+          <div class="trace-slot" hidden></div>
+        </div>
+      <% }) %>
+    </section>
+  <% } %>
+
+  <% board.groups.forEach(function (g) { %>
+    <section class="group">
+      <h2><%= g.owner %> <span class="group-role"><%= g.role %></span></h2>
+      <div class="m-head" aria-hidden="true"><span></span><span>Week</span><span>Month to date</span></div>
+      <% g.rows.forEach(function (row) { %><%- include('partials/measure-row', { row, board, fmt, branchQs }) %><% }) %>
+    </section>
+  <% }) %>
+</main>
+<script src="/js/scoreboard.js?v=1" defer></script>
+</body>
+</html>

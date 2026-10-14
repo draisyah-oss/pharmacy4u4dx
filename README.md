@@ -4,8 +4,8 @@ Replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; man
 CEO see scoreboards. The build spec is in `CLAUDE.md`; all targets, people and measures are in
 `seed.json`.
 
-**Status:** database, seed loader, calculation module, login and the Daily Entry screen are done.
-The scoreboards come next.
+**Status:** database, seed loader, calculation module, login, Daily Entry and the Branch Scoreboard
+are done. Weekly check-in, commitments, group and HQ scoreboards come next.
 
 ## Run it on your Mac
 
@@ -17,7 +17,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 66, fail 0
+npm test                    # should end with: pass 78, fail 0
 npm start
 ```
 
@@ -53,6 +53,10 @@ database can only be open in one window at a time (you'll get a clear message if
 
 Changed `seed.json` and want to see it locally? `npm run db:reset-local`, then `npm start`.
 
+### Trying a different day
+
+`APP_TODAY=2026-10-20 npm start` makes the app behave as if it's that day (ignored on Railway).
+
 ### Testing on your phone
 
 With the app running, find your Mac's address (System Settings → Wi-Fi → Details → IP address,
@@ -76,6 +80,7 @@ src/server.js             npm start: migrate → load seed (first run) → start
 src/app.js                web app: login, home, daily entry, /status (admin), /health
 src/auth/                 login, logout, sessions, form tokens
 src/daily/                Daily Entry: who can edit what, target hints, saving
+src/scoreboard/           Branch Scoreboard: week + month-to-date per measure, running totals, click-through
 src/db/index.js           database connection: Postgres if DATABASE_URL is set, else local PGlite
 src/db/migrate.js         runs new files in src/db/migrations/ in order
 src/db/migrations/        001_init.sql = all tables. Add 002_… for changes; never edit old ones

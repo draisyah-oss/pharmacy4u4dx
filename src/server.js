@@ -16,7 +16,11 @@ async function main() {
 
   await prepareDatabase(db);
 
-  const app = createApp(db);
+  // APP_TODAY=2026-10-20 pretends it's that day – handy for trying things locally.
+  // Ignored in production so the live app always uses the real date.
+  const fake = process.env.NODE_ENV !== 'production' && /^\d{4}-\d{2}-\d{2}$/.test(process.env.APP_TODAY || '');
+  if (fake) console.log(`Pretending today is ${process.env.APP_TODAY} (APP_TODAY).`);
+  const app = createApp(db, fake ? { now: () => new Date(`${process.env.APP_TODAY}T20:00:00+08:00`) } : {});
   const port = Number(process.env.PORT) || 3000;
   const server = app.listen(port, () => {
     console.log(`Pharmacy4U 4DX is running – open http://localhost:${port}`);
