@@ -21,6 +21,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Roles: `branch_staff` (own branch, daily log only), `branch_manager` (own branch, everything for that branch), `hq` (HQ input + read all), `admin` (everything, including targets).
 - Editing: staff and managers can edit the last 7 days of entries. Anything older: admin only.
 - Admin password comes from the `ADMIN_PASSWORD` environment variable on first run.
+- Login is BUILT (src/auth): branch → name → PIN keypad for staff; password form for others. 5 wrong tries = locked 15 min. Sessions in the `sessions` table (staff 14 h, others 7 days). Every logged-in POST needs the session's `_csrf` token. HQ can view daily entry read-only.
 
 ## Data model (as built – see src/db/migrations/001_init.sql)
 - Setup, seeded from `seed.json` once: `branches`, `people`, `users`, `daily_fields`, `measures`, `measure_targets` (measure × month), `branch_month_targets`, `branch_baselines` (sales 1–11 Oct), `running_totals`, `hq_measures`, `hq_measure_targets`, `app_settings`.
@@ -30,7 +31,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Schema changes go in a new migration file (002_…); never edit an applied one. seed.json is never re-applied after the first load – the database is the source of truth.
 
 ## Screens
-1. **Daily entry** (per branch): today's date, one card per person with only their fields, big number inputs, yes/no toggles. Shows green/red against today's target as they type (weekly/monthly targets: week-to-date progress). Can edit the last 7 days.
+1. **Daily entry** (per branch) – BUILT (src/daily, views/daily.ejs, public/js/daily.js): today's date, one card per person with only their fields, big number inputs, yes/no toggles. Shows green/red against today's target as they type (weekly/monthly targets: week-to-date progress). Can edit the last 7 days.
 2. **Branch scoreboard** (per branch, per week): grouped by person, week actual vs target, % achieved, status (✔ ≥100%, ▲ 90–99%, ✕ <90%), month-to-date. WIG and lead measures in bold at the top. Running totals (e.g. chronic database, Google reviews, TikTok followers) as progress bars.
 3. **Weekly check-in** (per branch, Mondays): MTD sales vs target, required sales/day, stock turnover, OOS list, one win, one issue needing HQ help. Zakat fields hidden for branches with no `zakat_field` (Bangi, Ampang).
 4. **Commitments**: last week's commitments with Done Y/N, then one new commitment per person.

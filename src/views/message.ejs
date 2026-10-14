@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<% if (typeof user !== 'undefined' && user) { %><%- include('partials/topbar') %><% } %>
+<main class="page narrow">
+  <h1><%= title %></h1>
+  <p><%= message %></p>
+  <p><a class="button secondary" href="/">Go to start</a></p>
+</main>
+</body>
+</html>

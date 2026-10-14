@@ -4,8 +4,8 @@ Replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; man
 CEO see scoreboards. The build spec is in `CLAUDE.md`; all targets, people and measures are in
 `seed.json`.
 
-**Status:** project skeleton, database tables, seed loader and calculation module are done. Login, daily entry and
-the scoreboards come next.
+**Status:** database, seed loader, calculation module, login and the Daily Entry screen are done.
+The scoreboards come next.
 
 ## Run it on your Mac
 
@@ -17,11 +17,22 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 47, fail 0
+npm test                    # should end with: pass 66, fail 0
 npm start
 ```
 
 Then open http://localhost:3000. Stop the app with **Ctrl+C**.
+
+Before anyone can log in, give them a password or PIN (stop the app first):
+
+```bash
+npm run set-password -- hazera 1234            # branch staff: 4-digit PIN
+npm run set-password -- hafizah ManagerPass1   # managers / HQ: password, 8+ characters
+```
+
+Staff log in by tapping their branch, their name, then their PIN. Managers, HQ and admin use
+"Log in with your password" (admin's username is `admin`). After 5 wrong tries a login is
+locked for 15 minutes.
 
 The first `npm start` creates the tables and loads `seed.json`. Every start after that uses the
 data already in the database – seed.json is not loaded again, so nothing typed in is lost.
@@ -62,7 +73,9 @@ e.g. `192.168.1.23`) and open `http://192.168.1.23:3000` on a phone on the same 
 ```
 seed.json                 targets, people, measures (loaded once into the database)
 src/server.js             npm start: migrate → load seed (first run) → start web server
-src/app.js                web routes (status page and /health for now)
+src/app.js                web app: login, home, daily entry, /status (admin), /health
+src/auth/                 login, logout, sessions, form tokens
+src/daily/                Daily Entry: who can edit what, target hints, saving
 src/db/index.js           database connection: Postgres if DATABASE_URL is set, else local PGlite
 src/db/migrate.js         runs new files in src/db/migrations/ in order
 src/db/migrations/        001_init.sql = all tables. Add 002_… for changes; never edit old ones

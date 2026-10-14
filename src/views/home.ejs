@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<main class="page narrow">
+  <h1>Daily entry</h1>
+  <p class="muted">Open a branch to see or fix its numbers for <%= fmtDate(today) %>.</p>
+  <div class="pick-list">
+    <% branches.forEach(function (b) { %>
+      <a class="pick" href="/daily?branch=<%= encodeURIComponent(b.code) %>">
+        <span class="pick-main"><%= b.name %></span>
+        <span class="pick-sub"><%= b.today_entries ? b.today_entries + ' of ' + b.fields + ' numbers in today' : 'Nothing in yet today' %></span>
+      </a>
+    <% }) %>
+  </div>
+  <% if (user.role === 'admin') { %><p class="login-alt"><a href="/status">Setup check</a></p><% } %>
+</main>
+</body>
+</html>

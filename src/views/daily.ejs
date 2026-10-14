@@ -1,0 +1,110 @@
+<%- include('partials/head', { bodyClass: 'daily-body' }) %>
+<%- include('partials/topbar') %>
+<%
+  const branchQs = (user.role === 'admin' || user.role === 'hq') ? '&branch=' + encodeURIComponent(branch.code) : '';
+  const isToday = date === today;
+  const editable = !blocked;
+  const errorCount = Object.keys(errors).length;
+  const money = (n) => 'RM ' + Number(n).toLocaleString('en-MY', { maximumFractionDigits: 0 });
+  const num = (n) => Number(n).toLocaleString('en-MY', { maximumFractionDigits: 1 });
+  const errorKeys = Object.keys(errors);
+  function targetText(f) {
+    const h = f.hint;
+    if (!h) return '';
+    const show = (n) => h.money ? money(n) : num(n);
+    if (h.kind === 'track') return 'No target this month';
+    if (h.kind === 'ratio') return 'Target ' + Math.round(h.target * 100) + '%';
+    if (h.kind === 'perday') return 'Target ' + num(h.target) + ' on storefront days';
+    if (h.kind === 'day') return f.type === 'yes_no' ? 'Every day' : 'Target ' + show(h.target);
+    return (h.period === 'week' ? 'Week target ' : 'Month target ') + show(h.targetFull);
+  }
+%>
+<div class="daybar">
+  <nav class="strip" aria-label="Choose a day">
+    <% strip.forEach(function (d) { %>
+      <a href="/daily?date=<%= d.date %><%= branchQs %>" class="strip-day<%= d.date === date ? ' is-current' : '' %><%= d.filled ? ' has-data' : '' %>"<%= d.date === date ? ' aria-current="date"' : '' %>>
+        <span class="strip-dow"><%= d.date === today ? 'Today' : fmtDate(d.date, { day: undefined, month: undefined }) %></span>
+        <span class="strip-num"><%= Number(d.date.slice(8)) %></span>
+      </a>
+    <% }) %>
+  </nav>
+</div>
+
+<main class="page daily">
+  <h1 class="day-title"><%= isToday ? 'Today' : fmtDate(date, { weekday: 'long', day: undefined, month: undefined }) %> <span class="day-date"><%= fmtDate(date, { weekday: isToday ? 'long' : undefined, month: 'long' }) %></span></h1>
+  <p class="muted day-meta">
+    <% if (lastSaved) { %>Last saved by <%= lastSaved.display_name || 'someone' %> at <%= new Date(lastSaved.updated_at).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', minute: '2-digit' }) %>.<% } else { %>Nothing entered for this day yet.<% } %>
+  </p>
+
+  <% if (saved !== null) { %>
+    <p class="alert alert-good" role="status"><%= saved === 0 ? 'No changes – everything was already saved.' : 'Saved ' + saved + ' ' + (saved === 1 ? 'number' : 'numbers') + '.' %></p>
+  <% } %>
+  <% if (errorCount) { %>
+    <p class="alert alert-bad" role="alert"><%= errorCount === 1 ? '1 number needs fixing' : errorCount + ' numbers need fixing' %> before it can be saved. Nothing was saved yet. <a href="#f_<%= Object.keys(errors)[0] %>">Show me</a></p>
+  <% } %>
+  <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
+
+  <nav class="people" aria-label="Jump to a person">
+    <% cards.forEach(function (c) { %>
+      <a href="#<%= c.id %>" class="people-chip<%= c.isMe ? ' is-me' : '' %>" data-chip="<%= c.id %>"><%= c.name %> <span class="chip-count"><%= c.filled %>/<%= c.fields.length %></span></a>
+    <% }) %>
+  </nav>
+
+  <form method="post" action="/daily" id="daily-form" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="date" value="<%= date %>">
+    <input type="hidden" name="branch" value="<%= branch.code %>">
+
+    <% cards.forEach(function (c) { %>
+      <section class="person" id="<%= c.id %>" data-card="<%= c.id %>">
+        <header class="person-head">
+          <h2><%= c.name %><% if (c.isMe) { %> <span class="me">you</span><% } %></h2>
+          <p class="person-role"><%= c.role %></p>
+          <p class="person-count"><span data-count><%= c.filled %></span> of <%= c.fields.length %> filled</p>
+        </header>
+
+        <% c.fields.forEach(function (f) {
+             const err = errors[f.key];
+             const id = 'f_' + f.key; %>
+          <div class="field<%= err ? ' has-error' : '' %>" data-field="<%= f.key %>" data-type="<%= f.type %>"
+               data-hint="<%= f.hint ? JSON.stringify(f.hint) : '' %>" data-max-of="<%= f.maxOf || '' %>" data-max-of-label="<%= f.maxOfLabel || '' %>"
+               data-initial="<%= f.stored === null ? '' : f.stored %>">
+            <div class="field-top">
+              <label for="<%= id %>"><%= f.label %></label>
+              <span class="field-target"><%= targetText(f) %></span>
+            </div>
+
+            <% if (f.type === 'yes_no') { %>
+              <div class="yesno" role="radiogroup" aria-labelledby="<%= id %>-l">
+                <span id="<%= id %>-l" class="sr-only"><%= f.label %></span>
+                <label class="yn yn-yes"><input type="radio" id="<%= id %>" name="f[<%= f.key %>]" value="1"<%= String(f.value) === '1' ? ' checked' : '' %><%= editable ? '' : ' disabled' %>><span>Yes</span></label>
+                <label class="yn yn-no"><input type="radio" name="f[<%= f.key %>]" value="0"<%= String(f.value) === '0' ? ' checked' : '' %><%= editable ? '' : ' disabled' %>><span>No</span></label>
+              </div>
+            <% } else { %>
+              <div class="num-wrap<%= f.type === 'money' ? ' is-money' : '' %>">
+                <% if (f.type === 'money') { %><span class="prefix" aria-hidden="true">RM</span><% } %>
+                <input class="num" id="<%= id %>" name="f[<%= f.key %>]" type="text" inputmode="decimal"
+                       enterkeyhint="next" autocomplete="off" value="<%= f.value === null ? '' : f.value %>"
+                       placeholder="–"<%= editable ? '' : ' disabled' %><%= err ? ' aria-invalid="true"' : '' %>
+                       aria-describedby="<%= id %>-s">
+              </div>
+            <% } %>
+
+            <% if (f.hint && f.hint.kind !== 'track' && f.type !== 'yes_no') { %><div class="gauge" aria-hidden="true"><span></span></div><% } %>
+            <p class="field-status" id="<%= id %>-s" aria-live="polite"><%= err || '' %></p>
+          </div>
+        <% }) %>
+      </section>
+    <% }) %>
+
+    <% if (editable) { %>
+      <div class="savebar">
+        <p class="savebar-note" data-dirty-note>All saved</p>
+        <button type="submit" class="button save">Save <%= isToday ? 'today' : fmtDate(date) %></button>
+      </div>
+    <% } %>
+  </form>
+</main>
+<script src="/js/daily.js?v=4" defer></script>
+</body>
+</html>

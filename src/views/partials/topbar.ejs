@@ -1,0 +1,10 @@
+<header class="topbar">
+  <a class="brand" href="/">Pharmacy4U<% if (typeof branch !== 'undefined' && branch) { %> <span class="brand-branch"><%= branch.name %></span><% } %></a>
+  <% if (user) { %>
+    <form method="post" action="/logout" class="who">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <span class="who-name"><%= user.display_name %></span>
+      <button type="submit" class="link-button">Log out</button>
+    </form>
+  <% } %>
+</header>

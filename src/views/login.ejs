@@ -1,0 +1,74 @@
+<%- include('partials/head', { bodyClass: 'login-body' }) %>
+<main class="login">
+  <div class="login-mark">Pharmacy4U <span>4DX</span></div>
+
+  <% if (error) { %><p class="alert alert-bad" role="alert"><%= error %></p><% } %>
+
+  <% if (mode === 'branches') { %>
+    <h1>Which branch are you at?</h1>
+    <div class="pick-list">
+      <% branches.forEach(function (b) { %>
+        <a class="pick" href="/login?branch=<%= encodeURIComponent(b.code) %>&next=<%= encodeURIComponent(next) %>">
+          <span class="pick-main"><%= b.name %></span>
+          <span class="pick-sub"><%= b.code %></span>
+        </a>
+      <% }) %>
+    </div>
+    <p class="login-alt"><a href="/login?mode=password&next=<%= encodeURIComponent(next) %>">Manager, HQ or admin? Log in with your password</a></p>
+
+  <% } else if (mode === 'names') { %>
+    <a class="back" href="/login?next=<%= encodeURIComponent(next) %>">Change branch</a>
+    <h1><%= branch.name %>: who are you?</h1>
+    <div class="pick-list">
+      <% staff.forEach(function (s) { %>
+        <% if (s.ready) { %>
+          <a class="pick" href="/login?branch=<%= encodeURIComponent(branch.code) %>&user=<%= encodeURIComponent(s.username) %>&next=<%= encodeURIComponent(next) %>">
+            <span class="pick-main"><%= s.display_name %></span>
+            <span class="pick-sub"><%= s.job %></span>
+          </a>
+        <% } else { %>
+          <div class="pick pick-off" aria-disabled="true">
+            <span class="pick-main"><%= s.display_name %></span>
+            <span class="pick-sub">PIN not set yet – ask admin</span>
+          </div>
+        <% } %>
+      <% }) %>
+    </div>
+    <p class="login-alt"><a href="/login?mode=password&next=<%= encodeURIComponent(next) %>">Branch manager? Log in with your password</a></p>
+
+  <% } else if (mode === 'pin') { %>
+    <a class="back" href="/login?branch=<%= encodeURIComponent(branch.code) %>&next=<%= encodeURIComponent(next) %>">Not <%= picked.display_name %>?</a>
+    <h1>Hi <%= picked.display_name %>, enter your PIN</h1>
+    <form method="post" action="/login/pin" class="pin-form" id="pin-form" autocomplete="off">
+      <input type="hidden" name="username" value="<%= picked.username %>">
+      <input type="hidden" name="branch" value="<%= branch.code %>">
+      <input type="hidden" name="next" value="<%= next %>">
+      <label class="sr-only" for="pin">4-digit PIN</label>
+      <input class="pin-input" id="pin" name="pin" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" required autofocus>
+      <div class="pin-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <div class="keypad" hidden>
+        <% [1,2,3,4,5,6,7,8,9].forEach(function (n) { %><button type="button" data-key="<%= n %>"><%= n %></button><% }) %>
+        <span></span><button type="button" data-key="0">0</button><button type="button" data-key="del" aria-label="Delete">⌫</button>
+      </div>
+      <button type="submit" class="button wide pin-submit">Log in</button>
+    </form>
+    <script src="/js/login.js?v=3" defer></script>
+
+  <% } else { %>
+    <a class="back" href="/login?next=<%= encodeURIComponent(next) %>">Back to branches</a>
+    <h1>Log in with your password</h1>
+    <form method="post" action="/login/password" class="stack">
+      <input type="hidden" name="next" value="<%= next %>">
+      <input type="hidden" name="mode" value="password">
+      <label>Username
+        <input name="username" value="<%= username %>" autocapitalize="none" autocorrect="off" autocomplete="username" required autofocus>
+      </label>
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="button wide">Log in</button>
+    </form>
+  <% } %>
+</main>
+</body>
+</html>
