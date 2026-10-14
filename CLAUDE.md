@@ -42,11 +42,14 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Monthly targets spread evenly per day; weekly targets per day ÷ 7. Weeks run Monday–Sunday.
 - `calc = sum`: week actual = sum of the field; week target = sum of daily targets for days in the week.
 - `calc = ratio_percent`: actual = sum(numerator) ÷ sum(denominator); target is a % (e.g. 45% of transactions with 2+ items, 100% zakat on time).
-- `calc = ratio_per_day`: same as ratio, shown as a number, not % (Ampang storefront: checks per day with 2 staff on duty).
+- `calc = ratio_per_day`: same as ratio, shown as a number, not % (Ampang storefront: checks per day with 2 staff on duty). The numerator only counts on days where the denominator is > 0 (checks on a 1-staff day don't count).
+- Ratio targets are rates, not added up; a week spanning two months uses the average of its days' targets.
+- If only some days in a period have a target (track-only month next to a month with a target), actual and target both use only the days with a target.
 - A blank target means "track only" – show the actual, no status.
 - Branch total sales = sum of `total_sales_fields`. October also adds `before_tracker.sales_1_to_11_oct`.
 - The tracker starts 12 Oct (`company.tracker_start_date`). Week and MTD measure targets in October count only from 12 Oct; MTD sales vs the month total and required sales/day use the whole month (including the 1–11 Oct sales).
-- Required sales/day = (month target − MTD actual) ÷ days left in the month.
+- Required sales/day = (month target − MTD actual) ÷ days left in the month. Days left = days after the last day included in MTD (MTD to 18 Oct → 13 days left). 0 once the target is hit; none on the last day.
+- The calculation code lives in `src/calc/` (pure functions, no database); tests in `test/calc/` use a sample week (`test/fixtures/sample-weeks.js`).
 - Stock turnover = weekly COGS ÷ ((Monday stock + Sunday stock) ÷ 2); days of stock = 7 ÷ turnover. Target 0.23 a week.
 - Running totals = start value + sum of the field to date, against the end target.
 - "Today" is Malaysia time (Asia/Kuala_Lumpur), not the server's clock.

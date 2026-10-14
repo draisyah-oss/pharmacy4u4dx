@@ -4,7 +4,7 @@ Replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; man
 CEO see scoreboards. The build spec is in `CLAUDE.md`; all targets, people and measures are in
 `seed.json`.
 
-**Status:** project skeleton, database tables and seed loader are done. Login, daily entry and
+**Status:** project skeleton, database tables, seed loader and calculation module are done. Login, daily entry and
 the scoreboards come next.
 
 ## Run it on your Mac
@@ -17,7 +17,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 14, fail 0
+npm test                    # should end with: pass 47, fail 0
 npm start
 ```
 
@@ -67,6 +67,7 @@ src/db/index.js           database connection: Postgres if DATABASE_URL is set, 
 src/db/migrate.js         runs new files in src/db/migrations/ in order
 src/db/migrations/        001_init.sql = all tables. Add 002_… for changes; never edit old ones
 src/db/seed.js            checks seed.json for mistakes, then loads it
+src/calc/                calculation rules (targets, ratios, MTD, required/day, turnover, running totals)
 src/views/  public/css/   pages and mobile-first styles
 scripts/                  users, set-password, db:reset-local
 test/                     node --test

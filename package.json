@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test",
+    "test": "node --test test/*.test.js test/*/*.test.js",
     "users": "node scripts/list-users.js",
     "set-password": "node scripts/set-password.js",
     "db:reset-local": "node scripts/reset-local-db.js"
