@@ -73,8 +73,8 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - October total RM 60k = retail + Grabmart RM 42k (walk-in 1,250 weekdays / 1,650 weekends), Shopee RM 7.5k (BR plan, Ainur leads; CEO target 12k), Alpine RM 0.5k (new, Alya), zakat RM 10k (BR aim, Amirah leads the value, Alya the fulfilment; CEO target 5k). YTD targets moved up by RM 5.8k.
 - 8 BR target products (p1–p8) with margins in the notes; Qushairi leads the tracking. Grabmart added (Qushairi: items, orders, sales – no target yet).
 - Intraday checkpoints (weekday 1pm RM 300 / 6pm RM 600; weekend 1pm RM 450 / 6pm RM 850) are in wig_detail only – not tracked, the daily log is at closing.
-- Nov/Dec BR targets are still the 4DX plan numbers until revised.
+- Nov/Dec (confirmed 14 Oct): BR's split continues – Shopee 7.5k, zakat 10k, Alpine 0.5k a month. Month totals stay 61.6k / 69k (4DX), so walk-in fills the rest: Nov RM 1,330 weekdays / 1,750 weekends, Dec RM 1,520 / 2,000.
+- Grabmart (confirmed 14 Oct): same proposed ramp as the other branches – sales RM 1k / 2.5k / 4.5k, items 15 / 10 / 5 a week.
 
 ## Open items
-- BR names: the sheet spells Ainnur and Qusyairy; the app uses Ainur and Qushairi (usernames ainur, qushairi). Confirm.
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).

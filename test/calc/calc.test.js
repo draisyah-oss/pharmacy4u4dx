@@ -329,8 +329,9 @@ test('BR walk-in: RM 1,250 on weekdays, RM 1,650 on Sat–Sun in October', () =>
   assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-16', t1.weekend_targets), 1250); // Friday
   assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-17', t1.weekend_targets), 1650); // Saturday
   assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-18', t1.weekend_targets), 1650); // Sunday
-  // November has no weekend figure yet → the same every day
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-07', t1.weekend_targets), 1490);
+  // November: RM 1,330 weekdays, RM 1,750 weekends
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-06', t1.weekend_targets), 1330);
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-07', t1.weekend_targets), 1750);
 });
 
 test('BR walk-in week 12–18 Oct: 5 × 1,250 + 2 × 1,650 = RM 9,550', () => {
@@ -361,4 +362,15 @@ test('BR October total sales target RM 60k includes Shopee, zakat, Grabmart and 
   assert.equal(measure('BR', 'A5').targets['2026-10'], 10000);
   assert.equal(measure('BR', 'AL').targets['2026-10'], 500);
   assert.equal(br.measures.filter((m) => /^P\d$/.test(m.id)).length, 8);
+  // BR's own split continues into Nov and Dec; walk-in fills the rest of the 4DX month totals
+  for (const month of ['2026-11', '2026-12']) {
+    assert.equal(measure('BR', 'M3').targets[month], 7500);
+    assert.equal(measure('BR', 'A5').targets[month], 10000);
+    assert.equal(measure('BR', 'AL').targets[month], 500);
+  }
+  const t1 = measure('BR', 'T1');
+  const monthWalkin = (month) => calc.dateRange(calc.monthStart(month), calc.monthEnd(month))
+    .reduce((a, d) => a + calc.dailyTarget(t1.targets, 'day', d, t1.weekend_targets), 0);
+  assert.ok(Math.abs(monthWalkin('2026-11') + 18000 - br.monthly_total_target['2026-11']) < 200);
+  assert.ok(Math.abs(monthWalkin('2026-12') + 18000 - br.monthly_total_target['2026-12']) < 200);
 });
