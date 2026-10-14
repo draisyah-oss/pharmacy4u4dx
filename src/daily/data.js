@@ -113,6 +113,13 @@ async function loadDailyPage(db, { branch, date, user, trackerStart, sheetFields
     const own = fieldsRes.rows.filter((f) => f.owner_name === p.name);
     if (own.length) cards.push({ id: `p${p.id}`, name: p.name, role: p.role, isMe: p.id === user.person_id, fields: own.map(fieldView) });
   }
+  // Fields whose owner has been removed must not disappear – they wait here until admin
+  // gives them a new owner.
+  const known = new Set(['Team', ...people.map((p) => p.name)]);
+  const orphans = fieldsRes.rows.filter((f) => !known.has(f.owner_name));
+  if (orphans.length) {
+    cards.push({ id: 'others', name: 'Others', role: 'Owner no longer here – admin can reassign these', fields: orphans.map(fieldView) });
+  }
   const labels = Object.fromEntries(fieldsRes.rows.map((f) => [f.key, cleanLabel(f.label)]));
   for (const c of cards) {
     c.filled = c.fields.filter((f) => f.value !== null).length;

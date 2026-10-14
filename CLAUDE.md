@@ -57,7 +57,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - "Today" is Malaysia time (Asia/Kuala_Lumpur), not the server's clock.
 
 ## Rules
-- Never store or display salaries.
+- Never store or display salaries. Enforced in three places: src/privacy.js (seed validation, Admin fields/measures, sales-sheet columns and tabs) and database CHECK constraints (migration 005, p4u_mentions_salary: salary, gaji, wages, payroll, upah, pay slip, EPF/KWSP, SOCSO/PERKESO). "Commission" is allowed (sales income). Tests check no page or export mentions salaries.
 - Every number on a scoreboard must be traceable to the entries behind it (click through to the daily rows).
 - Mobile first: daily entry must be usable one-handed on a phone.
 - Write tests for the calculation rules before building the screens.
@@ -81,6 +81,17 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Synced every 10 min + "Check the sheet now" into daily_entries with source = 'sheet' (migration 004), only 12 Oct → today. Audit actions sheet_sync / sheet_delete. Repeated dates in the sheet are merged (empty never wipes a number).
 - While the link is on, those fields are read-only in Daily Entry (fix in the sheet); with no service account they're typed as before.
 - Auth: Google service account, read-only scope, signed JWT with Node crypto (no googleapis package). GOOGLE_SERVICE_ACCOUNT_JSON (Railway) or GOOGLE_SERVICE_ACCOUNT_FILE (local).
+
+## Security (review 14 Oct)
+- Redirects only to same-site paths (src/lib/safe-path.js; blocks //, /\, spaces).
+- Login: 5 wrong tries lock a login 15 min; 30 wrong tries from one device (IP) in 15 min block that device. Sessions: staff 14 h, admin 12 h, others 7 days; expired ones cleared hourly; a new PIN/password ends that person's other sessions.
+- Headers: CSP (scripts from self only), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, HSTS over https. /health gives no error details.
+- Roles verified by tests: staff = own branch daily entry only; manager = own branch daily + scoreboard; HQ = read all, change nothing; admin = everything.
+- Dates in URLs must be real calendar days. Removed people's fields stay visible on an "Others" card until reassigned.
+- Login page lists staff names per branch (needed for the PIN flow) – no other data before login.
+
+## Not built yet (from Screens)
+- 3 Weekly check-in, 4 Commitments, 5 Group scoreboard, 6 HQ scoreboard + input. Tables exist; calc for stock turnover exists.
 
 ## Open items
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).

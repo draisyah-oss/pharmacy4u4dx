@@ -124,7 +124,7 @@ async function setActive(db, { personId, active, user }) {
 }
 
 // PIN for branch staff (4 digits), password for everyone else (8+ characters).
-async function setSecret(db, { userId, secret, user }) {
+async function setSecret(db, { userId, secret, user, currentSessionId = null }) {
   const u = (await db.query('SELECT id, username, role FROM users WHERE id = $1', [userId])).rows[0];
   if (!u) return { error: 'That login doesn’t exist.' };
   const s = String(secret || '');
@@ -137,6 +137,8 @@ async function setSecret(db, { userId, secret, user }) {
   const column = u.role === 'branch_staff' ? 'pin_hash' : 'password_hash';
   await db.transaction(async (tx) => {
     await tx.query(`UPDATE users SET ${column} = $2, failed_attempts = 0, locked_until = NULL WHERE id = $1`, [u.id, bcrypt.hashSync(s, 10)]);
+    // A new PIN/password logs that person out everywhere (keeps admin's own current session).
+    await tx.query("DELETE FROM sessions WHERE (data->>'userId')::int = $1 AND sid IS DISTINCT FROM $2", [u.id, currentSessionId]);
     // Never store the PIN or password itself in the audit log.
     await audit(tx, user, column === 'pin_hash' ? 'set_pin' : 'set_password', 'users', u.username, null, null);
   });

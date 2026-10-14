@@ -486,3 +486,7 @@ html { scroll-behavior: smooth; }
   .t-weekend::before { content: "Sat–Sun"; font-size: 0.72rem; }
   .t-weekend { display: grid; justify-items: end; gap: 2px; }
 }
+
+.other-date { display: flex; gap: 8px; align-items: center; justify-content: center; padding: 0 12px 10px; font-size: 0.9rem; color: var(--ink-soft); }
+.other-date input { min-height: 36px; border: 2px solid var(--line); border-radius: 8px; padding: 0 8px; font: 0.95rem var(--font); margin-left: 6px; }
+.other-date .link-button { color: var(--brand); font-weight: 700; }

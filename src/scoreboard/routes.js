@@ -6,7 +6,7 @@ const fmt = require('./format');
 const { loadBranch } = require('../daily/data');
 const { weekList, buildScoreboard, traceMeasure, traceSales, traceRunning } = require('./data');
 
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
+const { isRealDate } = require('../lib/dates');
 const MAX_TRACE_DAYS = 100;
 
 // Managers see their own branch; HQ and admin see every branch.
@@ -62,7 +62,7 @@ function scoreboardRoutes(db, { now, trackerStart }) {
       if (denied) return res.status(403).render('message', { title: 'Scoreboard', message: denied });
 
       const { type, code, from, to } = req.query;
-      if (!ISO.test(from || '') || !ISO.test(to || '') || from > to || calc.diffDays(from, to) > MAX_TRACE_DAYS) {
+      if (!isRealDate(from) || !isRealDate(to) || from > to || calc.diffDays(from, to) > MAX_TRACE_DAYS) {
         return res.status(400).render('message', { title: 'Can’t show that', message: 'That date range isn’t valid.' });
       }
       const start = await trackerStart();

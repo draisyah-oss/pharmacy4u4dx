@@ -49,7 +49,7 @@
       <% } %>
     </div>
     <dl class="sales-facts">
-      <div><dt>Needed per day</dt><dd><%= s.perDay === null ? '–' : (s.perDay === 0 ? 'Target reached' : fmt.money(s.perDay)) %><% if (s.daysLeft && s.perDay) { %><span class="dd-note">for the last <%= s.daysLeft %> days</span><% } %></dd></div>
+      <div><dt>Needed per day</dt><dd><a href="<%= salesMtdHref %>" data-trace><%= s.perDay === null ? '–' : (s.perDay === 0 ? 'Target reached' : fmt.money(s.perDay)) %></a><% if (s.daysLeft && s.perDay) { %><span class="dd-note">for the last <%= s.daysLeft %> days</span><% } %></dd></div>
       <div><dt>This week</dt><dd><a href="<%= salesWeekHref %>" data-trace><%= fmt.money(s.weekTotal) %></a></dd></div>
     </dl>
     <div class="trace-slot" hidden></div>

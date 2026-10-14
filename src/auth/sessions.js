@@ -7,7 +7,8 @@ const COOKIE = 'p4u_sid';
 const HOURS = 3600 * 1000;
 // Staff log in quickly with a PIN, so their session is one working day.
 // Managers, HQ and admin stay logged in for a week.
-const LIFETIME = { branch_staff: 14 * HOURS, default: 7 * 24 * HOURS };
+// Admin can change everything, so admin logins last 12 hours.
+const LIFETIME = { branch_staff: 14 * HOURS, admin: 12 * HOURS, default: 7 * 24 * HOURS };
 
 const randomId = () => crypto.randomBytes(32).toString('base64url');
 
@@ -65,6 +66,7 @@ function loadUser(db) {
           const { data, ...user } = rows[0];
           req.user = user;
           req.csrfToken = data.csrf;
+          req.sessionId = sid;
         }
       }
     } catch (err) {

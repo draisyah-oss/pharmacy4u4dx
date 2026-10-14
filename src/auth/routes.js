@@ -10,8 +10,27 @@ const { startSession, endSession } = require('./sessions');
 const MAX_TRIES = 5;
 const LOCK_MINUTES = 15;
 
+const { safePath } = require('../lib/safe-path');
+
 // Only allow redirects to our own pages.
-const safeNext = (next) => (typeof next === 'string' && /^\/(?!\/)/.test(next) ? next : '/');
+const safeNext = (next) => safePath(next, '/');
+
+// A second lock per device: 30 wrong tries in 15 minutes from one IP address blocks that
+// device for a while, so nobody can work through PINs across many logins.
+const IP_WINDOW_MS = 15 * 60 * 1000;
+const IP_MAX_FAILS = 30;
+const ipFails = new Map(); // ip -> [timestamps]
+function ipBlocked(ip, now = Date.now()) {
+  const list = (ipFails.get(ip) || []).filter((t) => now - t < IP_WINDOW_MS);
+  ipFails.set(ip, list);
+  return list.length >= IP_MAX_FAILS;
+}
+function ipFailed(ip, now = Date.now()) {
+  const list = (ipFails.get(ip) || []).filter((t) => now - t < IP_WINDOW_MS);
+  list.push(now);
+  ipFails.set(ip, list);
+  if (ipFails.size > 10000) ipFails.clear(); // never let this grow without limit
+}
 
 function loginRoutes(db) {
   const router = express.Router();
@@ -56,6 +75,9 @@ function loginRoutes(db) {
 
   // Shared check for PIN and password logins.
   async function attempt(req, res, { username, secret, kind }) {
+    if (ipBlocked(req.ip)) {
+      return { error: 'Too many wrong tries from this device. Wait 15 minutes, or ask admin for help.' };
+    }
     const { rows } = await db.query(
       `SELECT id, username, role, password_hash, pin_hash, failed_attempts, locked_until
        FROM users WHERE username = $1 AND active`,
@@ -64,7 +86,7 @@ function loginRoutes(db) {
     const user = rows[0];
     const wrong = kind === 'pin' ? 'That PIN is not right. Try again.' : 'Username or password is not right.';
 
-    if (!user) return { error: wrong };
+    if (!user) { ipFailed(req.ip); return { error: wrong }; }
     if (user.locked_until && new Date(user.locked_until) > new Date()) {
       const mins = Math.ceil((new Date(user.locked_until) - new Date()) / 60000);
       return { error: `Too many wrong tries. This login opens again in ${mins} minute${mins === 1 ? '' : 's'}, or ask admin to reset it.` };
@@ -75,6 +97,7 @@ function loginRoutes(db) {
     const ok = Boolean(hash) && roleOk && bcrypt.compareSync(String(secret || ''), hash);
 
     if (!ok) {
+      ipFailed(req.ip);
       const tries = user.failed_attempts + 1;
       const lock = tries >= MAX_TRIES;
       await db.query(
@@ -132,4 +155,4 @@ function loginRoutes(db) {
   return router;
 }
 
-module.exports = { loginRoutes, safeNext, MAX_TRIES };
+module.exports = { loginRoutes, safeNext, MAX_TRIES, IP_MAX_FAILS, _ipFails: ipFails };

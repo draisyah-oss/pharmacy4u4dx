@@ -21,6 +21,14 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
+    // Only our own scripts; styles may be inline (progress bars); fonts from Google.
+    res.setHeader('Content-Security-Policy', [
+      "default-src 'self'", "script-src 'self'", "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com", "img-src 'self' data:", "connect-src 'self'",
+      "form-action 'self'", "frame-ancestors 'none'", "base-uri 'none'", "object-src 'none'",
+    ].join('; '));
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    if (req.secure) res.setHeader('Strict-Transport-Security', 'max-age=31536000');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.locals.fmtDate = fmtDate;
@@ -41,7 +49,8 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
       await db.query('SELECT 1');
       res.json({ ok: true, database: db.kind });
     } catch (err) {
-      res.status(500).json({ ok: false, error: err.message });
+      console.error('Health check failed:', err.message);
+      res.status(500).json({ ok: false }); // no details for the outside world
     }
   });
 

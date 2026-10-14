@@ -6,6 +6,7 @@ const { getDb } = require('./db');
 const { prepareDatabase } = require('./db/setup');
 const { createApp } = require('./app');
 const { createSalesSheetLink } = require('./sheets/sync');
+const { clearExpiredSessions } = require('./auth/sessions');
 
 async function main() {
   const db = await getDb();
@@ -25,6 +26,11 @@ async function main() {
   const salesSheet = createSalesSheetLink(db, { now });
   const app = createApp(db, { now, salesSheet });
   salesSheet.schedule(Number(process.env.SALES_SHEET_SYNC_MINUTES) || 10);
+
+  // Remove expired login sessions now and every hour.
+  const tidy = () => clearExpiredSessions(db).catch((err) => console.error('Session clean-up failed:', err.message));
+  tidy();
+  setInterval(tidy, 60 * 60 * 1000).unref();
   const port = Number(process.env.PORT) || 3000;
   const server = app.listen(port, () => {
     console.log(`Pharmacy4U 4DX is running – open http://localhost:${port}`);

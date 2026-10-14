@@ -1,7 +1,8 @@
 <%
   const t = trace;
   const d = (iso) => new Date(iso + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' });
-  const dayLink = (iso) => editLinks ? '<a href="/daily?date=' + iso + branchQs + '">' + d(iso) + '</a>' : d(iso);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const dayLink = (iso) => editLinks ? '<a href="/daily?date=' + esc(iso) + esc(branchQs) + '">' + esc(d(iso)) + '</a>' : esc(d(iso));
   const show = (n) => n === null || n === undefined ? '–' : (t.money ? fmt.money(n) : fmt.number(n, 2));
   const period = d(t.from) + ' – ' + d(t.to);
 %>

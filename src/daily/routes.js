@@ -5,12 +5,13 @@ const calc = require('../calc');
 const { canViewBranch, editBlockReason, dateStrip } = require('./rules');
 const { loadBranch, loadDailyPage, saveDailyEntries } = require('./data');
 
-const ISO = /^\d{4}-\d{2}-\d{2}$/;
-
 const { sheetFieldsFor } = require('../sheets/sync');
+const { safePath } = require('../lib/safe-path');
+const { isRealDate } = require('../lib/dates');
 
 function dailyRoutes(db, { now, trackerStart, salesSheet }) {
   const router = express.Router();
+  let lastManualSync = 0;
 
   // Which branch: staff and managers always their own; HQ/admin pick one (?branch=WM).
   async function resolve(req) {
@@ -20,7 +21,7 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
     const today = calc.todayInMalaysia(now());
     const start = await trackerStart();
     let date = req.query.date || req.body?.date || today;
-    if (!ISO.test(date)) date = today;
+    if (!isRealDate(date)) date = today; // e.g. 2026-02-31 → today, never an error
     return { branch, today, start, date };
   }
 
@@ -83,10 +84,13 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
 
   // "Sync now" for the sales sheet. Goes back to the page it came from.
   router.post('/sales-sheet/sync', async (req, res, next) => {
-    const back = typeof req.body.back === 'string' && /^\/(?!\/)/.test(req.body.back) ? req.body.back : '/';
+    const back = safePath(req.body.back, '/');
     const sep = back.includes('?') ? '&' : '?';
     try {
       if (!salesSheet || !(await salesSheet.enabled())) return res.redirect(`${back}${sep}synced=off`);
+      // Once a minute is plenty – the sheet is checked every 10 minutes anyway.
+      if (Date.now() - lastManualSync < 60 * 1000) return res.redirect(`${back}${sep}synced=0`);
+      lastManualSync = Date.now();
       const r = await salesSheet.syncNow();
       res.redirect(`${back}${sep}synced=${r.changed + r.removed}`);
     } catch (err) {

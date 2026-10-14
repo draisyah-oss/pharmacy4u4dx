@@ -3,6 +3,7 @@
 // never point at a field that doesn't exist.
 
 const { audit, slug } = require('./common');
+const { mentionsSalary, SALARY_MESSAGE } = require('../privacy');
 
 const KINDS = ['WIG', 'Lead', 'Routine', 'Stream', 'Result'];
 const TARGET_PER = ['day', 'week', 'month'];
@@ -16,7 +17,11 @@ async function loadMeasuresAdmin(db, branch) {
     db.query('SELECT * FROM daily_fields WHERE branch_id = $1 ORDER BY active DESC, sort_order', [branch.id]),
     db.query('SELECT name FROM people WHERE branch_id = $1 AND active ORDER BY sort_order', [branch.id]),
   ]);
-  return { measures: measures.rows, fields: fields.rows, owners: ['Team', ...people.rows.map((p) => p.name)] };
+  // Owners to choose from: Team, everyone active, plus any current owner who has since been
+  // removed – otherwise saving a measure would quietly move it to "Team".
+  const owners = ['Team', ...people.rows.map((p) => p.name)];
+  for (const r of [...measures.rows, ...fields.rows]) if (!owners.includes(r.owner_name)) owners.push(r.owner_name);
+  return { measures: measures.rows, fields: fields.rows, owners };
 }
 
 function readMeasureForm(body, fieldKeys, owners) {
@@ -33,6 +38,7 @@ function readMeasureForm(body, fieldKeys, owners) {
   };
   const errors = [];
   if (!m.label) errors.push('Type a name for the measure.');
+  if (mentionsSalary(m.label, m.unit, m.note)) errors.push(SALARY_MESSAGE);
   if (!owners.includes(m.owner_name)) errors.push('Pick an owner from the list.');
   if (!KINDS.includes(m.kind)) errors.push('Pick a kind.');
   if (!TARGET_PER.includes(m.target_per)) errors.push('Pick whether the target is per day, week or month.');
@@ -128,6 +134,7 @@ async function updateField(db, { branch, fieldId, body, user }) {
     owner_name: ctx.owners.includes(body.owner_name) ? body.owner_name : f.owner_name,
     type: FIELD_TYPES.includes(body.type) ? body.type : f.type,
   };
+  if (mentionsSalary(next.label)) return { error: SALARY_MESSAGE };
   const changed = Object.keys(next).filter((k) => next[k] !== f[k]);
   if (!changed.length) return { ok: 'No changes.' };
   await db.transaction(async (tx) => {
@@ -147,6 +154,7 @@ async function addField(db, { branch, body, user }) {
   const owner = String(body.owner_name || 'Team');
   const type = String(body.type || 'count');
   if (!key) return { error: 'Type a short key (letters and numbers, e.g. pwp2).' };
+  if (mentionsSalary(key, label)) return { error: SALARY_MESSAGE };
   if (ctx.fields.some((f) => f.key === key)) return { error: `${branch.code} already has a field “${key}”.` };
   if (!label) return { error: 'Type what staff will see (e.g. “Leaflets handed out”).' };
   if (!ctx.owners.includes(owner)) return { error: 'Pick an owner from the list.' };

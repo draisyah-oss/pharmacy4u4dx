@@ -30,6 +30,13 @@
       </a>
     <% }) %>
   </nav>
+  <% if (user.role === 'admin' || user.role === 'hq') { %>
+    <form method="get" action="/daily" class="other-date">
+      <% if (branchQs) { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
+      <label>Another day <input type="date" name="date" value="<%= date %>" max="<%= today %>"></label>
+      <button type="submit" class="link-button">Open</button>
+    </form>
+  <% } %>
 </div>
 
 <main class="page daily">

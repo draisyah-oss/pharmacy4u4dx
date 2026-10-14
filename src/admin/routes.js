@@ -50,6 +50,15 @@ function adminRoutes(db, { now, salesSheet }) {
     const path = `/admin/targets?branch=${hq ? 'HQ' : encodeURIComponent(branch.code)}`;
     if (result.errors.length) {
       const data = hq ? await T.loadHqTargets(db) : await T.loadBranchTargets(db, branch);
+      // Show what was typed, not what's stored, so nothing has to be typed twice.
+      for (const m of data.measures) {
+        for (const mo of data.months) {
+          const t = req.body[hq ? 'h' : 't']?.[`m${m.id}`]?.[mo];
+          const w = req.body.w?.[`m${m.id}`]?.[mo];
+          if (t !== undefined) m.cells[mo].target = t;
+          if (w !== undefined) m.cells[mo].weekend = w;
+        }
+      }
       return res.status(422).render('admin/targets', { title: 'Targets', list: await branches(), branch, hq, data, ok: null, err: null, errors: result.errors });
     }
     back(res, path, { ok: result.changes ? `Saved ${result.changes} target${result.changes === 1 ? '' : 's'}. Scoreboards use them straight away.` : 'No changes.' });
@@ -75,7 +84,7 @@ function adminRoutes(db, { now, salesSheet }) {
     back(res, peoplePath(req), await P.setActive(db, { personId: Number(req.params.id), active: req.body.active === 'true', user: req.user }));
   }));
   router.post('/admin/users/:id/secret', wrap(async (req, res) => {
-    back(res, peoplePath(req), await P.setSecret(db, { userId: Number(req.params.id), secret: req.body.secret, user: req.user }));
+    back(res, peoplePath(req), await P.setSecret(db, { userId: Number(req.params.id), secret: req.body.secret, user: req.user, currentSessionId: req.sessionId }));
   }));
   router.post('/admin/users/:id/unlock', wrap(async (req, res) => {
     back(res, peoplePath(req), await P.unlock(db, { userId: Number(req.params.id), user: req.user }));

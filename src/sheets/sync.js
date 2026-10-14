@@ -10,6 +10,7 @@
 const calc = require('../calc');
 const { parseSalesTab } = require('./parse');
 const { loadServiceAccount, readTabs } = require('./google');
+const { mentionsSalary } = require('../privacy');
 
 async function sheetSettings(db) {
   const { rows } = await db.query("SELECT key, value FROM app_settings WHERE key LIKE 'sales_sheet_%'");
@@ -29,7 +30,16 @@ async function linkedBranches(db) {
     "SELECT id, code, name, sales_sheet FROM branches WHERE active AND sales_sheet IS NOT NULL ORDER BY sort_order");
   return rows
     .map((b) => ({ ...b, sales_sheet: typeof b.sales_sheet === 'string' ? JSON.parse(b.sales_sheet) : b.sales_sheet }))
-    .filter((b) => b.sales_sheet && b.sales_sheet.tab && b.sales_sheet.columns);
+    .filter((b) => b.sales_sheet && b.sales_sheet.tab && b.sales_sheet.columns)
+    .filter((b) => !mentionsSalary(b.sales_sheet.tab))
+    // Privacy rule: never read a salary/pay column, even if one were mapped by mistake.
+    .map((b) => ({
+      ...b,
+      sales_sheet: {
+        ...b.sales_sheet,
+        columns: Object.fromEntries(Object.entries(b.sales_sheet.columns).filter(([k, h]) => !mentionsSalary(k, h))),
+      },
+    }));
 }
 
 // readRows(tabs) → { tabName: rows }. Injected so tests don't need Google.

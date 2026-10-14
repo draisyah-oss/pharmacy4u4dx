@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const { mentionsSalary } = require('../privacy');
 
 const SEED_PATH = path.resolve(__dirname, '..', '..', 'seed.json');
 
@@ -114,7 +115,8 @@ function validateSeed(seed) {
   }
 
   // Guard the privacy rule: no salary anywhere in the seed.
-  if (/salar/i.test(JSON.stringify(seed).replace(/"privacy":\s*"[^"]*"/, ''))) {
+  const { privacy, ...rest } = seed.company || {};
+  if (mentionsSalary(JSON.stringify({ ...seed, company: rest }))) {
     err('seed.json mentions salaries – salaries must never be stored in this app');
   }
 
