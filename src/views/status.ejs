@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pharmacy4U 4DX</title>
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1><%= settings.company_name || 'Pharmacy4U' %> 4DX</h1>
+      <p class="muted"><%= settings.period %> · <%= settings.company_wig %></p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="notice">
+      <strong>Setup check.</strong> The database is ready and seed.json is loaded.
+      Login, daily entry and the scoreboards come next.
+      <span class="muted">Database: <%= dbKind === 'postgres' ? 'PostgreSQL' : 'local (PGlite)' %> ·
+      tracker started <%= settings.tracker_start_date %></span>
+    </section>
+
+    <h2>Branches</h2>
+    <div class="cards">
+      <% branches.forEach(function (b) { %>
+        <article class="card">
+          <h3><%= b.name %> <span class="tag"><%= b.code %></span></h3>
+          <p class="wig"><%= b.wig %></p>
+          <dl>
+            <div><dt>People</dt><dd><%= b.people %></dd></div>
+            <div><dt>Daily fields</dt><dd><%= b.fields %></dd></div>
+            <div><dt>Measures</dt><dd><%= b.measures %></dd></div>
+            <div><dt>Entries</dt><dd><%= b.entries %></dd></div>
+          </dl>
+          <p class="muted small"><%= b.names %><%= b.has_zakat ? '' : ' · no zakat' %></p>
+        </article>
+      <% }) %>
+    </div>
+
+    <h2>HQ and logins</h2>
+    <p><%= totals.hq_measures %> HQ measures (Alia, Hanin) · <%= totals.users %> logins created,
+      <%= totals.users_ready %> with a password or PIN set.</p>
+  </main>
+</body>
+</html>

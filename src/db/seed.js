@@ -1,0 +1,309 @@
+// Loads seed.json into an empty database.
+//
+// It runs ONCE – the first time the app starts on a fresh database. After that the database
+// is the source of truth (targets, people and measures are edited in Admin), and seed.json
+// is never applied again, so nobody's edits get overwritten.
+
+const fs = require('fs');
+const path = require('path');
+const bcrypt = require('bcryptjs');
+
+const SEED_PATH = path.resolve(__dirname, '..', '..', 'seed.json');
+
+const CALCS = ['sum', 'ratio_percent', 'ratio_per_day'];
+const TARGET_PER = ['day', 'week', 'month'];
+const FIELD_TYPES = ['money', 'count', 'yes_no'];
+const MONTH_RE = /^\d{4}-\d{2}$/;
+
+function readSeed(file = SEED_PATH) {
+  return JSON.parse(fs.readFileSync(file, 'utf8'));
+}
+
+// Checks that every field a measure, total or running total refers to actually exists,
+// so a typo in seed.json fails loudly instead of showing zeros on a scoreboard.
+// Returns { errors: [...], warnings: [...] }.
+function validateSeed(seed) {
+  const errors = [];
+  const warnings = [];
+  const err = (m) => errors.push(m);
+
+  const start = seed.company && seed.company.tracker_start_date;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(start || '')) err('company.tracker_start_date must be YYYY-MM-DD');
+
+  if (!Array.isArray(seed.branches) || seed.branches.length === 0) err('No branches in seed.json');
+  const codes = new Set();
+
+  for (const b of seed.branches || []) {
+    const at = `Branch ${b.code}`;
+    if (codes.has(b.code)) err(`${at}: branch code appears twice`);
+    codes.add(b.code);
+
+    const people = new Set((b.people || []).map((p) => p.name));
+    if (people.size !== (b.people || []).length) err(`${at}: the same person is listed twice`);
+
+    const keys = new Set();
+    for (const f of b.daily_fields || []) {
+      if (keys.has(f.key)) err(`${at}: daily field "${f.key}" appears twice`);
+      keys.add(f.key);
+      if (!FIELD_TYPES.includes(f.type)) err(`${at}: field "${f.key}" has unknown type "${f.type}"`);
+      if (f.owner !== 'Team' && !people.has(f.owner)) {
+        err(`${at}: field "${f.key}" owner "${f.owner}" is not a person in this branch`);
+      }
+    }
+    const needField = (key, where) => {
+      if (key && !keys.has(key)) err(`${at}: ${where} uses field "${key}", which is not a daily field`);
+    };
+
+    (b.total_sales_fields || []).forEach((k) => needField(k, 'total_sales_fields'));
+    (b.online_sales_fields || []).forEach((k) => needField(k, 'online_sales_fields'));
+    needField(b.zakat_field, 'zakat_field');
+    needField(b.lead1_field, 'lead1_field');
+    needField(b.lead2_field, 'lead2_field');
+
+    const measureIds = new Set();
+    for (const m of b.measures || []) {
+      const mat = `${at} measure ${m.id}`;
+      if (measureIds.has(m.id)) err(`${mat}: id appears twice`);
+      measureIds.add(m.id);
+      if (!CALCS.includes(m.calc)) err(`${mat}: unknown calc "${m.calc}"`);
+      if (!TARGET_PER.includes(m.target_per)) err(`${mat}: unknown target_per "${m.target_per}"`);
+      needField(m.numerator_field, `measure ${m.id}`);
+      if (m.calc !== 'sum') {
+        if (!m.denominator_field) err(`${mat}: ${m.calc} needs a denominator_field`);
+        needField(m.denominator_field, `measure ${m.id}`);
+      }
+      for (const [month, t] of Object.entries(m.targets || {})) {
+        if (!MONTH_RE.test(month)) err(`${mat}: target month "${month}" must be YYYY-MM`);
+        if (t !== null && typeof t !== 'number') err(`${mat}: target for ${month} must be a number or null`);
+      }
+      if (m.owner !== 'Team' && !people.has(m.owner)) {
+        err(`${mat}: owner "${m.owner}" is not a person in this branch`);
+      }
+    }
+
+    for (const rt of b.running_totals || []) {
+      needField(rt.field, `running total ${rt.id}`);
+      if (rt.start_value === null || rt.start_value === undefined) {
+        warnings.push(`${at}: running total ${rt.id} has no start value yet`);
+      }
+    }
+    for (const month of Object.keys(b.monthly_total_target || {})) {
+      if (!MONTH_RE.test(month)) err(`${at}: monthly_total_target month "${month}" must be YYYY-MM`);
+    }
+  }
+
+  const hqIds = new Set();
+  const hqOwners = new Set(((seed.hq && seed.hq.owners) || []).map((o) => o.name));
+  for (const m of (seed.hq && seed.hq.measures) || []) {
+    if (hqIds.has(m.id)) err(`HQ measure ${m.id}: id appears twice`);
+    hqIds.add(m.id);
+    if (!['single_value', 'done_and_total'].includes(m.input)) err(`HQ measure ${m.id}: unknown input "${m.input}"`);
+    if (!['high', 'low'].includes(m.better)) err(`HQ measure ${m.id}: better must be high or low`);
+    if (!hqOwners.has(m.owner)) err(`HQ measure ${m.id}: owner "${m.owner}" is not an HQ owner`);
+  }
+
+  // Guard the privacy rule: no salary anywhere in the seed.
+  if (/salar/i.test(JSON.stringify(seed).replace(/"privacy":\s*"[^"]*"/, ''))) {
+    err('seed.json mentions salaries – salaries must never be stored in this app');
+  }
+
+  return { errors, warnings };
+}
+
+function dayBefore(isoDate) {
+  const d = new Date(`${isoDate}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// Usernames: the person's first name in lowercase ("hafizah"). If two people share a name,
+// the branch code is added ("yaya.jh"). Admin can change usernames later.
+function makeUsernames(seed) {
+  const all = [];
+  for (const b of seed.branches) for (const p of b.people) all.push({ name: p.name, branch: b.code });
+  for (const o of seed.hq.owners) all.push({ name: o.name, branch: 'hq' });
+
+  const base = (n) => n.toLowerCase().replace(/[^a-z0-9]+/g, '');
+  const counts = {};
+  all.forEach((x) => { counts[base(x.name)] = (counts[base(x.name)] || 0) + 1; });
+
+  const map = new Map();
+  for (const x of all) {
+    const b = base(x.name);
+    map.set(`${x.branch}|${x.name}`, counts[b] > 1 ? `${b}.${x.branch.toLowerCase()}` : b);
+  }
+  return map;
+}
+
+function userRoleFor(personRole) {
+  return /branch manager/i.test(personRole || '') ? 'branch_manager' : 'branch_staff';
+}
+
+async function isSeeded(db) {
+  const { rows } = await db.query("SELECT value FROM app_settings WHERE key = 'seed_loaded_at'");
+  return rows.length > 0;
+}
+
+async function loadSeed(db, seed, { adminPassword } = {}) {
+  const { errors } = validateSeed(seed);
+  if (errors.length) {
+    throw new Error(`seed.json has problems – nothing was loaded:\n  - ${errors.join('\n  - ')}`);
+  }
+  if (!adminPassword || adminPassword.length < 8) {
+    throw new Error('ADMIN_PASSWORD must be set (at least 8 characters) before the first start.');
+  }
+
+  const startDate = seed.company.tracker_start_date;
+  const usernames = makeUsernames(seed);
+  const summary = { branches: 0, people: 0, daily_fields: 0, measures: 0, targets: 0, hq_measures: 0, users: 0 };
+
+  await db.transaction(async (tx) => {
+    if (await isSeeded(tx)) throw new Error('Seed has already been loaded into this database.');
+
+    const one = async (sql, params) => (await tx.query(sql, params)).rows[0];
+
+    for (const [bi, b] of seed.branches.entries()) {
+      const branch = await one(
+        `INSERT INTO branches (code, name, wig, wig_detail, total_sales_fields, online_sales_fields,
+           zakat_field, lead1_field, lead2_field, lead_measures,
+           stock_turnover_target_per_week, sku_sold_target_per_month, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+        [b.code, b.name, b.wig, b.wig_detail,
+          JSON.stringify(b.total_sales_fields || []), JSON.stringify(b.online_sales_fields || []),
+          b.zakat_field, b.lead1_field, b.lead2_field, JSON.stringify(b.lead_measures || []),
+          b.stock_turnover_target_per_week, b.sku_sold_target_per_month, bi + 1]
+      );
+      summary.branches++;
+
+      const personIds = {};
+      for (const [pi, p] of b.people.entries()) {
+        const person = await one(
+          'INSERT INTO people (branch_id, name, role, sort_order) VALUES ($1,$2,$3,$4) RETURNING id',
+          [branch.id, p.name, p.role, pi + 1]
+        );
+        personIds[p.name] = person.id;
+        summary.people++;
+
+        await tx.query(
+          `INSERT INTO users (username, display_name, role, branch_id, person_id)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [usernames.get(`${b.code}|${p.name}`), p.name, userRoleFor(p.role), branch.id, person.id]
+        );
+        summary.users++;
+      }
+
+      for (const [fi, f] of b.daily_fields.entries()) {
+        await tx.query(
+          `INSERT INTO daily_fields (branch_id, key, label, owner_name, person_id, type, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+          [branch.id, f.key, f.label, f.owner, personIds[f.owner] || null, f.type, fi + 1]
+        );
+        summary.daily_fields++;
+      }
+
+      for (const [mi, m] of b.measures.entries()) {
+        const measure = await one(
+          `INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per,
+             calc, numerator_field, denominator_field, note, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+          [branch.id, m.id, m.owner, personIds[m.owner] || null, m.label, m.kind, m.unit, m.target_per,
+            m.calc, m.numerator_field, m.denominator_field, m.note, mi + 1]
+        );
+        summary.measures++;
+        for (const [month, target] of Object.entries(m.targets || {})) {
+          await tx.query(
+            'INSERT INTO measure_targets (measure_id, month, target) VALUES ($1,$2,$3)',
+            [measure.id, month, target]
+          );
+          summary.targets++;
+        }
+      }
+
+      const bt = b.before_tracker || {};
+      const months = new Set([
+        ...Object.keys(b.monthly_total_target || {}),
+        ...Object.keys(bt.ytd_target_month_end || {}),
+      ]);
+      for (const month of [...months].sort()) {
+        await tx.query(
+          `INSERT INTO branch_month_targets (branch_id, month, total_sales_target, ytd_target_month_end)
+           VALUES ($1,$2,$3,$4)`,
+          [branch.id, month, (b.monthly_total_target || {})[month] ?? null, (bt.ytd_target_month_end || {})[month] ?? null]
+        );
+      }
+
+      await tx.query(
+        `INSERT INTO branch_baselines (branch_id, baseline_end_date, sales_before_start, ytd_sales_to_date)
+         VALUES ($1,$2,$3,$4)`,
+        [branch.id, dayBefore(startDate), bt.sales_1_to_11_oct ?? null, bt.ytd_sales_to_11_oct ?? null]
+      );
+
+      for (const [ri, rt] of (b.running_totals || []).entries()) {
+        await tx.query(
+          `INSERT INTO running_totals (branch_id, code, label, field_key, start_value, start_date, end_target, sort_order)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [branch.id, rt.id, rt.label, rt.field, rt.start_value, startDate, rt.end_target, ri + 1]
+        );
+      }
+    }
+
+    const hqPeople = {};
+    for (const [oi, o] of seed.hq.owners.entries()) {
+      const person = await one(
+        'INSERT INTO people (branch_id, name, role, sort_order) VALUES (NULL,$1,$2,$3) RETURNING id',
+        [o.name, o.role, oi + 1]
+      );
+      hqPeople[o.name] = person.id;
+      summary.people++;
+      await tx.query(
+        `INSERT INTO users (username, display_name, role, person_id) VALUES ($1,$2,'hq',$3)`,
+        [usernames.get(`hq|${o.name}`), o.name, person.id]
+      );
+      summary.users++;
+    }
+
+    for (const [mi, m] of seed.hq.measures.entries()) {
+      const hm = await one(
+        `INSERT INTO hq_measures (code, owner_name, person_id, label, unit, input, better, kind, note, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+        [m.id, m.owner, hqPeople[m.owner] || null, m.label, m.unit, m.input, m.better, m.kind, m.note, mi + 1]
+      );
+      summary.hq_measures++;
+      for (const [month, target] of Object.entries(m.targets || {})) {
+        await tx.query(
+          'INSERT INTO hq_measure_targets (hq_measure_id, month, target) VALUES ($1,$2,$3)',
+          [hm.id, month, target]
+        );
+      }
+    }
+
+    const admin = await one(
+      `INSERT INTO users (username, display_name, role, password_hash)
+       VALUES ('admin', 'Admin', 'admin', $1) RETURNING id`,
+      [bcrypt.hashSync(adminPassword, 10)]
+    );
+    summary.users++;
+
+    // Company-level settings the screens will need.
+    const settings = {
+      company_name: seed.company.name,
+      period: seed.company.period,
+      company_wig: seed.company.company_wig,
+      tracker_start_date: startDate,
+      seed_loaded_at: new Date().toISOString(),
+    };
+    for (const [key, value] of Object.entries(settings)) {
+      await tx.query('INSERT INTO app_settings (key, value) VALUES ($1,$2)', [key, value]);
+    }
+
+    await tx.query(
+      `INSERT INTO audit_log (user_id, action, table_name, record_key, new_value)
+       VALUES ($1, 'seed', NULL, 'seed.json', $2)`,
+      [admin.id, JSON.stringify(summary)]
+    );
+  });
+
+  return summary;
+}
+
+module.exports = { readSeed, validateSeed, loadSeed, isSeeded, makeUsernames, SEED_PATH };
