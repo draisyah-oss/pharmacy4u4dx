@@ -9,7 +9,7 @@ const { scoreboardRoutes } = require('./scoreboard/routes');
 const calc = require('./calc');
 
 // options.now lets tests pretend it's a particular day.
-function createApp(db, { now = () => new Date() } = {}) {
+function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   const app = express();
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
@@ -64,7 +64,7 @@ function createApp(db, { now = () => new Date() } = {}) {
     } catch (err) { next(err); }
   });
 
-  app.use(dailyRoutes(db, { now, trackerStart }));
+  app.use(dailyRoutes(db, { now, trackerStart, salesSheet }));
   app.use(scoreboardRoutes(db, { now, trackerStart }));
 
   // Setup status page (admin).
@@ -84,7 +84,8 @@ function createApp(db, { now = () => new Date() } = {}) {
         SELECT (SELECT count(*)::int FROM hq_measures WHERE active) AS hq_measures,
                (SELECT count(*)::int FROM users WHERE active) AS users,
                (SELECT count(*)::int FROM users WHERE active AND (password_hash IS NOT NULL OR pin_hash IS NOT NULL)) AS users_ready`)).rows[0];
-      res.render('status', { title: 'Setup', settings, branches, totals, dbKind: db.kind });
+      const sheet = salesSheet ? await salesSheet.status() : null;
+      res.render('status', { title: 'Setup', settings, branches, totals, dbKind: db.kind, sheet });
     } catch (err) { next(err); }
   });
 

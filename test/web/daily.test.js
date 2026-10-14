@@ -171,7 +171,7 @@ test('save today: numbers stored, who/when recorded, audit log written', async (
 
   const page = (await b.get(r.location)).html;
   assert.match(page, /Saved 6 numbers/);
-  assert.match(page, /Last saved by Hazera/);
+  assert.match(page, /Last updated by Hazera/);
 
   const audit = (await db.query("SELECT action, old_value, new_value FROM audit_log WHERE record_key = 'WM 2026-10-20 walkin'")).rows;
   assert.deepEqual(audit, [{ action: 'insert', old_value: null, new_value: 1880 }]);

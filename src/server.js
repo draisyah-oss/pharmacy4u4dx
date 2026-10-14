@@ -5,6 +5,7 @@ require('dotenv').config({ quiet: true });
 const { getDb } = require('./db');
 const { prepareDatabase } = require('./db/setup');
 const { createApp } = require('./app');
+const { createSalesSheetLink } = require('./sheets/sync');
 
 async function main() {
   const db = await getDb();
@@ -20,7 +21,10 @@ async function main() {
   // Ignored in production so the live app always uses the real date.
   const fake = process.env.NODE_ENV !== 'production' && /^\d{4}-\d{2}-\d{2}$/.test(process.env.APP_TODAY || '');
   if (fake) console.log(`Pretending today is ${process.env.APP_TODAY} (APP_TODAY).`);
-  const app = createApp(db, fake ? { now: () => new Date(`${process.env.APP_TODAY}T20:00:00+08:00`) } : {});
+  const now = fake ? () => new Date(`${process.env.APP_TODAY}T20:00:00+08:00`) : () => new Date();
+  const salesSheet = createSalesSheetLink(db, { now });
+  const app = createApp(db, { now, salesSheet });
+  salesSheet.schedule(Number(process.env.SALES_SHEET_SYNC_MINUTES) || 10);
   const port = Number(process.env.PORT) || 3000;
   const server = app.listen(port, () => {
     console.log(`Pharmacy4U 4DX is running – open http://localhost:${port}`);

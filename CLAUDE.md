@@ -76,5 +76,11 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Nov/Dec (confirmed 14 Oct): BR's split continues – Shopee 7.5k, zakat 10k, Alpine 0.5k a month. Month totals stay 61.6k / 69k (4DX), so walk-in fills the rest: Nov RM 1,330 weekdays / 1,750 weekends, Dec RM 1,520 / 2,000.
 - Grabmart (confirmed 14 Oct): same proposed ramp as the other branches – sales RM 1k / 2.5k / 4.5k, items 15 / 10 / 5 a week.
 
+## Sales sheet link (14 Oct)
+- Source: 2026 Sales Dashboard (Google Sheet id in seed.json → company.sales_sheet_id), the five branch daily tabs. Column → field mapping per branch in branch.sales_sheet.
+- Synced every 10 min + "Check the sheet now" into daily_entries with source = 'sheet' (migration 004), only 12 Oct → today. Audit actions sheet_sync / sheet_delete. Repeated dates in the sheet are merged (empty never wipes a number).
+- While the link is on, those fields are read-only in Daily Entry (fix in the sheet); with no service account they're typed as before.
+- Auth: Google service account, read-only scope, signed JWT with Node crypto (no googleapis package). GOOGLE_SERVICE_ACCOUNT_JSON (Railway) or GOOGLE_SERVICE_ACCOUNT_FILE (local).
+
 ## Open items
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).

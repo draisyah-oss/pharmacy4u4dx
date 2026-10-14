@@ -406,3 +406,14 @@ html { scroll-behavior: smooth; }
 .trace-sum { margin: 10px 0 0; }
 .trace-loading { margin: 10px 0; color: var(--ink-soft); }
 .back-link { display: inline-block; margin: 4px 0 8px; }
+
+/* Numbers that come from the sales sheet */
+.sheet-tag {
+  display: inline-block; font-size: 0.72rem; font-weight: 700; padding: 1px 7px; border-radius: 999px;
+  background: var(--info-tint); color: #24456e; vertical-align: middle;
+}
+.sheet-note { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; font-size: 0.9rem; color: var(--ink-soft); margin: 0 0 14px; }
+.sheet-note p { margin: 0; }
+.sheet-note .link-button { color: var(--brand); font-weight: 700; }
+.num[data-from-sheet] { background: var(--info-tint); color: var(--ink); -webkit-text-fill-color: var(--ink); opacity: 1; }
+.num[data-from-sheet]::placeholder { font-size: 1rem; color: #6a7f95; -webkit-text-fill-color: #6a7f95; }

@@ -17,7 +17,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 83, fail 0
+npm test                    # should end with: pass 96, fail 0
 npm start
 ```
 
@@ -62,6 +62,33 @@ Changed `seed.json` and want to see it locally? `npm run db:reset-local`, then `
 With the app running, find your Mac's address (System Settings → Wi-Fi → Details → IP address,
 e.g. `192.168.1.23`) and open `http://192.168.1.23:3000` on a phone on the same Wi-Fi.
 
+## Sales sheet (2026 Sales Dashboard)
+
+The app reads each branch's daily tab in the **2026 Sales Dashboard** Google Sheet and fills in
+walk-in sales, transactions, zakat, Shopee, Alpine and Grab orders automatically (which columns
+go where is in `seed.json` → each branch's `sales_sheet`). It checks every 10 minutes, and
+there's a "Check the sheet now" button on the daily entry page. Those boxes become read-only
+and are tagged *Sales sheet* – to change a number, fix it in the sheet. Until the link is set
+up, they're typed in the app as before.
+
+Set it up once (free, about 10 minutes):
+
+1. Go to https://console.cloud.google.com, sign in as draisyah@imanwellnessandhealth.com and
+   create a project (e.g. "Pharmacy4U 4DX").
+2. **APIs & Services → Library**: search **Google Sheets API** and click **Enable**.
+3. **IAM & Admin → Service accounts → Create service account**: name it `p4u-dashboard`,
+   skip the optional steps. Open it → **Keys → Add key → Create new key → JSON**. A file
+   downloads – keep it private.
+4. Open the 2026 Sales Dashboard → **Share** → paste the service account's email (it looks
+   like `p4u-dashboard@your-project.iam.gserviceaccount.com`) → **Viewer** → untick "Notify" → Share.
+5. On your Mac: move the key file into this folder, rename it `google-service-account.json`,
+   and add `GOOGLE_SERVICE_ACCOUNT_FILE=google-service-account.json` to `.env`.
+   On Railway: add a variable `GOOGLE_SERVICE_ACCOUNT_JSON` and paste the whole file's text.
+6. Restart the app. The terminal says "Sales sheet link: on". Admin → Setup check shows the
+   last sync or what went wrong.
+
+The key is never committed (`.gitignore`), and the app only asks for read-only access.
+
 ## Deploy to Railway
 
 1. Push this folder to a GitHub repo.
@@ -80,6 +107,7 @@ src/server.js             npm start: migrate → load seed (first run) → start
 src/app.js                web app: login, home, daily entry, /status (admin), /health
 src/auth/                 login, logout, sessions, form tokens
 src/daily/                Daily Entry: who can edit what, target hints, saving
+src/sheets/               Sales sheet link: Google sign-in, reading the tabs, syncing into daily entries
 src/scoreboard/           Branch Scoreboard: week + month-to-date per measure, running totals, click-through
 src/db/index.js           database connection: Postgres if DATABASE_URL is set, else local PGlite
 src/db/migrate.js         runs new files in src/db/migrations/ in order

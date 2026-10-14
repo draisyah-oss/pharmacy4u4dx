@@ -155,7 +155,8 @@ function strip(r) {
 async function whoEntered(db, branchId, fieldKeys, from, to) {
   if (!fieldKeys.length || from > to) return new Map();
   const { rows } = await db.query(
-    `SELECT e.entry_date, e.field_key, e.updated_at, u.display_name
+    `SELECT e.entry_date, e.field_key, e.updated_at, e.source,
+            CASE WHEN e.source = 'sheet' THEN 'Sales sheet' ELSE u.display_name END AS display_name
      FROM daily_entries e LEFT JOIN users u ON u.id = e.entered_by
      WHERE e.branch_id = $1 AND e.field_key = ANY($2) AND e.entry_date BETWEEN $3 AND $4`,
     [branchId, fieldKeys, from, to]

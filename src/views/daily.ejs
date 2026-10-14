@@ -35,7 +35,7 @@
 <main class="page daily">
   <h1 class="day-title"><%= isToday ? 'Today' : fmtDate(date, { weekday: 'long', day: undefined, month: undefined }) %> <span class="day-date"><%= fmtDate(date, { weekday: isToday ? 'long' : undefined, month: 'long' }) %></span></h1>
   <p class="muted day-meta">
-    <% if (lastSaved) { %>Last saved by <%= lastSaved.display_name || 'someone' %> at <%= new Date(lastSaved.updated_at).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', minute: '2-digit' }) %>.<% } else { %>Nothing entered for this day yet.<% } %>
+    <% if (lastSaved) { %>Last updated by <%= lastSaved.display_name || 'someone' %> at <%= new Date(lastSaved.updated_at).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', minute: '2-digit' }) %>.<% } else { %>Nothing entered for this day yet.<% } %>
   </p>
 
   <% if (saved !== null) { %>
@@ -45,6 +45,16 @@
     <p class="alert alert-bad" role="alert"><%= errorCount === 1 ? '1 number needs fixing' : errorCount + ' numbers need fixing' %> before it can be saved. Nothing was saved yet. <a href="#f_<%= Object.keys(errors)[0] %>">Show me</a></p>
   <% } %>
   <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
+  <% if (synced === 'error') { %><p class="alert alert-bad" role="alert">The sales sheet couldn’t be read<%= sheet && sheet.lastError ? ': ' + sheet.lastError : '' %></p>
+  <% } else if (synced !== null && synced !== 'off') { %><p class="alert alert-good" role="status">Sales sheet synced<%= Number(synced) ? ' – ' + synced + ' numbers updated' : ' – no changes' %>.</p><% } %>
+  <% if (sheet) { %>
+    <form method="post" action="/sales-sheet/sync" class="sheet-note">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="back" value="/daily?date=<%= date %><%= branchQs %>">
+      <p>Boxes marked <span class="sheet-tag">Sales sheet</span> fill in from the 2026 Sales Dashboard<% if (sheet.lastSync) { %>, last checked <%= new Date(sheet.lastSync).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', minute: '2-digit' }) %><% } %>. To change one, fix it in the sheet.</p>
+      <button type="submit" class="link-button">Check the sheet now</button>
+    </form>
+  <% } %>
 
   <nav class="people" aria-label="Jump to a person">
     <% cards.forEach(function (c) { %>
@@ -72,7 +82,7 @@
                data-hint="<%= f.hint ? JSON.stringify(f.hint) : '' %>" data-max-of="<%= f.maxOf || '' %>" data-max-of-label="<%= f.maxOfLabel || '' %>"
                data-initial="<%= f.stored === null ? '' : f.stored %>">
             <div class="field-top">
-              <label for="<%= id %>"><%= f.label %></label>
+              <label for="<%= id %>"><%= f.label %><% if (f.fromSheet) { %> <span class="sheet-tag">Sales sheet</span><% } %></label>
               <span class="field-target"><%= targetText(f) %></span>
             </div>
 
@@ -87,7 +97,7 @@
                 <% if (f.type === 'money') { %><span class="prefix" aria-hidden="true">RM</span><% } %>
                 <input class="num" id="<%= id %>" name="f[<%= f.key %>]" type="text" inputmode="decimal"
                        enterkeyhint="next" autocomplete="off" value="<%= f.value === null ? '' : f.value %>"
-                       placeholder="–"<%= editable ? '' : ' disabled' %><%= err ? ' aria-invalid="true"' : '' %>
+                       placeholder="<%= f.fromSheet ? 'Not in the sheet yet' : '–' %>"<%= editable && !f.fromSheet ? '' : ' disabled' %><%= f.fromSheet ? ' data-from-sheet' : '' %><%= err ? ' aria-invalid="true"' : '' %>
                        aria-describedby="<%= id %>-s">
               </div>
             <% } %>

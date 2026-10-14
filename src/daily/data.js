@@ -68,7 +68,7 @@ function maxOfMap(measures) {
   return map;
 }
 
-async function loadDailyPage(db, { branch, date, user, trackerStart }) {
+async function loadDailyPage(db, { branch, date, user, trackerStart, sheetFields = new Set() }) {
   const [fieldsRes, peopleRes, measures] = await Promise.all([
     db.query('SELECT * FROM daily_fields WHERE branch_id = $1 AND active ORDER BY sort_order', [branch.id]),
     db.query('SELECT * FROM people WHERE branch_id = $1 AND active ORDER BY sort_order', [branch.id]),
@@ -84,7 +84,8 @@ async function loadDailyPage(db, { branch, date, user, trackerStart }) {
   const entries = calc.indexEntries(entryRows);
 
   const lastSaved = (await db.query(
-    `SELECT e.updated_at, u.display_name FROM daily_entries e LEFT JOIN users u ON u.id = e.entered_by
+    `SELECT e.updated_at, CASE WHEN e.source = 'sheet' THEN 'the sales sheet' ELSE u.display_name END AS display_name
+     FROM daily_entries e LEFT JOIN users u ON u.id = e.entered_by
      WHERE e.branch_id = $1 AND e.entry_date = $2 ORDER BY e.updated_at DESC LIMIT 1`,
     [branch.id, date]
   )).rows[0] || null;
@@ -94,6 +95,7 @@ async function loadDailyPage(db, { branch, date, user, trackerStart }) {
     key: f.key, label: cleanLabel(f.label), type: f.type,
     value: entries.get(date, f.key),
     stored: entries.get(date, f.key),
+    fromSheet: sheetFields.has(f.key),
     hint: buildHint(f, measures, entries, date, trackerStart),
     maxOf: maxOf[f.key] || null,
   });
@@ -160,11 +162,23 @@ function parseEntries(fields, input, maxOf) {
   return { values, errors };
 }
 
-async function saveDailyEntries(db, { branch, date, user, input }) {
-  const fields = (await db.query('SELECT key, label, type FROM daily_fields WHERE branch_id = $1 AND active', [branch.id])).rows;
+// sheetFields: fields filled from the sales sheet – never written here, but their stored
+// numbers still count for checks like "…of which" ≤ its total.
+async function saveDailyEntries(db, { branch, date, user, input, sheetFields = new Set() }) {
+  const all = (await db.query('SELECT key, label, type FROM daily_fields WHERE branch_id = $1 AND active', [branch.id])).rows;
   const measures = await loadMeasures(db, branch.id);
-  const { values, errors } = parseEntries(fields, input, maxOfMap(measures));
+  const merged = { ...input };
+  if (sheetFields.size) {
+    const stored = (await db.query(
+      'SELECT field_key, value FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = ANY($3)',
+      [branch.id, date, [...sheetFields]])).rows;
+    for (const k of sheetFields) merged[k] = '';
+    for (const r of stored) merged[r.field_key] = String(r.value);
+  }
+  const { values, errors } = parseEntries(all, merged, maxOfMap(measures));
+  for (const k of sheetFields) delete errors[k];
   if (Object.keys(errors).length) return { errors, changes: 0 };
+  const fields = all.filter((f) => !sheetFields.has(f.key));
 
   let changes = 0;
   await db.transaction(async (tx) => {

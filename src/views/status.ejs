@@ -26,6 +26,16 @@
       <% }) %>
     </div>
 
+    <h2>Sales sheet</h2>
+    <% if (!sheet || !sheet.enabled) { %>
+      <p>Not linked yet<%= sheet && sheet.configError ? ' – ' + sheet.configError : '' %>. Walk-in, transactions and the other sheet columns are typed in the app until it is. README → “Sales sheet” has the steps.</p>
+    <% } else { %>
+      <p>Linked as <b><%= sheet.serviceAccountEmail %></b>.
+        <%= sheet.lastSync ? 'Last checked ' + new Date(sheet.lastSync).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }) + '.' : 'Not checked yet.' %>
+        <% if (sheet.lastError) { %><span class="s-off_track">Last problem: <%= sheet.lastError %></span><% } %></p>
+      <form method="post" action="/sales-sheet/sync"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/status"><button class="button small-button" type="submit">Check the sheet now</button></form>
+    <% } %>
+
     <h2>HQ and logins</h2>
     <p><%= totals.hq_measures %> HQ measures (Alia, Hanin) · <%= totals.users %> logins created,
       <%= totals.users_ready %> with a password or PIN set.</p>

@@ -59,6 +59,10 @@ function validateSeed(seed) {
     needField(b.zakat_field, 'zakat_field');
     needField(b.lead1_field, 'lead1_field');
     needField(b.lead2_field, 'lead2_field');
+    if (b.sales_sheet) {
+      if (!b.sales_sheet.tab || !b.sales_sheet.columns) err(`${at}: sales_sheet needs a tab and columns`);
+      Object.keys(b.sales_sheet.columns || {}).forEach((k) => needField(k, 'sales_sheet'));
+    }
 
     const measureIds = new Set();
     for (const m of b.measures || []) {
@@ -173,12 +177,13 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       const branch = await one(
         `INSERT INTO branches (code, name, wig, wig_detail, total_sales_fields, online_sales_fields,
            zakat_field, lead1_field, lead2_field, lead_measures,
-           stock_turnover_target_per_week, sku_sold_target_per_month, sort_order)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+           stock_turnover_target_per_week, sku_sold_target_per_month, sort_order, sales_sheet)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
         [b.code, b.name, b.wig, b.wig_detail,
           JSON.stringify(b.total_sales_fields || []), JSON.stringify(b.online_sales_fields || []),
           b.zakat_field, b.lead1_field, b.lead2_field, JSON.stringify(b.lead_measures || []),
-          b.stock_turnover_target_per_week, b.sku_sold_target_per_month, bi + 1]
+          b.stock_turnover_target_per_week, b.sku_sold_target_per_month, bi + 1,
+          b.sales_sheet ? JSON.stringify(b.sales_sheet) : null]
       );
       summary.branches++;
 
@@ -298,9 +303,11 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       period: seed.company.period,
       company_wig: seed.company.company_wig,
       tracker_start_date: startDate,
+      sales_sheet_id: seed.company.sales_sheet_id || null,
       seed_loaded_at: new Date().toISOString(),
     };
     for (const [key, value] of Object.entries(settings)) {
+      if (value === null) continue;
       await tx.query('INSERT INTO app_settings (key, value) VALUES ($1,$2)', [key, value]);
     }
 
