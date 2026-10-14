@@ -4,8 +4,8 @@ Replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; man
 CEO see scoreboards. The build spec is in `CLAUDE.md`; all targets, people and measures are in
 `seed.json`.
 
-**Status:** database, seed loader, calculation module, login, Daily Entry and the Branch Scoreboard
-are done. Weekly check-in, commitments, group and HQ scoreboards come next.
+**Status:** login, Daily Entry, Branch Scoreboard, sales sheet link and Admin are done.
+Weekly check-in, commitments, group and HQ scoreboards come next.
 
 ## Run it on your Mac
 
@@ -17,13 +17,14 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 96, fail 0
+npm test                    # should end with: pass 110, fail 0
 npm start
 ```
 
 Then open http://localhost:3000. Stop the app with **Ctrl+C**.
 
-Before anyone can log in, give them a password or PIN (stop the app first):
+Before anyone can log in, give them a password or PIN: log in as `admin` and use
+**Admin → People & logins**. (From the terminal, with the app stopped, this also works:)
 
 ```bash
 npm run set-password -- hazera 1234            # branch staff: 4-digit PIN
@@ -61,6 +62,19 @@ Changed `seed.json` and want to see it locally? `npm run db:reset-local`, then `
 
 With the app running, find your Mac's address (System Settings → Wi-Fi → Details → IP address,
 e.g. `192.168.1.23`) and open `http://192.168.1.23:3000` on a phone on the same Wi-Fi.
+
+## Admin
+
+Log in as `admin` → **Admin** tab:
+
+- **Targets** – every measure per month (percent targets typed as percent), Sat–Sun targets for
+  daily measures, branch month totals, running-total start values, HQ targets. Empty box = track only.
+- **People & logins** – add, rename (carries over to their measures and fields), remove, set PINs
+  and passwords, unlock, change the admin password.
+- **Measures** – owner, kind, what field it counts, per day/week/month, add or retire; daily fields too.
+- **Audit log** – every change, who and when, searchable. PINs and passwords are never logged.
+- **Export to Excel** – the whole group or one branch: scoreboard by week, sales, every daily
+  entry with who entered it (or the sales sheet), targets, people.
 
 ## Sales sheet (2026 Sales Dashboard)
 
@@ -107,6 +121,7 @@ src/server.js             npm start: migrate → load seed (first run) → start
 src/app.js                web app: login, home, daily entry, /status (admin), /health
 src/auth/                 login, logout, sessions, form tokens
 src/daily/                Daily Entry: who can edit what, target hints, saving
+src/admin/                Admin: targets, people & logins, measures & fields, audit log, Excel export
 src/sheets/               Sales sheet link: Google sign-in, reading the tabs, syncing into daily entries
 src/scoreboard/           Branch Scoreboard: week + month-to-date per measure, running totals, click-through
 src/db/index.js           database connection: Postgres if DATABASE_URL is set, else local PGlite

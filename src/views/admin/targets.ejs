@@ -1,0 +1,82 @@
+<%- include('../partials/head', { bodyClass: 'admin-body' }) %>
+<%- include('../partials/topbar') %>
+<%- include('../partials/admin-nav', { active: '/admin/targets' }) %>
+<%
+  const monthName = (m) => new Date(m + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short', year: 'numeric' });
+  const show = (v) => v === null || v === undefined ? '' : String(v);
+%>
+<main class="page admin">
+  <%- include('../partials/branch-pick', { list, branch, hq, base: '/admin/targets', withHq: true }) %>
+  <h1>Targets <span class="muted"><%= hq ? 'HQ' : branch.name %></span></h1>
+  <p class="muted">Leave a box empty for “track only” (no status). Percent targets are typed as percent (45 = 45%). Changes show on the scoreboards straight away.</p>
+
+  <% if (errors.length) { %>
+    <div class="alert alert-bad" role="alert"><p>Nothing was saved – fix these first:</p><ul><% errors.forEach(function (e) { %><li><%= e %></li><% }) %></ul></div>
+  <% } %>
+
+  <form method="post" action="/admin/targets" class="admin-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="branch" value="<%= hq ? 'HQ' : branch.code %>">
+
+    <div class="table-wrap">
+      <table class="admin-table targets">
+        <thead><tr><th>Measure</th><% data.months.forEach(function (m) { %><th class="n"><%= monthName(m) %></th><% }) %></tr></thead>
+        <tbody>
+          <% data.measures.forEach(function (m) { %>
+            <tr class="<%= m.active ? '' : 'is-off' %>">
+              <th scope="row">
+                <span class="t-label"><%= m.code %> · <%= m.label %></span>
+                <span class="t-meta"><%= m.owner_name %>, <%= hq ? (m.better === 'low' ? 'lower is better' : m.unit) : (m.pct ? '% of ' + (m.target_per) + 's' : 'per ' + m.target_per) %><%= m.active ? '' : ' – off the scoreboard' %></span>
+              </th>
+              <% data.months.forEach(function (mo) { const c = m.cells[mo]; %>
+                <td class="n">
+                  <label class="t-input"><span class="sr-only"><%= m.label %> <%= monthName(mo) %></span>
+                    <input name="<%= hq ? 'h' : 't' %>[m<%= m.id %>][<%= mo %>]" value="<%= c.target %>" inputmode="decimal" autocomplete="off"><% if (m.pct) { %><i>%</i><% } %>
+                  </label>
+                  <% if (!hq && m.daily) { %>
+                    <label class="t-input t-weekend" title="Saturday and Sunday target – leave empty for the same every day"><span>Sat–Sun</span>
+                      <input name="w[m<%= m.id %>][<%= mo %>]" value="<%= c.weekend %>" inputmode="decimal" autocomplete="off" placeholder="same">
+                    </label>
+                  <% } %>
+                </td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+
+    <% if (!hq) { %>
+      <h2>Branch totals</h2>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th></th><% data.months.forEach(function (m) { %><th class="n"><%= monthName(m) %></th><% }) %></tr></thead>
+          <tbody>
+            <tr><th scope="row">Total sales target (RM)</th><% data.months.forEach(function (mo) { const t = data.totals[mo] || {}; %><td class="n"><input name="bt[<%= mo %>][total]" value="<%= show(t.total) %>" inputmode="decimal" aria-label="Total sales target <%= mo %>"></td><% }) %></tr>
+            <tr><th scope="row">Year-to-date target at month end (RM)</th><% data.months.forEach(function (mo) { const t = data.totals[mo] || {}; %><td class="n"><input name="bt[<%= mo %>][ytd]" value="<%= show(t.ytd) %>" inputmode="decimal" aria-label="YTD target <%= mo %>"></td><% }) %></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <% if (data.running.length) { %>
+        <h2>Running totals</h2>
+        <div class="table-wrap">
+          <table class="admin-table">
+            <thead><tr><th></th><th class="n">Start value (12 Oct)</th><th class="n">End target</th></tr></thead>
+            <tbody>
+              <% data.running.forEach(function (r) { %>
+                <tr><th scope="row"><%= r.label %></th>
+                  <td class="n"><input name="rt[r<%= r.id %>][start]" value="<%= show(r.start_value === null ? null : Number(r.start_value)) %>" inputmode="decimal" aria-label="<%= r.label %> start"></td>
+                  <td class="n"><input name="rt[r<%= r.id %>][end]" value="<%= show(r.end_target === null ? null : Number(r.end_target)) %>" inputmode="decimal" aria-label="<%= r.label %> end target"></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    <% } %>
+
+    <div class="savebar admin-savebar"><p class="savebar-note">Only changed boxes are saved, each one logged.</p><button class="button save" type="submit">Save targets</button></div>
+  </form>
+</main>
+</body>
+</html>

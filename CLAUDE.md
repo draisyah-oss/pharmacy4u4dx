@@ -37,7 +37,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 4. **Commitments**: last week's commitments with Done Y/N, then one new commitment per person.
 5. **Group scoreboard** (managers' Monday session): one row per branch – MTD %, required sales/day, walk-in % of target, Lead 1 %, Lead 2 %, stock turnover, OOS count, zakat pending (– for branches without zakat) – plus company total, wins/issues, and 12-week trend grids.
 6. **HQ scoreboard + HQ input**: Alia's inventory WIG and leads, Hanin's ops and training measures (see `seed.json` → `hq`). Turnover days: lower is better.
-7. **Admin**: edit targets, people, measures, logins (passwords/PINs); export everything to Excel/CSV.
+7. **Admin** – BUILT (src/admin, /admin): targets per month (+ weekend, branch totals, running totals, HQ), people & logins (add/rename/remove, PIN/password, unlock), measures & daily fields (edit/add/retire, checked against field use), audit log viewer, Excel export per branch and group (exceljs). Every change audited; PINs/passwords never logged. Form keys use a letter before ids (t[m12][2026-10]) because the form parser turns small numeric keys into arrays.
 
 ## Calculation rules (must match the Excel trackers)
 - Monthly targets spread evenly per day; weekly targets per day ÷ 7. Weeks run Monday–Sunday.

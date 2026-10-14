@@ -1,0 +1,85 @@
+<%- include('../partials/head', { bodyClass: 'admin-body' }) %>
+<%- include('../partials/topbar') %>
+<%- include('../partials/admin-nav', { active: '/admin/measures' }) %>
+<%
+  const calcText = { sum: 'Add up the field', ratio_percent: '% – field ÷ another field', ratio_per_day: 'Per day – field ÷ days marked in another field' };
+  const typeText = { money: 'Money (RM)', count: 'Number', yes_no: 'Yes / no' };
+  const activeFields = data.fields.filter(function (f) { return f.active; });
+  function measureForm(m, isNew) { %>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+    <% if (isNew) { %><label>Code <input name="code" placeholder="e.g. W8" required maxlength="6"></label><% } %>
+    <label class="wide">Name <input name="label" value="<%= m.label || '' %>" required></label>
+    <label>Owner <select name="owner_name"><% data.owners.forEach(function (o) { %><option<%= m.owner_name === o ? ' selected' : '' %>><%= o %></option><% }) %></select></label>
+    <label>Kind <select name="kind"><% KINDS.forEach(function (k) { %><option<%= m.kind === k ? ' selected' : '' %>><%= k %></option><% }) %></select></label>
+    <label>Unit <input name="unit" value="<%= m.unit || '' %>" placeholder="RM, units, % on time…"></label>
+    <label>Target per <select name="target_per"><% TARGET_PER.forEach(function (t) { %><option value="<%= t %>"<%= m.target_per === t ? ' selected' : '' %>><%= t %></option><% }) %></select></label>
+    <label class="wide">How it’s worked out <select name="calc"><% CALCS.forEach(function (c) { %><option value="<%= c %>"<%= m.calc === c ? ' selected' : '' %>><%= calcText[c] %></option><% }) %></select></label>
+    <label>Counts this field <select name="numerator_field"><% activeFields.forEach(function (f) { %><option value="<%= f.key %>"<%= m.numerator_field === f.key ? ' selected' : '' %>><%= f.label %></option><% }) %></select></label>
+    <label>Divided by (for % and per day) <select name="denominator_field"><option value="">–</option><% activeFields.forEach(function (f) { %><option value="<%= f.key %>"<%= m.denominator_field === f.key ? ' selected' : '' %>><%= f.label %></option><% }) %></select></label>
+    <label class="wide">Note <input name="note" value="<%= m.note || '' %>"></label>
+<% } %>
+<main class="page admin">
+  <%- include('../partials/branch-pick', { list, branch, hq: false, base: '/admin/measures', withHq: false }) %>
+  <h1>Measures <span class="muted"><%= branch.name %></span></h1>
+  <p class="muted">What each scoreboard row counts and who owns it. Targets are set under <a href="/admin/targets?branch=<%= encodeURIComponent(branch.code) %>">Targets</a>.</p>
+
+  <div class="admin-list">
+    <% data.measures.forEach(function (m) { %>
+      <details class="admin-row<%= m.active ? '' : ' is-off' %>" id="m-<%= m.id %>">
+        <summary><b><%= m.code %></b> <%= m.label %> <span class="muted"><%= m.owner_name %> · <%= m.kind %><%= m.active ? '' : ' · off' %></span></summary>
+        <form method="post" action="/admin/measures/<%= m.id %>" class="admin-fields">
+          <% measureForm(m, false) %>
+          <input type="hidden" name="anchor" value="m-<%= m.id %>">
+          <button class="button small-button" type="submit">Save <%= m.code %></button>
+        </form>
+        <form method="post" action="/admin/measures/<%= m.id %>/active" class="admin-danger">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+          <input type="hidden" name="active" value="<%= m.active ? 'false' : 'true' %>">
+          <button class="link-button" type="submit"><%= m.active ? 'Take off the scoreboard (history kept)' : 'Put back on the scoreboard' %></button>
+        </form>
+      </details>
+    <% }) %>
+    <details class="admin-row admin-add">
+      <summary><b>Add a measure</b></summary>
+      <form method="post" action="/admin/measures" class="admin-fields">
+        <% measureForm({ owner_name: 'Team', kind: 'Lead', target_per: 'day', calc: 'sum' }, true) %>
+        <button class="button small-button" type="submit">Add measure</button>
+      </form>
+    </details>
+  </div>
+
+  <h2>Daily fields</h2>
+  <p class="muted">The boxes on the daily entry, grouped onto each owner’s card.</p>
+  <div class="admin-list">
+    <% data.fields.forEach(function (f) { %>
+      <details class="admin-row<%= f.active ? '' : ' is-off' %>" id="f-<%= f.id %>">
+        <summary><%= f.label %> <span class="muted"><%= f.key %> · <%= f.owner_name %> · <%= typeText[f.type] %><%= f.active ? '' : ' · off' %></span></summary>
+        <form method="post" action="/admin/fields/<%= f.id %>" class="admin-fields">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>"><input type="hidden" name="anchor" value="f-<%= f.id %>">
+          <label class="wide">What staff see <input name="label" value="<%= f.label %>" required></label>
+          <label>On whose card <select name="owner_name"><% data.owners.forEach(function (o) { %><option<%= f.owner_name === o ? ' selected' : '' %>><%= o %></option><% }) %></select></label>
+          <label>Type <select name="type"><% FIELD_TYPES.forEach(function (t) { %><option value="<%= t %>"<%= f.type === t ? ' selected' : '' %>><%= typeText[t] %></option><% }) %></select></label>
+          <button class="button small-button" type="submit">Save</button>
+        </form>
+        <form method="post" action="/admin/fields/<%= f.id %>/active" class="admin-danger">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+          <input type="hidden" name="active" value="<%= f.active ? 'false' : 'true' %>">
+          <button class="link-button" type="submit"><%= f.active ? 'Take off the daily entry (past numbers kept)' : 'Put back on the daily entry' %></button>
+        </form>
+      </details>
+    <% }) %>
+    <details class="admin-row admin-add">
+      <summary><b>Add a daily field</b></summary>
+      <form method="post" action="/admin/fields" class="admin-fields">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+        <label>Short key <input name="key" placeholder="e.g. leaflets" required></label>
+        <label class="wide">What staff see <input name="label" required></label>
+        <label>On whose card <select name="owner_name"><% data.owners.forEach(function (o) { %><option><%= o %></option><% }) %></select></label>
+        <label>Type <select name="type"><% FIELD_TYPES.forEach(function (t) { %><option value="<%= t %>"><%= typeText[t] %></option><% }) %></select></label>
+        <button class="button small-button" type="submit">Add field</button>
+      </form>
+    </details>
+  </div>
+</main>
+</body>
+</html>

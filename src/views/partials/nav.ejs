@@ -4,5 +4,6 @@
   <nav class="tabs" aria-label="Sections">
     <a href="/daily<%= bq %>" class="tab<%= here === 'daily' ? ' is-current' : '' %>"<%= here === 'daily' ? ' aria-current="page"' : '' %>>Daily entry</a>
     <a href="/scoreboard<%= bq %>" class="tab<%= here === 'scoreboard' ? ' is-current' : '' %>"<%= here === 'scoreboard' ? ' aria-current="page"' : '' %>>Scoreboard</a>
+    <% if (user.role === 'admin') { %><a href="/admin" class="tab">Admin</a><% } %>
   </nav>
 <% } %>

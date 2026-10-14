@@ -1,0 +1,32 @@
+<%- include('../partials/head', { bodyClass: 'admin-body' }) %>
+<%- include('../partials/topbar') %>
+<%- include('../partials/admin-nav', { active: '/admin' }) %>
+<main class="page admin">
+  <h1>Admin</h1>
+  <p class="muted">Targets, people, logins and measures. Every change is written to the audit log.</p>
+
+  <div class="admin-grid">
+    <a class="admin-card" href="/admin/targets"><b>Targets</b><span>Monthly targets for every measure, weekend targets, branch month totals, running-total start values, HQ targets.</span></a>
+    <a class="admin-card" href="/admin/people"><b>People & logins</b><span><%= counts.logins %> logins<%= counts.no_login ? ', ' + counts.no_login + ' without a PIN or password yet' : '' %><%= counts.locked ? ', ' + counts.locked + ' locked' : '' %>.</span></a>
+    <a class="admin-card" href="/admin/measures"><b>Measures & daily fields</b><span><%= counts.measures %> measures. Change owners, what they count, or add new ones.</span></a>
+    <a class="admin-card" href="/admin/audit"><b>Audit log</b><span><%= counts.changes_week %> changes in the last 7 days.</span></a>
+  </div>
+
+  <h2>Export to Excel</h2>
+  <p class="muted">Scoreboard by week, sales, every daily entry with who entered it, targets and people.</p>
+  <div class="export-row">
+    <a class="button" href="/admin/export/group.xlsx" download>Whole group</a>
+    <% branches.forEach(function (b) { %><a class="button secondary" href="/admin/export/<%= encodeURIComponent(b.code) %>.xlsx" download><%= b.name %></a><% }) %>
+  </div>
+
+  <h2>Sales sheet</h2>
+  <% if (!sheet || !sheet.enabled) { %>
+    <p>Not linked yet. README → “Sales sheet” has the steps.</p>
+  <% } else { %>
+    <p>Linked as <b><%= sheet.serviceAccountEmail %></b>. <%= sheet.lastSync ? 'Last checked ' + new Date(sheet.lastSync).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }) + '.' : '' %>
+      <% if (sheet.lastError) { %><span class="s-off_track">Last problem: <%= sheet.lastError %></span><% } %></p>
+  <% } %>
+  <p><a href="/status">Setup check</a></p>
+</main>
+</body>
+</html>

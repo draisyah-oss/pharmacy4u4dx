@@ -1,0 +1,6 @@
+<nav class="strip branch-strip admin-pick" aria-label="Choose a branch">
+  <% list.forEach(function (b) { %>
+    <a class="strip-pill<%= branch && branch.code === b.code ? ' is-current' : '' %>" href="<%= base %>?branch=<%= encodeURIComponent(b.code) %>"><%= b.code %></a>
+  <% }) %>
+  <% if (withHq) { %><a class="strip-pill<%= hq ? ' is-current' : '' %>" href="<%= base %>?branch=HQ">HQ</a><% } %>
+</nav>
