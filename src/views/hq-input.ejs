@@ -1,0 +1,48 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'hq' }) %>
+<%- include('partials/week-bar', { base: '/hq', pickAny: false }) %>
+<%
+  const typedV = (m) => typed && typed.v && typed.v['m' + m.id] !== undefined ? typed.v['m' + m.id] : hq.inputValue(m, m.entry, 'value');
+  const typedT = (m) => typed && typed.t && typed.t['m' + m.id] !== undefined ? typed.t['m' + m.id] : hq.inputValue(m, m.entry, 'total');
+  const owners = [...new Set(rows.map(function (r) { return r.owner_name; }))];
+  const mine = rows.filter(function (r) { return r.canEdit; }).length;
+%>
+<main class="page wk">
+  <header class="board-head">
+    <h1>HQ input <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">Every Monday, for the week that just ended. Percentages are typed as percent (95 = 95%). Leave a box empty if there’s nothing to report.</p>
+  </header>
+  <form method="post" action="/hq" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
+    <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
+    <% owners.forEach(function (o) { %>
+      <section class="wk-card" aria-label="<%= o %>">
+        <h2><%= o %></h2>
+        <% rows.filter(function (r) { return r.owner_name === o; }).forEach(function (m) {
+             const off = blocked || !m.canEdit ? ' disabled' : '';
+             const r = m.result; %>
+          <div class="wk-field hq-field<%= errors[m.id] ? ' has-error' : '' %>" id="hq-<%= m.code %>">
+            <span class="wk-label"><%= m.label %>
+              <small>Target <%= m.target === null ? 'none – tracked only' : hq.show(m, m.target) %><%= m.better === 'low' ? ' (lower is better)' : '' %><% if (m.entry) { %> · now <span class="s-<%= r.status %>"><%= hq.show(m, r.actual) %> <%= fmt.symbol(r.status) %></span> · entered by <%= m.entry.entered_by_name || '–' %><% } %></small></span>
+            <% if (m.input === 'done_and_total') { %>
+              <span class="hq-pair">
+                <label><span class="sr-only">Done</span><input class="num" name="v[m<%= m.id %>]" inputmode="decimal" autocomplete="off" placeholder="done" value="<%= typedV(m) %>"<%= off %>></label>
+                <span>of</span>
+                <label><span class="sr-only">Total</span><input class="num" name="t[m<%= m.id %>]" inputmode="decimal" autocomplete="off" placeholder="total" value="<%= typedT(m) %>"<%= off %>></label>
+              </span>
+            <% } else { %>
+              <span class="num-wrap<%= m.unit === 'RM' ? ' is-money' : '' %>"><% if (m.unit === 'RM') { %><span class="prefix">RM</span><% } %><input class="num" name="v[m<%= m.id %>]" inputmode="decimal" autocomplete="off" value="<%= typedV(m) %>"<%= off %>><% if (m.unit === '%') { %><span class="suffix">%</span><% } %></span>
+            <% } %>
+            <% if (m.note) { %><span class="muted small"><%= m.note %></span><% } %>
+            <% if (errors[m.id]) { %><span class="wk-error"><%= errors[m.id] %></span><% } %>
+          </div>
+        <% }) %>
+      </section>
+    <% }) %>
+    <% if (!blocked && mine) { %><button class="button wide" type="submit">Save HQ numbers</button><% } %>
+  </form>
+  <p class="wk-next"><a class="button secondary" href="/hq/scoreboard?week=<%= week %>">HQ scoreboard →</a></p>
+</main>
+</body>
+</html>

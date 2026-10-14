@@ -1,0 +1,125 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'weekly' }) %>
+<%- include('partials/week-bar', { base: '/weekly' }) %>
+<%
+  const s = sales;
+  const salesHref = '/scoreboard/trace?type=sales&from=' + mtdFrom + '&to=' + asOf + branchQs;
+  const monthName = new Date(s.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' });
+  const show = (k) => values[k] === null || values[k] === undefined ? '' : values[k];
+  const t = turnover;
+  const off = blocked ? ' disabled' : '';
+%>
+<main class="page wk">
+  <header class="board-head">
+    <h1>Weekly check-in <span class="board-week"><%= branch.name %> · week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">Fill in on Monday for the week that just ended (Monday to Sunday).
+      <% if (checkin && checkin.submitted_by_name) { %>Last saved by <%= checkin.submitted_by_name %>.<% } %></p>
+  </header>
+
+  <section class="wk-facts" aria-label="Sales and stock">
+    <div class="wk-fact">
+      <span class="wk-k"><%= monthName %> sales so far</span>
+      <a class="wk-v" href="<%= salesHref %>"><%= fmt.money(s.mtd) %></a>
+      <span class="wk-sub"><% if (s.monthTarget) { %><%= fmt.pct(s.pct) %> of <%= fmt.money(s.monthTarget) %> · <span class="s-<%= s.status %>"><%= s.pacePct >= 1 ? 'ahead of pace' : 'behind pace' %> <%= fmt.symbol(s.status) %></span><% } else { %>No month target<% } %></span>
+      <span class="wk-sub"><%= started ? 'Counted to ' + fmtDate(asOf) : 'No days counted yet' %></span>
+    </div>
+    <div class="wk-fact">
+      <span class="wk-k">Sales needed per day</span>
+      <a class="wk-v" href="<%= salesHref %>"><%= s.perDay === null ? '–' : (s.perDay === 0 ? 'Target reached' : fmt.money(s.perDay)) %></a>
+      <span class="wk-sub"><%= s.daysLeft && s.perDay ? 'for the last ' + s.daysLeft + ' days of ' + monthName : '' %></span>
+    </div>
+    <div class="wk-fact">
+      <span class="wk-k">Stock turnover this week</span>
+      <span class="wk-v s-<%= t.status %>"><%= t.turnover === null ? '–' : fmt.number(t.turnover, 2) %> <%= t.turnover === null ? '' : fmt.symbol(t.status) %></span>
+      <span class="wk-sub"><% if (t.turnover === null) { %>Needs Monday stock, Sunday stock and COGS<% } else { %>Target <%= fmt.number(Number(branch.stock_turnover_target_per_week), 2) %> a week · <%= fmt.number(t.daysOfStock, 0) %> days of stock<% } %></span>
+    </div>
+  </section>
+
+  <form method="post" action="/weekly" class="wk-form" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="week" value="<%= week %>">
+    <% if (pickAny) { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
+    <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
+
+    <section class="wk-card" aria-labelledby="wk-numbers">
+      <h2 id="wk-numbers">Numbers</h2>
+      <% numbers.forEach(function (n) { %>
+        <label class="wk-field<%= errors[n.key] ? ' has-error' : '' %>">
+          <span class="wk-label"><%= n.label %><small><%= n.hint %><% if (n.key === 'skus_sold_mtd' && skuTarget) { %> · target <%= fmt.number(skuTarget, 0) %> a month<% } %></small></span>
+          <span class="num-wrap<%= n.money ? ' is-money' : '' %>"><% if (n.money) { %><span class="prefix">RM</span><% } %><input class="num" name="<%= n.key %>" inputmode="decimal" autocomplete="off" value="<%= show(n.key) %>"<%= off %>></span>
+          <% if (errors[n.key]) { %><span class="wk-error"><%= errors[n.key] %></span><% } %>
+        </label>
+      <% }) %>
+      <% if (!hasZakat) { %><p class="muted small">No zakat at this branch, so the zakat claims boxes are hidden.</p><% } %>
+    </section>
+
+    <section class="wk-card" aria-labelledby="wk-words">
+      <h2 id="wk-words">Win and issue</h2>
+      <% texts.forEach(function (x) { %>
+        <label class="wk-field<%= errors[x.key] ? ' has-error' : '' %>">
+          <span class="wk-label"><%= x.label %></span>
+          <textarea name="<%= x.key %>" rows="3" maxlength="500"<%= off %>><%= show(x.key) %></textarea>
+          <% if (errors[x.key]) { %><span class="wk-error"><%= errors[x.key] %></span><% } %>
+        </label>
+      <% }) %>
+    </section>
+    <% if (!blocked) { %><button class="button wide" type="submit">Save check-in</button><% } %>
+  </form>
+
+  <section class="wk-card" id="oos" aria-labelledby="oos-h">
+    <h2 id="oos-h">Out of stock</h2>
+    <p class="muted small">Items the branch can’t sell. Inventory (HQ) fills in the reason and when it’s back.</p>
+    <% if (!oos.length) { %><p class="muted">Nothing on the list.</p><% } %>
+    <% oos.forEach(function (o) { const open = openStatuses.includes(o.status); %>
+      <article class="oos<%= open ? '' : ' is-closed' %>" id="oos-<%= o.id %>">
+        <header class="oos-top">
+          <b><%= o.item %></b>
+          <span class="oos-status<%= open ? ' s-off_track' : ' s-on_track' %>"><%= o.status %></span>
+        </header>
+        <p class="oos-meta">
+          <% if (o.out_of_stock_since) { %>Out since <%= fmtDate(o.out_of_stock_since) %> · <% } %>
+          <% if (o.customers_asking) { %>Customers: <%= o.customers_asking %> · <% } %>
+          Logged <%= o.week_start === week ? 'this week' : 'week of ' + fmtDate(o.week_start) %><%= o.created_by_name ? ' by ' + o.created_by_name : '' %>
+        </p>
+        <p class="oos-answer"><% if (o.reason_for_delay || o.expected_back) { %>HQ: <%= o.reason_for_delay || '' %><%= o.expected_back ? ' · back by ' + fmtDate(o.expected_back) : '' %><% } else { %><span class="muted">No answer from HQ yet.</span><% } %></p>
+        <% if (o.branchEdit || canAnswer) { %>
+          <details class="admin-details">
+            <summary>Update</summary>
+            <form method="post" action="/weekly/oos/<%= o.id %>" class="admin-fields">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
+              <% if (o.branchEdit) { %>
+                <label>Item <input name="item" value="<%= o.item %>" maxlength="120" required></label>
+                <label>Out since <input type="date" name="out_of_stock_since" value="<%= o.out_of_stock_since || '' %>" max="<%= today %>"></label>
+                <label class="wide">Customers asking / lost sales <input name="customers_asking" value="<%= o.customers_asking || '' %>" maxlength="200"></label>
+              <% } %>
+              <% if (canAnswer) { %>
+                <label class="wide">Reason for the delay (HQ) <input name="reason_for_delay" value="<%= o.reason_for_delay || '' %>" maxlength="300"></label>
+                <label>Expected back <input type="date" name="expected_back" value="<%= o.expected_back || '' %>"></label>
+              <% } %>
+              <label>Status
+                <select name="status"><% statuses.forEach(function (st) { %><option<%= st === o.status ? ' selected' : '' %>><%= st %></option><% }) %></select>
+              </label>
+              <button class="button small-button" type="submit">Save</button>
+            </form>
+          </details>
+        <% } %>
+      </article>
+    <% }) %>
+
+    <% if (!blocked) { %>
+      <form method="post" action="/weekly/oos" class="admin-fields oos-add">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
+        <% if (pickAny) { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
+        <label class="wide">Item out of stock <input name="item" maxlength="120" required></label>
+        <label>Out since <input type="date" name="out_of_stock_since" max="<%= today %>"></label>
+        <label class="wide">Customers asking / lost sales <input name="customers_asking" maxlength="200" placeholder="e.g. 3 asked this week"></label>
+        <button class="button small-button" type="submit">Add to the list</button>
+      </form>
+    <% } %>
+  </section>
+
+  <p class="wk-next"><a class="button secondary" href="/commitments?<%= branchQs.slice(1) %>">Next: commitments →</a></p>
+</main>
+</body>
+</html>

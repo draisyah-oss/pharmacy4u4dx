@@ -1,0 +1,16 @@
+<div class="daybar">
+  <% if (typeof pickAny !== 'undefined' && pickAny && typeof branches !== 'undefined') { %>
+    <nav class="strip branch-strip" aria-label="Choose a branch">
+      <% branches.forEach(function (b) { %>
+        <a href="<%= base %>?branch=<%= encodeURIComponent(b.code) %>&week=<%= week %>" class="strip-pill<%= branch && b.code === branch.code ? ' is-current' : '' %>"><%= b.code %></a>
+      <% }) %>
+    </nav>
+  <% } %>
+  <nav class="strip week-strip" aria-label="Choose a week">
+    <% pills.forEach(function (p) { %>
+      <a href="<%= p.href %>" class="strip-pill<%= p.current ? ' is-current' : '' %>"<%= p.current ? ' aria-current="true"' : '' %>><%= p.label %></a>
+    <% }) %>
+  </nav>
+</div>
+<% if (typeof ok !== 'undefined' && ok) { %><p class="alert alert-good page-flash" role="status"><%= ok %></p><% } %>
+<% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad page-flash" role="alert"><%= err %></p><% } %>

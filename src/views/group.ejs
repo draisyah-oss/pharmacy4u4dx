@@ -1,0 +1,105 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'group' }) %>
+<%- include('partials/week-bar', { base: '/group', pickAny: false }) %>
+<%
+  const t = group.total;
+  const cell = (m) => m ? fmt.pct(m.pct) || '–' : '–';
+  // A number that links to the rows behind it when this login may open that branch.
+  const link = (code, href, text, cls) => canOpen(code)
+    ? '<a class="' + (cls || '') + '" href="' + href + '">' + text + '</a>'
+    : '<span class="' + (cls || '') + '">' + text + '</span>';
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const measureHref = (r, m) => '/scoreboard/trace?type=measure&code=' + encodeURIComponent(m.code) + '&from=' + r.week + '&to=' + r.asOf + qs(r.code);
+  const salesHref = (r) => '/scoreboard/trace?type=sales&from=' + r.mtdFrom + '&to=' + r.asOf + qs(r.code);
+  const checkinHref = (r, hash) => '/weekly?week=' + r.week + qs(r.code) + (hash || '');
+  const mcell = (r, m) => !m ? '<span class="muted">–</span>'
+    : (r.started && r.asOf >= r.week ? link(r.code, measureHref(r, m), esc(cell(m)) + ' ' + fmt.symbol(m.status), 's-' + m.status) : '<span class="muted">–</span>');
+%>
+<main class="page group-page">
+  <header class="board-head">
+    <h1>Group scoreboard <span class="board-week">week <%= fmt.weekLabel(group.week, group.weekEnd) %></span></h1>
+    <p class="muted">Month-to-date sales, this week’s walk-in and lead measures, and last Monday’s check-in, per branch. Tap a number for the entries behind it.</p>
+  </header>
+
+  <div class="legend" aria-label="Status key">
+    <span><b class="s-on_track">✔</b> 100% or more</span><span><b class="s-watch">▲</b> 90–99%</span><span><b class="s-off_track">✕</b> under 90%</span>
+  </div>
+
+  <div class="table-wrap">
+    <table class="admin-table group-table">
+      <thead>
+        <tr>
+          <th scope="col">Branch</th><th scope="col" class="n">Sales MTD</th><th scope="col" class="n">Needed / day</th>
+          <th scope="col" class="n">Walk-in</th><th scope="col" class="n">Lead 1</th><th scope="col" class="n">Lead 2</th>
+          <th scope="col" class="n">Stock turnover</th><th scope="col" class="n">OOS open</th><th scope="col" class="n">Zakat pending</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% group.rows.forEach(function (r) { const s = r.sales; %>
+          <tr>
+            <th scope="row"><%- link(r.code, '/scoreboard?week=' + r.week + qs(r.code), esc(r.name), 'g-branch') %>
+              <span class="t-meta"><%= r.started ? 'to ' + fmtDate(r.asOf) : 'not started' %></span></th>
+            <td class="n"><%- link(r.code, salesHref(r), fmt.money(s.mtd), 'g-strong') %>
+              <span class="t-meta s-<%= s.status %>"><%= s.monthTarget ? fmt.pct(s.pct) + ' of ' + fmt.money(s.monthTarget) + ' ' + fmt.symbol(s.status) : 'no target' %></span></td>
+            <td class="n"><%= s.perDay === null ? '–' : s.perDay === 0 ? 'Reached' : fmt.money(s.perDay) %></td>
+            <td class="n"><%- mcell(r, r.walk) %></td>
+            <td class="n"><%- mcell(r, r.lead1) %><% if (r.lead1) { %><span class="t-meta g-leadname"><%= r.lead1.label.replace(/\s*\(.*$/, '') %></span><% } %></td>
+            <td class="n"><%- mcell(r, r.lead2) %><% if (r.lead2) { %><span class="t-meta g-leadname"><%= r.lead2.label.replace(/\s*\(.*$/, '') %></span><% } %></td>
+            <td class="n"><% if (r.turnover.turnover === null) { %><%- link(r.code, checkinHref(r), r.checkedIn ? 'no stock numbers' : 'no check-in', 'muted') %><% } else { %><%- link(r.code, checkinHref(r), fmt.number(r.turnover.turnover, 2) + ' ' + fmt.symbol(r.turnover.status), 's-' + r.turnover.status) %><% } %></td>
+            <td class="n"><%- link(r.code, checkinHref(r, '#oos'), String(r.oos), r.oos ? 's-off_track' : '') %></td>
+            <td class="n"><% if (!r.hasZakat) { %>–<% } else if (r.zakatPending === null) { %><span class="muted">not given</span><% } else { %><%- link(r.code, checkinHref(r), fmt.number(r.zakatPending, 0), '') %><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr class="g-total">
+          <th scope="row">Company</th>
+          <td class="n"><b><%= fmt.money(t.mtd) %></b><span class="t-meta s-<%= t.salesStatus %>"><%= t.monthTarget ? fmt.pct(t.salesPct) + ' of ' + fmt.money(t.monthTarget) + ' ' + fmt.symbol(t.salesStatus) : '' %></span></td>
+          <td class="n"><%= t.perDay === null ? '–' : fmt.money(t.perDay) %></td>
+          <td class="n s-<%= t.walkStatus %>"><%= fmt.pct(t.walkPct) || '–' %> <%= fmt.symbol(t.walkStatus) %></td>
+          <td class="n muted">–</td><td class="n muted">–</td>
+          <td class="n s-<%= t.turnoverStatus %>"><%= t.turnover === null ? '–' : fmt.number(t.turnover, 2) + ' ' + fmt.symbol(t.turnoverStatus) %></td>
+          <td class="n"><%= t.oos %></td>
+          <td class="n"><%= t.zakatPending === null ? '–' : fmt.number(t.zakatPending, 0) %></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <p class="muted small">Sales colour = pace for the days gone. Needed / day added up = what the branches still need each day. Stock turnover, OOS and zakat come from each branch’s Monday check-in for this week.</p>
+
+  <div class="g-notes">
+    <section class="wk-card"><h2>Wins</h2>
+      <% if (!group.wins.length) { %><p class="muted">No wins written in the check-ins yet.</p><% } %>
+      <ul class="g-list"><% group.wins.forEach(function (w) { %><li><b><%= w.code %></b> <%= w.text %></li><% }) %></ul>
+    </section>
+    <section class="wk-card"><h2>Issues needing HQ help</h2>
+      <% if (!group.issues.length) { %><p class="muted">No issues raised.</p><% } %>
+      <ul class="g-list"><% group.issues.forEach(function (w) { %><li><b><%= w.code %></b> <%= w.text %></li><% }) %></ul>
+    </section>
+  </div>
+
+  <h2 class="g-h">Last <%= group.weeks.length %> week<%= group.weeks.length === 1 ? '' : 's' %></h2>
+  <% [['Walk-in % of target', 'walk'], ['Lead 1 %', 'lead1'], ['Lead 2 %', 'lead2'], ['Stock turnover', 'turn']].forEach(function (g) { %>
+    <div class="table-wrap">
+      <table class="admin-table trend-table">
+        <caption><%= g[0] %></caption>
+        <thead><tr><th scope="col">Branch</th><% group.weeks.forEach(function (w) { %><th scope="col" class="n"><%= fmtDate(w, { weekday: undefined }) %></th><% }) %></tr></thead>
+        <tbody>
+          <% group.trend.forEach(function (b) { %>
+            <tr><th scope="row"><%= b.code %></th>
+              <% b.cells.forEach(function (c) {
+                   let text = '–', status = 'no_data';
+                   if (g[1] === 'turn') { if (c.turnover.turnover !== null) { text = fmt.number(c.turnover.turnover, 2); status = c.turnover.status; } }
+                   else if (c[g[1]] && c.started) { text = fmt.pct(c[g[1]].pct) || '–'; status = c[g[1]].status; } %>
+                <td class="n trend-cell t-<%= status %>"><%- link(c.code, g[1] === 'turn' ? checkinHref(c) : '/scoreboard?week=' + c.week + qs(c.code), text, '') %></td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% }) %>
+</main>
+</body>
+</html>

@@ -33,10 +33,10 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## Screens
 1. **Daily entry** (per branch) – BUILT (src/daily, views/daily.ejs, public/js/daily.js): today's date, one card per person with only their fields, big number inputs, yes/no toggles. Shows green/red against today's target as they type (weekly/monthly targets: week-to-date progress). Can edit the last 7 days.
 2. **Branch scoreboard** (per branch, per week) – BUILT (src/scoreboard, /scoreboard, /scoreboard/trace): grouped by person, week actual vs target, % achieved, status (✔ ≥100%, ▲ 90–99%, ✕ <90%), month-to-date. WIG and lead measures in bold at the top. Running totals (e.g. chronic database, Google reviews, TikTok followers) as progress bars.
-3. **Weekly check-in** (per branch, Mondays): MTD sales vs target, required sales/day, stock turnover, OOS list, one win, one issue needing HQ help. Zakat fields hidden for branches with no `zakat_field` (Bangi, Ampang).
-4. **Commitments**: last week's commitments with Done Y/N, then one new commitment per person.
-5. **Group scoreboard** (managers' Monday session): one row per branch – MTD %, required sales/day, walk-in % of target, Lead 1 %, Lead 2 %, stock turnover, OOS count, zakat pending (– for branches without zakat) – plus company total, wins/issues, and 12-week trend grids.
-6. **HQ scoreboard + HQ input**: Alia's inventory WIG and leads, Hanin's ops and training measures (see `seed.json` → `hq`). Turnover days: lower is better.
+3. **Weekly check-in** – BUILT (src/weekly, /weekly, views/weekly.ejs): per branch, for the week that just ended (default). MTD sales vs target and needed/day (from the branch scoreboard, traceable), stock values Mon/Sun + COGS → stock turnover and days of stock, SKUs on hand, SKUs sold MTD, zakat claims paid/pending, one win, one issue needing HQ help. Zakat boxes hidden for branches with no `zakat_field` (Bangi, Ampang). OOS list on the same page (/weekly/oos): the branch adds items; Inventory (HQ) fills in reason, expected back and status; open items carry into later weeks.
+4. **Commitments** – BUILT (/commitments, src/weekly/commitments.js): defaults to this week. Off-track (✕) measures from last week (linked to their trace), last week's commitments with Done / Not done, then one commitment per person (unique per branch × week × person, migration 006) with the measure it moves and a by-when date. Empty box = remove.
+5. **Group scoreboard** – BUILT (src/group, /group): one row per branch for a week – MTD sales and % (coloured by pace), needed/day, walk-in % of week target, Lead 1 %, Lead 2 % (measures on lead1_field / lead2_field), stock turnover, open OOS items, zakat pending (– without zakat) – plus company total (sums; turnover = total COGS ÷ total average stock), wins/issues, and 12-week trend grids (walk-in, Lead 1, Lead 2, turnover). Managers, HQ, admin; managers only get links into their own branch.
+6. **HQ input + HQ scoreboard** – BUILT (src/hq, /hq, /hq/scoreboard): Alia enters Alia's measures, Hanin Hanin's (by person_id), admin any. Percent typed as percent (95 → 0.95); done_and_total as "done of total". Scoreboard per week with status and a 12-week trend; turnover days lower is better. A week uses the target of the month its Thursday falls in.
 7. **Admin** – BUILT (src/admin, /admin): targets per month (+ weekend, branch totals, running totals, HQ), people & logins (add/rename/remove, PIN/password, unlock), measures & daily fields (edit/add/retire, checked against field use), audit log viewer, Excel export per branch and group (exceljs). Every change audited; PINs/passwords never logged. Form keys use a letter before ids (t[m12][2026-10]) because the form parser turns small numeric keys into arrays.
 
 ## Calculation rules (must match the Excel trackers)
@@ -86,12 +86,18 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Redirects only to same-site paths (src/lib/safe-path.js; blocks //, /\, spaces).
 - Login: 5 wrong tries lock a login 15 min; 30 wrong tries from one device (IP) in 15 min block that device. Sessions: staff 14 h, admin 12 h, others 7 days; expired ones cleared hourly; a new PIN/password ends that person's other sessions.
 - Headers: CSP (scripts from self only), X-Frame-Options DENY, nosniff, Referrer-Policy, Permissions-Policy, HSTS over https. /health gives no error details.
-- Roles verified by tests: staff = own branch daily entry only; manager = own branch daily + scoreboard; HQ = read all, change nothing; admin = everything.
+- Roles verified by tests: staff = own branch daily entry only; manager = own branch daily, scoreboard, check-in, OOS, commitments + the group scoreboard; HQ = read all branches, enter HQ numbers, answer OOS items, change nothing else; admin = everything.
 - Dates in URLs must be real calendar days. Removed people's fields stay visible on an "Others" card until reassigned.
 - Login page lists staff names per branch (needed for the PIN flow) – no other data before login.
 
-## Not built yet (from Screens)
-- 3 Weekly check-in, 4 Commitments, 5 Group scoreboard, 6 HQ scoreboard + input. Tables exist; calc for stock turnover exists.
+## Monday screens decisions (14 Oct)
+- Weeks are named by their Monday. Check-in and HQ input default to last week (the one just ended); commitments and the group scoreboard default to this week.
+- Managers and HQ can change this week and last week; older weeks admin only. A save for a week that isn't on the week list is refused (never saved to another week). Boxes missing from a form are left unchanged.
+- Free text (win, issue, OOS, commitments) goes through the salary guard; migration 006 adds the same CHECKs in the database.
+- Group Excel export includes check-ins, OOS list, commitments and HQ entries.
+
+## Deploy (Railway)
+- railway.json: `npm start`, health check /health. Variables: DATABASE_URL = ${{Postgres.DATABASE_URL}}, ADMIN_PASSWORD (first start only), optional GOOGLE_SERVICE_ACCOUNT_JSON. RAILWAY_ENVIRONMENT makes the app run as production (secure cookies, APP_TODAY ignored).
 
 ## Open items
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).

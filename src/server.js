@@ -2,6 +2,9 @@
 
 require('dotenv').config({ quiet: true });
 
+// On Railway, behave as production even if NODE_ENV wasn't set (secure cookies, no fake dates).
+if (process.env.RAILWAY_ENVIRONMENT && !process.env.NODE_ENV) process.env.NODE_ENV = 'production';
+
 const { getDb } = require('./db');
 const { prepareDatabase } = require('./db/setup');
 const { createApp } = require('./app');

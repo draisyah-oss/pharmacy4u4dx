@@ -1,0 +1,45 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'hqboard' }) %>
+<%- include('partials/week-bar', { base: '/hq/scoreboard', pickAny: false }) %>
+<%
+  const monthName = new Date(board.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' });
+%>
+<main class="page group-page">
+  <header class="board-head">
+    <h1>HQ scoreboard <span class="board-week">week <%= fmt.weekLabel(board.week, board.weekEnd) %></span></h1>
+    <p class="muted"><%= board.entered %> of <%= board.total %> measures entered. Targets are <%= monthName %>’s. Inventory turnover days: lower is better. Tap a number to see or fix the entry.</p>
+  </header>
+  <div class="legend" aria-label="Status key">
+    <span><b class="s-on_track">✔</b> 100% or more</span><span><b class="s-watch">▲</b> 90–99%</span><span><b class="s-off_track">✕</b> under 90%</span>
+  </div>
+
+  <% board.groups.forEach(function (g) { %>
+    <h2 class="g-h"><%= g.owner %></h2>
+    <div class="table-wrap">
+      <table class="admin-table hq-table">
+        <thead><tr>
+          <th scope="col">Measure</th><th scope="col" class="n">This week</th><th scope="col" class="n">Target</th><th scope="col" class="n">%</th>
+          <% board.weeks.forEach(function (w) { %><th scope="col" class="n trend-h"><%= fmtDate(w, { weekday: undefined }) %></th><% }) %>
+        </tr></thead>
+        <tbody>
+          <% g.rows.forEach(function (m) { const r = m.result; %>
+            <tr class="<%= m.kind === 'WIG' ? 'is-wig' : '' %>">
+              <th scope="row"><span class="t-label"><%= m.label %></span><span class="t-meta"><%= m.kind || '' %><%= m.better === 'low' ? ' · lower is better' : '' %></span></th>
+              <td class="n"><a class="s-<%= r.status %>" href="/hq?week=<%= board.week %>#hq-<%= m.code %>"><%= m.entry ? hq.show(m, r.actual) : '–' %></a>
+                <% if (m.entry && m.input === 'done_and_total') { %><span class="t-meta"><%= Number(m.entry.value) %> of <%= Number(m.entry.total) %></span><% } %>
+                <% if (m.entry) { %><span class="t-meta"><%= m.entry.entered_by_name || '' %></span><% } %></td>
+              <td class="n"><%= m.target === null ? 'track only' : hq.show(m, m.target) %></td>
+              <td class="n s-<%= r.status %>"><%= fmt.pct(r.pct) %> <%= fmt.symbol(r.status) %></td>
+              <% m.trend.forEach(function (c) { %>
+                <td class="n trend-cell t-<%= c.result.status %>"><a href="/hq?week=<%= c.week %>#hq-<%= m.code %>"><%= c.entry ? hq.show(m, c.result.actual) : '–' %></a></td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+  <% }) %>
+</main>
+</body>
+</html>

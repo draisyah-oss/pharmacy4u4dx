@@ -7,6 +7,9 @@ const { loginRoutes } = require('./auth/routes');
 const { dailyRoutes } = require('./daily/routes');
 const { scoreboardRoutes } = require('./scoreboard/routes');
 const { adminRoutes } = require('./admin/routes');
+const { weeklyRoutes } = require('./weekly/routes');
+const { groupRoutes } = require('./group/routes');
+const { hqRoutes } = require('./hq/routes');
 const calc = require('./calc');
 
 // options.now lets tests pretend it's a particular day.
@@ -76,6 +79,9 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
 
   app.use(dailyRoutes(db, { now, trackerStart, salesSheet }));
   app.use(scoreboardRoutes(db, { now, trackerStart }));
+  app.use(weeklyRoutes(db, { now, trackerStart }));
+  app.use(groupRoutes(db, { now, trackerStart }));
+  app.use(hqRoutes(db, { now, trackerStart }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

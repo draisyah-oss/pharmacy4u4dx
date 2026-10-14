@@ -231,6 +231,52 @@ async function groupWorkbook(db, { now = () => new Date() } = {}) {
 
   for (const { code } of branches) await dailySheet(wb, db, await loadBranch(db, code), ctx, `${code} daily`);
 
+  // Monday screens: check-ins, OOS list, commitments, HQ entries.
+  const checkins = (await db.query(
+    `SELECT c.week_start AS week, b.code AS branch, c.opening_stock_value AS open, c.closing_stock_value AS close,
+            c.weekly_cogs AS cogs, c.sku_qty_on_hand AS skus, c.skus_sold_mtd AS sold, c.zakat_claims_disbursed AS zpaid,
+            c.zakat_claims_pending AS zpending, c.win_this_week AS win, c.issue_needing_hq_help AS issue, u.display_name AS who
+     FROM weekly_checkins c JOIN branches b ON b.id = c.branch_id LEFT JOIN users u ON u.id = c.submitted_by
+     ORDER BY c.week_start, b.sort_order`)).rows.map((r) => {
+    const avg = r.open === null || r.close === null ? null : (Number(r.open) + Number(r.close)) / 2;
+    return { ...r, turnover: avg && r.cogs !== null ? Number(r.cogs) / avg : null };
+  });
+  addTable(wb, 'Weekly check-ins', {
+    columns: [{ header: 'Week', key: 'week', width: 12 }, { header: 'Branch', key: 'branch', width: 9 },
+      { header: 'Stock Mon', key: 'open', format: MONEY }, { header: 'Stock Sun', key: 'close', format: MONEY },
+      { header: 'COGS', key: 'cogs', format: MONEY }, { header: 'Turnover', key: 'turnover', format: '0.00' },
+      { header: 'SKUs on hand', key: 'skus' }, { header: 'SKUs sold MTD', key: 'sold' },
+      { header: 'Zakat paid', key: 'zpaid' }, { header: 'Zakat pending', key: 'zpending' },
+      { header: 'Win', key: 'win', width: 40 }, { header: 'Issue for HQ', key: 'issue', width: 40 }, { header: 'Saved by', key: 'who', width: 12 }],
+    rows: checkins,
+  });
+  addTable(wb, 'Out of stock', {
+    columns: [{ header: 'Week logged', key: 'week_start', width: 12 }, { header: 'Branch', key: 'branch', width: 9 },
+      { header: 'Item', key: 'item', width: 34 }, { header: 'Out since', key: 'out_of_stock_since', width: 12 },
+      { header: 'Customers asking', key: 'customers_asking', width: 24 }, { header: 'Reason (HQ)', key: 'reason_for_delay', width: 30 },
+      { header: 'Expected back', key: 'expected_back', width: 12 }, { header: 'Status', key: 'status', width: 16 }],
+    rows: (await db.query(`SELECT o.*, b.code AS branch FROM oos_items o JOIN branches b ON b.id = o.branch_id ORDER BY o.week_start, b.sort_order, o.id`)).rows,
+  });
+  addTable(wb, 'Commitments', {
+    columns: [{ header: 'Week', key: 'week_start', width: 12 }, { header: 'Branch', key: 'branch', width: 9 },
+      { header: 'Person', key: 'person', width: 12 }, { header: 'Commitment', key: 'commitment', width: 44 },
+      { header: 'Measure', key: 'lead_measure', width: 36 }, { header: 'By when', key: 'by_when', width: 12 }, { header: 'Done', key: 'done_text', width: 8 }],
+    rows: (await db.query(
+      `SELECT c.*, b.code AS branch, p.name AS person FROM commitments c JOIN branches b ON b.id = c.branch_id
+       JOIN people p ON p.id = c.person_id ORDER BY c.week_start, b.sort_order, p.sort_order`)).rows
+      .map((r) => ({ ...r, done_text: r.done === true ? 'Yes' : r.done === false ? 'No' : '' })),
+  });
+  addTable(wb, 'HQ entries', {
+    columns: [{ header: 'Week', key: 'week_start', width: 12 }, { header: 'Owner', key: 'owner_name', width: 10 },
+      { header: 'Measure', key: 'label', width: 56 }, { header: 'Unit', key: 'unit', width: 9 },
+      { header: 'Value (done)', key: 'value', format: '#,##0.##' }, { header: 'Out of', key: 'total', format: '#,##0.##' },
+      { header: 'Entered by', key: 'who', width: 12 }],
+    rows: (await db.query(
+      `SELECT e.week_start, e.value, e.total, m.owner_name, m.label, m.unit, u.display_name AS who
+       FROM hq_entries e JOIN hq_measures m ON m.id = e.hq_measure_id LEFT JOIN users u ON u.id = e.entered_by
+       ORDER BY e.week_start, m.sort_order`)).rows,
+  });
+
   const hq = (await db.query(
     `SELECT m.code, m.owner_name, m.label, m.unit, m.better, t.month, t.target FROM hq_measures m
      JOIN hq_measure_targets t ON t.hq_measure_id = m.id WHERE m.active ORDER BY m.sort_order, t.month`)).rows;

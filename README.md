@@ -4,8 +4,9 @@ Replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; man
 CEO see scoreboards. The build spec is in `CLAUDE.md`; all targets, people and measures are in
 `seed.json`.
 
-**Status:** login, Daily Entry, Branch Scoreboard, sales sheet link and Admin are done.
-Weekly check-in, commitments, group and HQ scoreboards come next.
+**Status:** every screen in CLAUDE.md is built: login, Daily Entry, Branch Scoreboard, Weekly
+check-in + out-of-stock list, Commitments, Group scoreboard, HQ input + HQ scoreboard, Admin, and
+the sales sheet link.
 
 ## Run it on your Mac
 
@@ -17,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 129, fail 0
+npm test                    # should end with: pass 145, fail 0
 npm start
 ```
 
@@ -105,11 +106,17 @@ The key is never committed (`.gitignore`), and the app only asks for read-only a
 
 ## Deploy to Railway
 
-1. Push this folder to a GitHub repo.
+1. Push this folder to a private GitHub repo.
 2. In Railway: **New project → Deploy from GitHub repo**, then **+ New → Database → PostgreSQL**.
 3. In the app service's **Variables**, add `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` and
-   `ADMIN_PASSWORD` = a strong password.
-4. Railway runs `npm install` and `npm start`. Check `https://<your-app>/health`.
+   `ADMIN_PASSWORD` = a strong password (used once, on the first start). Optional:
+   `GOOGLE_SERVICE_ACCOUNT_JSON` for the sales sheet.
+4. **Settings → Networking → Generate domain**. Railway runs `npm install` and `npm start`
+   (see `railway.json`); it waits for `/health` before switching over.
+5. Open `https://<your-app>/health` → `{"ok":true,"database":"postgres"}`. Log in as `admin`
+   and give everyone a PIN or password in **Admin → People & logins**.
+
+Every `git push` to the main branch redeploys. New migrations run on start; data is kept.
 
 `npm run db:reset-local` refuses to run when `DATABASE_URL` is set, so it can't touch Railway.
 
@@ -121,6 +128,9 @@ src/server.js             npm start: migrate → load seed (first run) → start
 src/app.js                web app: login, home, daily entry, /status (admin), /health
 src/auth/                 login, logout, sessions, form tokens
 src/daily/                Daily Entry: who can edit what, target hints, saving
+src/weekly/               Weekly check-in, out-of-stock list, commitments (managers, Mondays)
+src/group/                Group scoreboard: one row per branch, company total, 12-week trends
+src/hq/                   HQ input (Alia, Hanin) and HQ scoreboard
 src/admin/                Admin: targets, people & logins, measures & fields, audit log, Excel export
 src/sheets/               Sales sheet link: Google sign-in, reading the tabs, syncing into daily entries
 src/scoreboard/           Branch Scoreboard: week + month-to-date per measure, running totals, click-through
@@ -151,4 +161,4 @@ No table stores salaries; a test checks this.
 
 Everyone has their own login. Usernames are first names in lowercase (`hafizah`, `alia`); `admin`
 uses `ADMIN_PASSWORD`. Branch managers, HQ and admin use passwords; branch staff use a 4-digit PIN.
-Until the Admin screen exists, set them with `npm run set-password`.
+Set them in **Admin → People & logins** (or `npm run set-password`).

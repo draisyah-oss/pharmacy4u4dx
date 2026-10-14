@@ -1,0 +1,82 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'commitments' }) %>
+<%- include('partials/week-bar', { base: '/commitments' }) %>
+<%
+  const off = blocked ? ' disabled' : '';
+  const typedFor = (pid) => (typed && typed.c && typed.c['p' + pid]) || null;
+  const doneTyped = (id) => (typed && typed.done ? typed.done['k' + id] : undefined);
+%>
+<main class="page wk">
+  <header class="board-head">
+    <h1>Commitments <span class="board-week"><%= branch.name %> · week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">Each person: was last week’s commitment done? Then one new commitment for this week that moves a lead measure.</p>
+  </header>
+
+  <section class="wk-card" aria-labelledby="off-h">
+    <h2 id="off-h">Off track <%= reviewIsThisWeek ? 'this week so far' : 'last week' %> <span class="s-off_track">✕</span></h2>
+    <% if (!offTrack.length) { %><p class="muted">Nothing under 90%. Commit to keeping the leads moving.</p><% } else { %>
+      <ul class="off-list">
+        <% offTrack.forEach(function (m) { %>
+          <li><% if (reviewAsOf >= reviewWeek) { %><a href="/scoreboard/trace?type=measure&code=<%= encodeURIComponent(m.code) %>&from=<%= reviewWeek %>&to=<%= reviewAsOf %><%= branchQs %>" class="off-link"><%= m.label %></a><% } else { %><%= m.label %><% } %>
+            <span class="muted"><%= m.owner %> · <%= fmt.pct(m.pct) || '–' %></span></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </section>
+
+  <form method="post" action="/commitments" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="week" value="<%= week %>">
+    <% if (pickAny) { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
+    <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
+
+    <section class="wk-card" aria-labelledby="last-h">
+      <h2 id="last-h">Last week’s commitments</h2>
+      <% if (!last.length) { %><p class="muted">None were made for the week of <%= fmtDate(prev) %>.</p><% } %>
+      <% last.forEach(function (c) {
+           const t = doneTyped(c.id);
+           const v = t !== undefined ? t : (c.done === true ? 'yes' : c.done === false ? 'no' : ''); %>
+        <fieldset class="commit-done">
+          <legend><b><%= c.person_name %></b>: <%= c.commitment %><% if (c.lead_measure) { %><span class="muted small"> – <%= c.lead_measure %></span><% } %></legend>
+          <div class="yesno">
+            <label class="yn yn-yes"><input type="radio" name="done[k<%= c.id %>]" value="yes"<%= v === 'yes' ? ' checked' : '' %><%= off %>><span>Done</span></label>
+            <label class="yn yn-no"><input type="radio" name="done[k<%= c.id %>]" value="no"<%= v === 'no' ? ' checked' : '' %><%= off %>><span>Not done</span></label>
+          </div>
+        </fieldset>
+      <% }) %>
+    </section>
+
+    <section class="wk-card" aria-labelledby="new-h">
+      <h2 id="new-h">This week – one commitment each</h2>
+      <% people.forEach(function (p) {
+           const c = current.get(p.id);
+           const t = typedFor(p.id);
+           const text = t ? t.text : (c ? c.commitment : '');
+           const lead = t ? t.lead : (c ? c.lead_measure : '');
+           const by = t ? t.by : (c ? c.by_when : '');
+           const mine = offTrack.filter(function (m) { return m.owner === p.name; }); %>
+        <div class="commit<%= errors[p.id] ? ' has-error' : '' %>">
+          <h3><%= p.name %> <span class="muted small"><%= p.role || '' %></span></h3>
+          <% if (mine.length) { %><p class="small s-off_track">Off track: <%= mine.map(function (m) { return m.label; }).join('; ') %></p><% } %>
+          <label class="wk-field"><span class="wk-label">I will…</span>
+            <textarea name="c[p<%= p.id %>][text]" rows="2" maxlength="300"<%= off %>><%= text || '' %></textarea></label>
+          <div class="commit-row">
+            <label class="wk-field"><span class="wk-label">Measure it moves</span>
+              <select name="c[p<%= p.id %>][lead]"<%= off %>>
+                <option value="">–</option>
+                <% measures.forEach(function (m) { %><option value="<%= m.label %>"<%= m.label === lead ? ' selected' : '' %>><%= m.offTrack ? '✕ ' : '' %><%= m.label %></option><% }) %>
+              </select></label>
+            <label class="wk-field"><span class="wk-label">By when</span>
+              <input type="date" name="c[p<%= p.id %>][by]" value="<%= by || '' %>" min="<%= week %>"<%= off %>></label>
+          </div>
+          <% if (errors[p.id]) { %><span class="wk-error"><%= errors[p.id] %></span><% } %>
+          <% if (c && c.updated_by_name) { %><p class="muted small">Saved by <%= c.updated_by_name %></p><% } %>
+        </div>
+      <% }) %>
+    </section>
+    <% if (!blocked) { %><button class="button wide" type="submit">Save commitments</button><% } %>
+  </form>
+</main>
+</body>
+</html>

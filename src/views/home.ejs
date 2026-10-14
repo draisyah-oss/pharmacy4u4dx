@@ -1,6 +1,11 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <main class="page narrow">
+  <div class="home-links">
+    <a class="button" href="/group">Group scoreboard</a>
+    <a class="button secondary" href="/hq">HQ input</a>
+    <a class="button secondary" href="/hq/scoreboard">HQ scoreboard</a>
+  </div>
   <h1>Branches</h1>
   <p class="muted">Open a branch's daily entry for <%= fmtDate(today) %>, or its scoreboard.</p>
   <div class="pick-list">
@@ -11,6 +16,7 @@
         <span class="pick-links">
           <a class="button secondary small-button" href="/daily?branch=<%= encodeURIComponent(b.code) %>">Daily entry</a>
           <a class="button small-button" href="/scoreboard?branch=<%= encodeURIComponent(b.code) %>">Scoreboard</a>
+          <a class="button secondary small-button" href="/weekly?branch=<%= encodeURIComponent(b.code) %>">Check-in</a>
         </span>
       </div>
     <% }) %>
