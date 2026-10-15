@@ -6,6 +6,7 @@
     <a class="button secondary" href="/hq">HQ input</a>
     <a class="button secondary" href="/hq/scoreboard">HQ scoreboard</a>
   </div>
+  <%- include('partials/company-sales', { company }) %>
   <h1>Branches</h1>
   <p class="muted">Open a branch's daily entry for <%= fmtDate(today) %>, or its scoreboard.</p>
   <div class="pick-list">

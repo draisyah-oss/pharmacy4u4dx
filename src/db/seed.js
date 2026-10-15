@@ -300,6 +300,10 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
     );
     summary.users++;
 
+    for (const [month, target] of Object.entries(seed.company.monthly_sales_target || {})) {
+      await tx.query('INSERT INTO company_month_targets (month, total_sales_target) VALUES ($1, $2)', [month, target]);
+    }
+
     // Company-level settings the screens will need.
     const settings = {
       company_name: seed.company.name,

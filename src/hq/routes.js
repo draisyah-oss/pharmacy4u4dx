@@ -5,6 +5,7 @@ const calc = require('../calc');
 const fmt = require('../scoreboard/format');
 const { weekChoices, lastFinishedWeek, pickWeek } = require('../lib/weeks');
 const hq = require('./data');
+const { companySalesForWeek } = require('../group/company');
 
 const isHqOrAdmin = (user) => user.role === 'hq' || user.role === 'admin';
 
@@ -58,7 +59,8 @@ function hqRoutes(db, { now, trackerStart }) {
       if (!isHqOrAdmin(req.user)) return deny(res);
       const ctx = await context(req);
       const board = await hq.buildHqScoreboard(db, { week: ctx.week, trackerStart: ctx.start });
-      res.render('hq-scoreboard', { title: 'HQ scoreboard', ...ctx, board, hq, fmt, pills: pills(ctx, '/hq/scoreboard') });
+      const company = await companySalesForWeek(db, { week: ctx.week, today: ctx.today, trackerStart: ctx.start });
+      res.render('hq-scoreboard', { title: 'HQ scoreboard', ...ctx, board, company, hq, fmt, pills: pills(ctx, '/hq/scoreboard') });
     } catch (err) { next(err); }
   });
 

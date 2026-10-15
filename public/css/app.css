@@ -570,3 +570,8 @@ a.wk-v { text-decoration: underline dotted; text-underline-offset: 4px; }
   .group-table tbody th { min-width: 118px; }
   .group-table .t-meta { max-width: 120px; }
 }
+
+/* Company sales card (group, HQ scoreboard, home) */
+.company-sales { margin: 12px 0 16px; }
+.company-sales .dd-note { display: block; white-space: normal; }
+.company-sales .dd-note a { white-space: nowrap; }

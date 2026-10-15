@@ -42,8 +42,10 @@ async function loadHqTargets(db) {
   const months = (await db.query('SELECT DISTINCT month FROM hq_measure_targets ORDER BY 1')).rows.map((r) => r.month.trim());
   const measures = (await db.query('SELECT * FROM hq_measures ORDER BY active DESC, sort_order')).rows;
   const targets = (await db.query('SELECT * FROM hq_measure_targets')).rows;
+  const company = Object.fromEntries((await db.query('SELECT month, total_sales_target FROM company_month_targets')).rows
+    .map((r) => [r.month.trim(), num(r.total_sales_target)]));
   return {
-    months,
+    months, company,
     measures: measures.map((m) => ({
       ...m, pct: hqIsPercent(m),
       cells: Object.fromEntries(months.map((mo) => {
@@ -154,6 +156,20 @@ async function saveHqTargets(db, { body, user }) {
         await audit(tx, user, 'update', 'hq_measure_targets', `HQ ${m.code} ${month} target`, oldT, newT);
         changes++;
       }
+    }
+    // Company sales target (all branches + B2B), per month.
+    for (const month of current.months) {
+      const typed = body.ct ? body.ct[month] : undefined;
+      if (typed === undefined) continue;
+      const p = parseOptional(typed);
+      if (p.error) { errors.push(`Company sales target (${month}): ${p.error}`); continue; }
+      const oldT = current.company[month] ?? null;
+      if (sameNumber(oldT, p.value)) continue;
+      await tx.query(
+        `INSERT INTO company_month_targets (month, total_sales_target) VALUES ($1, $2)
+         ON CONFLICT (month) DO UPDATE SET total_sales_target = EXCLUDED.total_sales_target`, [month, p.value]);
+      await audit(tx, user, 'update', 'company_month_targets', `Company sales target ${month}`, oldT, p.value);
+      changes++;
     }
     if (errors.length) throw Object.assign(new Error('invalid'), { userErrors: errors });
   }).catch((err) => { if (!err.userErrors) throw err; });

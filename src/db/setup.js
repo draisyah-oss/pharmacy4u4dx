@@ -40,6 +40,13 @@ async function backfillNewSettings(db, seed, log) {
     if (r.affectedRows || r.rowCount) log(`Added the sales sheet columns for ${b.code}.`);
   }
   await backfillHqTeam(db, seed, log);
+  const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
+  if (!ct.rows.length && seed.company.monthly_sales_target) {
+    for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
+      await db.query('INSERT INTO company_month_targets (month, total_sales_target) VALUES ($1, $2)', [month, target]);
+    }
+    log('Added the company monthly sales targets from seed.json.');
+  }
 }
 
 // HQ people and HQ measures added to seed.json later (14 Oct: Syarafana, Fariz, Azwani, Iman

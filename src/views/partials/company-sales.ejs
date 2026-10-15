@@ -1,0 +1,31 @@
+<% if (company) {
+     const c = company;
+     const monthName = new Date(c.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' });
+     const canSeeHq = user.role === 'hq' || user.role === 'admin';
+     const fill = c.target ? Math.min(c.total / c.target, 1) * 100 : 0; %>
+  <section class="sales company-sales" aria-labelledby="company-h">
+    <div class="sales-main">
+      <span class="sales-k" id="company-h">Company sales, <%= monthName %> so far (all branches + B2B)</span>
+      <span class="sales-big"><%= fmt.money(c.total) %></span>
+      <% if (c.target) { %>
+        <span class="sales-of"><%= fmt.pct(c.pct) %> of <%= fmt.money(c.target) %></span>
+        <div class="bar" aria-hidden="true">
+          <span class="s-<%= c.status %>" style="width:<%= fill %>%"></span>
+          <% if (c.paceTarget) { %><i class="run-mark" style="left:<%= Math.min(c.paceTarget / c.target, 1) * 100 %>%"></i><% } %>
+        </div>
+        <% if (c.paceTarget) { %>
+          <span class="sales-pace s-<%= c.status %>"><%= c.pacePct >= 1 ? 'Ahead of pace' : 'Behind pace' %>: <%= fmt.money(c.paceTarget) %> needed by <%= fmtDate(c.asOf) %> (<%= fmt.pct(c.pacePct) %> <%= fmt.symbol(c.status) %>)</span>
+        <% } %>
+      <% } else { %><span class="sales-of">No company target set for <%= monthName %> (Admin → Targets → HQ)</span><% } %>
+    </div>
+    <dl class="sales-facts">
+      <div><dt>Needed per day</dt><dd><%= c.perDay === null ? '–' : (c.perDay === 0 ? 'Target reached' : fmt.money(c.perDay)) %><% if (c.daysLeft && c.perDay) { %><span class="dd-note">for the last <%= c.daysLeft %> days</span><% } %></dd></div>
+      <div><dt>Branches</dt><dd><a href="/group#branches"><%= fmt.money(c.branchTotal) %></a><span class="dd-note"><%= c.branches.map(function (b) { return b.code + ' ' + fmt.money(b.mtd); }).join(' · ') %></span></dd></div>
+      <div><dt>B2B</dt><dd><%= fmt.money(c.b2b) %>
+        <span class="dd-note">
+          <% if (!c.b2bWeeks.length) { %>No B2B weeks entered yet<% } %>
+          <% c.b2bWeeks.forEach(function (w, i) { %><%= i ? ' · ' : '' %><% if (canSeeHq) { %><a href="/hq?week=<%= w.week %>#hq-b2b">wk <%= fmtDate(w.week, { weekday: undefined }) %> <%= fmt.money(w.value) %></a><% } else { %>wk <%= fmtDate(w.week, { weekday: undefined }) %> <%= fmt.money(w.value) %><% } %><% }) %>
+        </span></dd></div>
+    </dl>
+  </section>
+<% } %>

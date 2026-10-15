@@ -22,11 +22,13 @@
     <p class="muted">Month-to-date sales, this week’s walk-in and lead measures, and last Monday’s check-in, per branch. Tap a number for the entries behind it.</p>
   </header>
 
+  <%- include('partials/company-sales', { company: group.company }) %>
+
   <div class="legend" aria-label="Status key">
     <span><b class="s-on_track">✔</b> 100% or more</span><span><b class="s-watch">▲</b> 90–99%</span><span><b class="s-off_track">✕</b> under 90%</span>
   </div>
 
-  <div class="table-wrap">
+  <div class="table-wrap" id="branches">
     <table class="admin-table group-table">
       <thead>
         <tr>

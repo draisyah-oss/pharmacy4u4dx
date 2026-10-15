@@ -11,6 +11,8 @@ const { weeklyRoutes } = require('./weekly/routes');
 const { groupRoutes } = require('./group/routes');
 const { hqRoutes } = require('./hq/routes');
 const calc = require('./calc');
+const fmt = require('./scoreboard/format');
+const { companySalesForWeek } = require('./group/company');
 
 // options.now lets tests pretend it's a particular day.
 function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
@@ -73,7 +75,8 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
            (SELECT count(*)::int FROM daily_entries e WHERE e.branch_id = b.id AND e.entry_date = $1) AS today_entries,
            (SELECT count(*)::int FROM daily_fields f WHERE f.branch_id = b.id AND f.active) AS fields
          FROM branches b WHERE b.active ORDER BY b.sort_order`, [today])).rows;
-      res.render('home', { title: 'Branches', branches, today });
+      const company = await companySalesForWeek(db, { week: calc.weekStart(today), today, trackerStart: await trackerStart() });
+      res.render('home', { title: 'Branches', branches, today, company, fmt });
     } catch (err) { next(err); }
   });
 

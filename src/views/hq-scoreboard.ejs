@@ -10,6 +10,8 @@
     <h1>HQ scoreboard <span class="board-week">week <%= fmt.weekLabel(board.week, board.weekEnd) %></span></h1>
     <p class="muted"><%= board.entered %> of <%= board.total %> measures entered. Targets are <%= monthName %>’s. Inventory turnover days: lower is better. Tap a number to see or fix the entry.</p>
   </header>
+  <%- include('partials/company-sales', { company }) %>
+
   <div class="legend" aria-label="Status key">
     <span><b class="s-on_track">✔</b> 100% or more</span><span><b class="s-watch">▲</b> 90–99%</span><span><b class="s-off_track">✕</b> under 90%</span>
   </div>

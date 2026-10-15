@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 148, fail 0
+npm test                    # should end with: pass 151, fail 0
 npm start
 ```
 

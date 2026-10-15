@@ -46,6 +46,18 @@
       </table>
     </div>
 
+    <% if (hq) { %>
+      <h2>Company sales target</h2>
+      <p class="muted">All branches + B2B, per month (HQ Tracker). Shown on the group scoreboard, HQ scoreboard and the home page.</p>
+      <div class="table-wrap">
+        <table class="admin-table">
+          <thead><tr><th></th><% data.months.forEach(function (m) { %><th class="n"><%= monthName(m) %></th><% }) %></tr></thead>
+          <tbody>
+            <tr><th scope="row">Company sales target (RM)</th><% data.months.forEach(function (mo) { %><td class="n"><input name="ct[<%= mo %>]" value="<%= data.company[mo] === undefined || data.company[mo] === null ? '' : data.company[mo] %>" inputmode="decimal" aria-label="Company sales target <%= mo %>"></td><% }) %></tr>
+          </tbody>
+        </table>
+      </div>
+    <% } %>
     <% if (!hq) { %>
       <h2>Branch totals</h2>
       <div class="table-wrap">

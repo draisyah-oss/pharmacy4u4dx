@@ -7,6 +7,7 @@ const { loadMeasures } = require('../daily/data');
 const { buildScoreboard } = require('../scoreboard/data');
 const { loadCheckin, turnoverFor, OOS_OPEN } = require('../weekly/data');
 const { trendWeeks } = require('../lib/weeks');
+const { buildCompanySales } = require('./company');
 
 // The branch's walk-in measure and its two lead measures (from lead1_field / lead2_field).
 function keyMeasures(branch, measures) {
@@ -105,6 +106,7 @@ async function buildGroup(db, { week, today, trackerStart }) {
 
   return {
     week, weekEnd: calc.addDays(week, 6), rows, total: companyTotal(rows), weeks, trend,
+    company: await buildCompanySales(db, rows),
     wins: rows.filter((r) => r.win).map((r) => ({ code: r.code, name: r.name, text: r.win })),
     issues: rows.filter((r) => r.issue).map((r) => ({ code: r.code, name: r.name, text: r.issue })),
   };

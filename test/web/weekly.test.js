@@ -446,3 +446,64 @@ test('an older database gets the new HQ people and measures on start, without to
   assert.equal((await old.query("SELECT count(*)::int AS n FROM people WHERE name = 'Fariz'")).rows[0].n, 1, 'runs once');
   await old.close();
 });
+
+// ───────────── Company total sales (branches + B2B) ─────────────
+
+test('company sales: branches + B2B against the company target, by pace', () => {
+  const { companySales } = require('../../src/group/company');
+  const c = companySales({
+    month: '2026-10', target: 266800,
+    branches: [
+      { code: 'WM', name: 'WM', mtd: 36615, asOf: '2026-10-18', started: true },
+      { code: 'JH', name: 'JH', mtd: 27541, asOf: '2026-10-18', started: true },
+    ],
+    b2bWeeks: [{ week: '2026-10-12', value: 1800 }],
+  });
+  assert.equal(c.branchTotal, 64156);
+  assert.equal(c.b2b, 1800);
+  assert.equal(c.total, 65956);
+  near(c.pct, 65956 / 266800);
+  near(c.paceTarget, 266800 * 18 / 31, 'pace to 18 Oct');
+  near(c.perDay, (266800 - 65956) / 13, 'needed per day for the last 13 days');
+  assert.equal(c.status, 'off_track');
+});
+
+test('company sales: B2B weeks count in the month of their Thursday; the card is on group, HQ and home pages', async () => {
+  const { b2bWeeksFor } = require('../../src/group/company');
+  const ids = Object.fromEntries((await db.query('SELECT code, id FROM hq_measures')).rows.map((r) => [r.code, r.id]));
+  for (const [week, v] of [['2026-10-12', 1800], ['2026-10-26', 2000], ['2026-11-02', 2500]]) {
+    await db.query('INSERT INTO hq_entries (week_start, hq_measure_id, value) VALUES ($1, $2, $3) ON CONFLICT (week_start, hq_measure_id) DO UPDATE SET value = EXCLUDED.value', [week, ids.b2b, v]);
+  }
+  // 26 Oct – 1 Nov: Thursday 29 Oct → October, never counted twice
+  assert.deepEqual((await b2bWeeksFor(db, '2026-10', '2026-10-31')).map((w) => w.week), ['2026-10-12', '2026-10-26']);
+  assert.deepEqual((await b2bWeeksFor(db, '2026-11', '2026-11-08')).map((w) => w.week), ['2026-11-02']);
+  // Only weeks up to the one being shown
+  assert.deepEqual((await b2bWeeksFor(db, '2026-10', '2026-10-18')).map((w) => w.week), ['2026-10-12']);
+
+  const g = await buildGroup(db, { week: LAST, today: TODAY, trackerStart: START });
+  assert.equal(g.company.b2b, 1800);
+  near(g.company.total, g.total.mtd + 1800, 'branches + B2B');
+  assert.equal(g.company.target, 266800);
+
+  const a = await admin();
+  for (const p of [`/group?week=${LAST}`, `/hq/scoreboard?week=${LAST}`, '/']) {
+    const html = (await a.get(p)).html;
+    assert.match(html, /Company sales, October so far/, p);
+    assert.match(html, /RM 266,800/, p);
+  }
+  // Managers see the total, but the B2B weeks aren't links into HQ input
+  const m = await manager();
+  const html = (await m.get(`/group?week=${LAST}`)).html;
+  assert.match(html, /Company sales/);
+  assert.doesNotMatch(html, /href="\/hq\?week=/);
+});
+
+test('admin changes the company sales target (audited)', async () => {
+  const a = await admin();
+  const r = await a.post('/admin/targets', { branch: 'HQ', 'ct[2026-11]': '320,000' });
+  assert.equal(r.status, 302);
+  assert.equal(Number((await db.query("SELECT total_sales_target FROM company_month_targets WHERE month = '2026-11'")).rows[0].total_sales_target), 320000);
+  const log = await lastAudit('company_month_targets');
+  assert.equal(log.username, 'admin');
+  assert.equal(Number(log.old_value), 313600);
+});
