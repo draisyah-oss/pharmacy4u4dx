@@ -5,6 +5,14 @@ require('dotenv').config({ quiet: true });
 // On Railway, behave as production even if NODE_ENV wasn't set (secure cookies, no fake dates).
 if (process.env.RAILWAY_ENVIRONMENT && !process.env.NODE_ENV) process.env.NODE_ENV = 'production';
 
+// On Railway the built-in local database would be wiped on every deploy, losing everything
+// typed in. Refuse to start until the app is pointed at the Postgres database.
+if (process.env.RAILWAY_ENVIRONMENT && !process.env.DATABASE_URL) {
+  console.error('DATABASE_URL is not set. In Railway, open the app service → Variables and add');
+  console.error('DATABASE_URL = ${{Postgres.DATABASE_URL}} – then redeploy.');
+  process.exit(1);
+}
+
 const { getDb } = require('./db');
 const { prepareDatabase } = require('./db/setup');
 const { createApp } = require('./app');
