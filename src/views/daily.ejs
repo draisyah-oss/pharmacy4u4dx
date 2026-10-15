@@ -40,6 +40,7 @@
 </div>
 
 <main class="page daily">
+  <%- include('partials/branch-sales', monthSales) %>
   <h1 class="day-title"><%= isToday ? 'Today' : fmtDate(date, { weekday: 'long', day: undefined, month: undefined }) %> <span class="day-date"><%= fmtDate(date, { weekday: isToday ? 'long' : undefined, month: 'long' }) %></span></h1>
   <p class="muted day-meta">
     <% if (lastSaved) { %>Last updated by <%= lastSaved.display_name || 'someone' %> at <%= new Date(lastSaved.updated_at).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', minute: '2-digit' }) %>.<% } else { %>Nothing entered for this day yet.<% } %>

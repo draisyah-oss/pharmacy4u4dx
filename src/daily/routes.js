@@ -4,6 +4,9 @@ const express = require('express');
 const calc = require('../calc');
 const { canViewBranch, editBlockReason, dateStrip } = require('./rules');
 const { loadBranch, loadDailyPage, saveDailyEntries } = require('./data');
+const { buildScoreboard } = require('../scoreboard/data');
+const { scoreboardAccess } = require('../scoreboard/routes');
+const fmt = require('../scoreboard/format');
 
 const { sheetFieldsFor } = require('../sheets/sync');
 const { safePath } = require('../lib/safe-path');
@@ -43,7 +46,13 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
       }
     }
 
+    // The branch's month sales at the top, so everyone sees how the month is going.
+    const board = await buildScoreboard(db, { branch, weekStart: calc.weekStart(today), today, trackerStart: start });
+    const salesHref = board.started && !scoreboardAccess(req.user, branch)
+      ? `/scoreboard/trace?type=sales&from=${board.mtdFrom}&to=${board.asOf}${req.user.role === 'admin' || req.user.role === 'hq' ? `&branch=${encodeURIComponent(branch.code)}` : ''}`
+      : null;
     res.status(extra.status || 200).render('daily', {
+      monthSales: { s: board.sales, started: board.started, asOf: board.asOf, href: salesHref }, fmt,
       title: `${branch.name} – daily entry`,
       branch, date, today, ...page,
       strip: dateStrip(today, start).map((d) => ({ date: d, filled: page.filledDates.has(d) })),

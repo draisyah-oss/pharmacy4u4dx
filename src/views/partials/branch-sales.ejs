@@ -1,0 +1,23 @@
+<%# One branch's month sales at a glance: so far, % of target, pace, needed per day.
+    Inputs: s (scoreboard sales object), asOf, started, href (optional link to the rows behind it). %>
+<%
+  const monthName = new Date(s.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' });
+  const fill = s.monthTarget ? Math.min((s.mtd || 0) / s.monthTarget, 1) * 100 : 0;
+%>
+<div class="bsales">
+  <div class="bsales-top">
+    <span class="bsales-k"><%= monthName %> sales so far</span>
+    <% if (typeof href !== 'undefined' && href) { %><a class="bsales-v" href="<%= href %>"><%= fmt.money(s.mtd) %></a><% } else { %><span class="bsales-v"><%= fmt.money(s.mtd) %></span><% } %>
+  </div>
+  <% if (s.monthTarget) { %>
+    <div class="bar" aria-hidden="true">
+      <span class="s-<%= s.status %>" style="width:<%= fill %>%"></span>
+      <% if (s.paceTarget) { %><i class="run-mark" style="left:<%= Math.min(s.paceTarget / s.monthTarget, 1) * 100 %>%"></i><% } %>
+    </div>
+    <p class="bsales-sub">
+      <span><%= fmt.pct(s.pct) %> of <%= fmt.money(s.monthTarget) %></span>
+      <% if (started && s.paceTarget) { %><span class="s-<%= s.status %>"><%= s.pacePct >= 1 ? 'Ahead of pace' : 'Behind pace' %> <%= fmt.symbol(s.status) %></span><% } %>
+      <span>Needed per day: <b><%= s.perDay === null ? '–' : s.perDay === 0 ? 'target reached' : fmt.money(s.perDay) %></b></span>
+    </p>
+  <% } else { %><p class="bsales-sub">No month target set</p><% } %>
+</div>

@@ -10,7 +10,7 @@
 %>
 <main class="page wk">
   <header class="board-head">
-    <h1>HQ input <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <h1><%= title %> <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
     <p class="muted">Every Monday, for the week that just ended. Percentages are typed as percent (95 = 95%). Leave a box empty if there’s nothing to report.</p>
   </header>
   <form method="post" action="/hq" novalidate>

@@ -1,0 +1,56 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'projects' }) %>
+<% if (ok) { %><p class="alert alert-good page-flash" role="status"><%= ok %></p><% } %>
+<% if (err) { %><p class="alert alert-bad page-flash" role="alert"><%= err %></p><% } %>
+<%
+  const stateText = { done: 'Done', overdue: 'Overdue', blocked: 'Blocked', due_soon: 'Due this week', open: '' };
+  const stateClass = { done: 's-on_track', overdue: 's-off_track', blocked: 's-off_track', due_soon: 's-watch', open: '' };
+%>
+<main class="page wk">
+  <header class="board-head">
+    <h1>Projects <span class="board-week">building to scale, Q4</span></h1>
+    <p class="muted"><%= staff ? 'The milestones you own. Update the status and start date as you go.' : 'Owners update the status; reviewed at the Monday HQ session.' %></p>
+  </header>
+  <% if (!groups.length) { %><section class="wk-card"><p class="muted">No milestones <%= staff ? 'owned by you' : 'yet' %>.</p></section><% } %>
+  <% groups.forEach(function (g) { %>
+    <section class="wk-card">
+      <h2><%= g.project %></h2>
+      <% g.rows.forEach(function (p) { %>
+        <article class="oos" id="p-<%= p.id %>">
+          <header class="oos-top"><b><%= p.milestone %></b><span class="oos-status <%= stateClass[p.state] %>"><%= p.status %><%= p.state === 'overdue' ? ' · overdue' : p.state === 'due_soon' ? ' · due soon' : '' %></span></header>
+          <p class="oos-meta"><%= p.owner %> · start <%= p.start_date ? fmtDate(p.start_date) : 'not set' %> · due <%= p.due_date ? fmtDate(p.due_date) : 'not set' %></p>
+          <% if (p.notes) { %><p class="oos-answer"><%= p.notes %></p><% } %>
+          <% if (p.canEdit) { %>
+            <details class="admin-details"><summary>Update</summary>
+              <form method="post" action="/hq/projects/<%= p.id %>" class="admin-fields">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <label>Status <select name="status"><% statuses.forEach(function (s) { %><option<%= s === p.status ? ' selected' : '' %>><%= s %></option><% }) %></select></label>
+                <label>Start <input type="date" name="start_date" value="<%= p.start_date || '' %>"></label>
+                <% if (!staff) { %><label>Due <input type="date" name="due_date" value="<%= p.due_date || '' %>"></label><% } %>
+                <label class="wide">Notes <input name="notes" value="<%= p.notes || '' %>" maxlength="300"></label>
+                <button class="button small-button" type="submit">Save</button>
+              </form>
+            </details>
+          <% } %>
+        </article>
+      <% }) %>
+    </section>
+  <% }) %>
+  <% if (canAdd) { %>
+    <details class="wk-card admin-details"><summary>Add a milestone</summary>
+      <form method="post" action="/hq/projects" class="admin-fields">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label>Project <input name="project" maxlength="80" required list="project-names"></label>
+        <datalist id="project-names"><% groups.forEach(function (g) { %><option value="<%= g.project %>"><% }) %></datalist>
+        <label class="wide">Milestone <input name="milestone" maxlength="200" required></label>
+        <label>Owner <input name="owner" maxlength="80" required placeholder="e.g. Syarafana, with Alia"></label>
+        <label>Start <input type="date" name="start_date"></label>
+        <label>Due <input type="date" name="due_date"></label>
+        <button class="button small-button" type="submit">Add</button>
+      </form>
+    </details>
+  <% } %>
+</main>
+</body>
+</html>

@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 151, fail 0
+npm test                    # should end with: pass 161, fail 0
 npm start
 ```
 
@@ -32,8 +32,9 @@ npm run set-password -- hazera 1234            # branch staff: 4-digit PIN
 npm run set-password -- hafizah ManagerPass1   # managers / HQ: password, 8+ characters
 ```
 
-Staff log in by tapping their branch, their name, then their PIN. Managers, HQ and admin use
-"Log in with your password" (admin's username is `admin`). After 5 wrong tries a login is
+Everyone starts at "Where do you work?": tap your branch (or the **HQ** box), then your name.
+Staff and HQ staff (Syarafana, Fariz, Azwani) get the PIN keypad; branch managers and full HQ
+(Alia, Hanin, Iman) get a password box. Admin uses the small "Admin login" link (username `admin`). After 5 wrong tries a login is
 locked for 15 minutes.
 
 The first `npm start` creates the tables and loads `seed.json`. Every start after that uses the

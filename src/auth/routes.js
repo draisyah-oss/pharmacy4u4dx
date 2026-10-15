@@ -1,11 +1,13 @@
 // Login and logout.
-//   Branch staff: pick branch → pick your name → 4-digit PIN.
-//   Managers, HQ, admin: username + password.
+//   Branch staff and managers: pick your branch → pick your name → PIN (staff) or password (manager).
+//   HQ: the HQ box → pick your name → PIN (HQ staff) or password (full HQ access).
+//   Admin: "Admin login" → username + password.
 // After 5 wrong tries a login is locked for 15 minutes (a 4-digit PIN can't be guessed).
 
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const { startSession, endSession } = require('./sessions');
+const { usesPin } = require('./roles');
 
 const MAX_TRIES = 5;
 const LOCK_MINUTES = 15;
@@ -43,26 +45,31 @@ function loginRoutes(db) {
     const next = safeNext(req.query.next || req.body?.next);
     const mode = req.query.mode || req.body?.mode;
     const allBranches = await branches();
-    const branch = allBranches.find((b) => b.code === (req.query.branch || req.body?.branch)) || null;
+    const asked = req.query.branch || req.body?.branch;
+    const isHq = asked === 'HQ';
+    const branch = isHq ? { code: 'HQ', name: 'HQ' } : allBranches.find((b) => b.code === asked) || null;
 
-    let staff = [];
+    let people = [];
     let picked = null;
     if (branch) {
-      staff = (await db.query(
-        `SELECT u.username, u.display_name, p.role AS job, u.pin_hash IS NOT NULL AS ready
+      people = (await db.query(
+        `SELECT u.username, u.display_name, u.role, p.role AS job,
+                CASE WHEN u.role IN ('branch_staff', 'hq_staff') THEN u.pin_hash IS NOT NULL ELSE u.password_hash IS NOT NULL END AS ready
          FROM users u JOIN people p ON p.id = u.person_id
-         WHERE u.branch_id = $1 AND u.role = 'branch_staff' AND u.active
-         ORDER BY p.sort_order`,
-        [branch.id]
-      )).rows;
+         WHERE u.active AND ${isHq ? "u.role IN ('hq', 'hq_staff') AND u.branch_id IS NULL" : "u.branch_id = $1 AND u.role IN ('branch_staff', 'branch_manager')"}
+         ORDER BY CASE WHEN u.role IN ('branch_manager', 'hq') THEN 0 ELSE 1 END, p.sort_order`,
+        isHq ? [] : [branch.id]
+      )).rows.map((u) => ({ ...u, pin: usesPin(u.role) }));
       const who = req.query.user || req.body?.username;
-      picked = staff.find((s) => s.username === who && s.ready) || null;
+      picked = people.find((s) => s.username === who && s.ready) || null;
     }
 
+    let view = 'branches';
+    if (mode === 'password') view = 'password';
+    else if (picked) view = picked.pin ? 'pin' : 'pwd';
+    else if (branch) view = 'names';
     res.status(status).render('login', {
-      title: 'Log in',
-      mode: mode === 'password' ? 'password' : picked ? 'pin' : branch ? 'names' : 'branches',
-      branches: allBranches, branch, staff, picked, error, username, next,
+      title: 'Log in', mode: view, branches: allBranches, branch, staff: people, picked, error, username, next,
     });
   }
 
@@ -93,7 +100,7 @@ function loginRoutes(db) {
     }
 
     const hash = kind === 'pin' ? user.pin_hash : user.password_hash;
-    const roleOk = kind === 'pin' ? user.role === 'branch_staff' : user.role !== 'branch_staff' || !user.pin_hash;
+    const roleOk = kind === 'pin' ? usesPin(user.role) : !usesPin(user.role);
     const ok = Boolean(hash) && roleOk && bcrypt.compareSync(String(secret || ''), hash);
 
     if (!ok) {

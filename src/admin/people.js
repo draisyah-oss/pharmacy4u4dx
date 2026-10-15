@@ -4,7 +4,8 @@
 const bcrypt = require('bcryptjs');
 const { audit, slug } = require('./common');
 
-const LOGIN_ROLES = { branch: ['branch_staff', 'branch_manager'], hq: ['hq'] };
+const LOGIN_ROLES = { branch: ['branch_staff', 'branch_manager'], hq: ['hq', 'hq_staff'] };
+const { usesPin } = require('../auth/roles');
 
 async function loadPeople(db, branch) {
   const where = branch ? 'p.branch_id = $1' : 'p.branch_id IS NULL';
@@ -32,7 +33,8 @@ async function usernameFree(db, username, exceptUserId = null) {
 async function addPerson(db, { branch, body, user }) {
   const name = String(body.name || '').trim();
   const job = String(body.job || '').trim();
-  const loginRole = branch ? (body.login_role === 'branch_manager' ? 'branch_manager' : 'branch_staff') : 'hq';
+  const loginRole = branch ? (body.login_role === 'branch_manager' ? 'branch_manager' : 'branch_staff')
+    : (body.login_role === 'hq' ? 'hq' : 'hq_staff');
   if (!name) return { error: 'Type a name.' };
   if (!job) return { error: 'Type their job (e.g. Sales Assistant).' };
   let username = slug(body.username) || slug(name);
@@ -51,7 +53,7 @@ async function addPerson(db, { branch, body, user }) {
       [username, name, loginRole, branch ? branch.id : null, person.id]);
     await audit(tx, user, 'insert', 'people', `${branch ? branch.code : 'HQ'} ${name}`, null, { name, job, username, login: loginRole });
   });
-  return { ok: `Added ${name} (username ${username}). Set their ${loginRole === 'branch_staff' ? 'PIN' : 'password'} next.` };
+  return { ok: `Added ${name} (username ${username}). Set their ${usesPin(loginRole) ? 'PIN' : 'password'} next.` };
 }
 
 // Rename / change job / username / staff↔manager. A new name is carried into the measures
@@ -65,7 +67,8 @@ async function updatePerson(db, { personId, body, user }) {
   const name = String(body.name || '').trim() || p.name;
   const job = String(body.job || '').trim() || p.role;
   const username = slug(body.username) || p.username;
-  const loginRole = p.branch_id ? (body.login_role === 'branch_manager' ? 'branch_manager' : body.login_role === 'branch_staff' ? 'branch_staff' : p.login_role) : 'hq';
+  const allowed = p.branch_id ? LOGIN_ROLES.branch : LOGIN_ROLES.hq;
+  const loginRole = allowed.includes(body.login_role) ? body.login_role : p.login_role;
   if (p.user_id && username !== p.username && !(await usernameFree(db, username, p.user_id))) return { error: `The username “${username}” is taken.` };
   if (name !== p.name) {
     const dup = await db.query('SELECT 1 FROM people WHERE COALESCE(branch_id, 0) = $1 AND lower(name) = lower($2) AND id <> $3', [p.branch_id || 0, name, p.id]);
@@ -104,7 +107,7 @@ async function updatePerson(db, { personId, body, user }) {
     }
   });
   if (!changes) return { ok: 'No changes.' };
-  return { ok: loginRole !== p.login_role ? `Saved. ${name} now needs a new ${loginRole === 'branch_staff' ? 'PIN' : 'password'}.` : `Saved changes to ${name}.` };
+  return { ok: loginRole !== p.login_role ? `Saved. ${name} now needs a new ${usesPin(loginRole) ? 'PIN' : 'password'}.` : `Saved changes to ${name}.` };
 }
 
 async function setActive(db, { personId, active, user }) {
@@ -128,13 +131,13 @@ async function setSecret(db, { userId, secret, user, currentSessionId = null }) 
   const u = (await db.query('SELECT id, username, role FROM users WHERE id = $1', [userId])).rows[0];
   if (!u) return { error: 'That login doesn’t exist.' };
   const s = String(secret || '');
-  if (u.role === 'branch_staff') {
+  if (usesPin(u.role)) {
     if (!/^\d{4}$/.test(s)) return { error: 'A PIN is exactly 4 digits.' };
     if (['0000', '1111', '1234', '2222', '4321', '9999'].includes(s)) return { error: 'Choose a PIN that’s harder to guess.' };
   } else if (s.length < 8) {
     return { error: 'Passwords need at least 8 characters.' };
   }
-  const column = u.role === 'branch_staff' ? 'pin_hash' : 'password_hash';
+  const column = usesPin(u.role) ? 'pin_hash' : 'password_hash';
   await db.transaction(async (tx) => {
     await tx.query(`UPDATE users SET ${column} = $2, failed_attempts = 0, locked_until = NULL WHERE id = $1`, [u.id, bcrypt.hashSync(s, 10)]);
     // A new PIN/password logs that person out everywhere (keeps admin's own current session).

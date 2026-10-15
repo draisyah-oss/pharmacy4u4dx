@@ -1,43 +1,52 @@
 <%- include('partials/head', { bodyClass: 'login-body' }) %>
+<%
+  const n = encodeURIComponent(next);
+  const whereQs = branch ? 'branch=' + encodeURIComponent(branch.code) + '&' : '';
+%>
 <main class="login">
   <div class="login-mark">Pharmacy4U <span>4DX</span></div>
 
   <% if (error) { %><p class="alert alert-bad" role="alert"><%= error %></p><% } %>
 
   <% if (mode === 'branches') { %>
-    <h1>Which branch are you at?</h1>
+    <h1>Where do you work?</h1>
     <div class="pick-list">
       <% branches.forEach(function (b) { %>
-        <a class="pick" href="/login?branch=<%= encodeURIComponent(b.code) %>&next=<%= encodeURIComponent(next) %>">
+        <a class="pick" href="/login?branch=<%= encodeURIComponent(b.code) %>&next=<%= n %>">
           <span class="pick-main"><%= b.name %></span>
           <span class="pick-sub"><%= b.code %></span>
         </a>
       <% }) %>
+      <a class="pick pick-hq" href="/login?branch=HQ&next=<%= n %>">
+        <span class="pick-main">HQ</span>
+        <span class="pick-sub">Head office</span>
+      </a>
     </div>
-    <p class="login-alt"><a href="/login?mode=password&next=<%= encodeURIComponent(next) %>">Manager, HQ or admin? Log in with your password</a></p>
+    <p class="login-alt"><a href="/login?mode=password&next=<%= n %>">Admin login</a></p>
 
   <% } else if (mode === 'names') { %>
-    <a class="back" href="/login?next=<%= encodeURIComponent(next) %>">Change branch</a>
+    <a class="back" href="/login?next=<%= n %>">Change <%= branch.code === 'HQ' ? 'to a branch' : 'branch' %></a>
     <h1><%= branch.name %>: who are you?</h1>
     <div class="pick-list">
-      <% staff.forEach(function (s) { %>
+      <% staff.forEach(function (s) {
+           const tag = s.role === 'branch_manager' ? 'Manager' : s.role === 'hq' ? 'HQ' : ''; %>
         <% if (s.ready) { %>
-          <a class="pick" href="/login?branch=<%= encodeURIComponent(branch.code) %>&user=<%= encodeURIComponent(s.username) %>&next=<%= encodeURIComponent(next) %>">
-            <span class="pick-main"><%= s.display_name %></span>
+          <a class="pick" href="/login?<%= whereQs %>user=<%= encodeURIComponent(s.username) %>&next=<%= n %>">
+            <span class="pick-main"><%= s.display_name %><% if (tag) { %> <span class="pick-tag"><%= tag %></span><% } %></span>
             <span class="pick-sub"><%= s.job %></span>
           </a>
         <% } else { %>
           <div class="pick pick-off" aria-disabled="true">
             <span class="pick-main"><%= s.display_name %></span>
-            <span class="pick-sub">PIN not set yet – ask admin</span>
+            <span class="pick-sub"><%= s.pin ? 'PIN' : 'Password' %> not set yet – ask admin</span>
           </div>
         <% } %>
       <% }) %>
+      <% if (!staff.length) { %><p class="muted">No logins here yet – ask admin.</p><% } %>
     </div>
-    <p class="login-alt"><a href="/login?mode=password&next=<%= encodeURIComponent(next) %>">Branch manager? Log in with your password</a></p>
 
   <% } else if (mode === 'pin') { %>
-    <a class="back" href="/login?branch=<%= encodeURIComponent(branch.code) %>&next=<%= encodeURIComponent(next) %>">Not <%= picked.display_name %>?</a>
+    <a class="back" href="/login?<%= whereQs %>next=<%= n %>">Not <%= picked.display_name %>?</a>
     <h1>Hi <%= picked.display_name %>, enter your PIN</h1>
     <form method="post" action="/login/pin" class="pin-form" id="pin-form" autocomplete="off">
       <input type="hidden" name="username" value="<%= picked.username %>">
@@ -47,16 +56,29 @@
       <input class="pin-input" id="pin" name="pin" type="password" inputmode="numeric" pattern="\d{4}" maxlength="4" required autofocus>
       <div class="pin-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
       <div class="keypad" hidden>
-        <% [1,2,3,4,5,6,7,8,9].forEach(function (n) { %><button type="button" data-key="<%= n %>"><%= n %></button><% }) %>
+        <% [1,2,3,4,5,6,7,8,9].forEach(function (k) { %><button type="button" data-key="<%= k %>"><%= k %></button><% }) %>
         <span></span><button type="button" data-key="0">0</button><button type="button" data-key="del" aria-label="Delete">⌫</button>
       </div>
       <button type="submit" class="button wide pin-submit">Log in</button>
     </form>
     <script src="/js/login.js?v=3" defer></script>
 
+  <% } else if (mode === 'pwd') { %>
+    <a class="back" href="/login?<%= whereQs %>next=<%= n %>">Not <%= picked.display_name %>?</a>
+    <h1>Hi <%= picked.display_name %>, enter your password</h1>
+    <form method="post" action="/login/password" class="stack">
+      <input type="hidden" name="next" value="<%= next %>">
+      <input type="hidden" name="branch" value="<%= branch.code %>">
+      <input type="hidden" name="username" value="<%= picked.username %>" autocomplete="username">
+      <label>Password
+        <input name="password" type="password" autocomplete="current-password" required autofocus>
+      </label>
+      <button type="submit" class="button wide">Log in</button>
+    </form>
+
   <% } else { %>
-    <a class="back" href="/login?next=<%= encodeURIComponent(next) %>">Back to branches</a>
-    <h1>Log in with your password</h1>
+    <a class="back" href="/login?next=<%= n %>">Back</a>
+    <h1>Admin login</h1>
     <form method="post" action="/login/password" class="stack">
       <input type="hidden" name="next" value="<%= next %>">
       <input type="hidden" name="mode" value="password">

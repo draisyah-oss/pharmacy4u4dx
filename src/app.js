@@ -10,6 +10,7 @@ const { adminRoutes } = require('./admin/routes');
 const { weeklyRoutes } = require('./weekly/routes');
 const { groupRoutes } = require('./group/routes');
 const { hqRoutes } = require('./hq/routes');
+const { hqTeamRoutes } = require('./hq/team-routes');
 const calc = require('./calc');
 const fmt = require('./scoreboard/format');
 const { companySalesForWeek } = require('./group/company');
@@ -69,6 +70,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.get('/', async (req, res, next) => {
     try {
       if (req.user.role === 'branch_staff' || req.user.role === 'branch_manager') return res.redirect('/daily');
+      if (req.user.role === 'hq_staff') return res.redirect('/hq/today');
       const today = calc.todayInMalaysia(now());
       const branches = (await db.query(
         `SELECT b.code, b.name,
@@ -85,6 +87,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(weeklyRoutes(db, { now, trackerStart }));
   app.use(groupRoutes(db, { now, trackerStart }));
   app.use(hqRoutes(db, { now, trackerStart }));
+  app.use(hqTeamRoutes(db, { now, trackerStart }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

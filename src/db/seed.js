@@ -272,8 +272,8 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       summary.people++;
       if (o.login === false) continue; // e.g. the CEO, who logs in as admin
       await tx.query(
-        `INSERT INTO users (username, display_name, role, person_id, enters_all_hq) VALUES ($1,$2,'hq',$3,$4)`,
-        [usernames.get(`hq|${o.name}`), o.name, person.id, Boolean(o.enters_all)]
+        `INSERT INTO users (username, display_name, role, person_id, enters_all_hq) VALUES ($1,$2,$3,$4,$5)`,
+        [usernames.get(`hq|${o.name}`), o.name, o.access === 'staff' ? 'hq_staff' : 'hq', person.id, Boolean(o.enters_all)]
       );
       summary.users++;
     }
@@ -291,6 +291,18 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
           [hm.id, month, target]
         );
       }
+    }
+
+    for (const [name, labels] of Object.entries(seed.hq.daily_tasks || {})) {
+      if (!hqPeople[name]) continue;
+      for (const [i, label] of labels.entries()) {
+        await tx.query('INSERT INTO hq_daily_tasks (person_id, label, sort_order) VALUES ($1,$2,$3)', [hqPeople[name], label, i + 1]);
+      }
+    }
+    for (const [i, pr] of (seed.hq.projects || []).entries()) {
+      await tx.query(
+        'INSERT INTO hq_projects (project, milestone, owner, start_date, due_date, sort_order) VALUES ($1,$2,$3,$4,$5,$6)',
+        [pr.project, pr.milestone, pr.owner, pr.start || null, pr.due || null, i + 1]);
     }
 
     const admin = await one(
@@ -312,6 +324,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       tracker_start_date: startDate,
       sales_sheet_id: seed.company.sales_sheet_id || null,
       seed_loaded_at: new Date().toISOString(),
+      hq_access_v1: new Date().toISOString(),
     };
     for (const [key, value] of Object.entries(settings)) {
       if (value === null) continue;

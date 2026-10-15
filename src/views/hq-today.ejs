@@ -1,0 +1,85 @@
+<%- include('partials/head', { bodyClass: 'daily-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'hqtoday' }) %>
+<%
+  const pq = 'person=' + person.id;
+  const off = blocked ? ' disabled' : '';
+  const w = week;
+%>
+<div class="daybar">
+  <% if (people.length > 1) { %>
+    <nav class="strip branch-strip" aria-label="Choose a person">
+      <% people.forEach(function (p) { %><a href="/hq/today?person=<%= p.id %>&date=<%= date %>" class="strip-pill<%= p.id === person.id ? ' is-current' : '' %>"><%= p.name %></a><% }) %>
+    </nav>
+  <% } %>
+  <nav class="strip" aria-label="Choose a day">
+    <% strip.forEach(function (d) { %>
+      <a href="/hq/today?<%= pq %>&date=<%= d.date %>" class="strip-day<%= d.date === date ? ' is-current' : '' %><%= d.filled ? ' has-data' : '' %>"<%= d.date === date ? ' aria-current="date"' : '' %>>
+        <span class="strip-dow"><%= d.date === today ? 'Today' : fmtDate(d.date, { day: undefined, month: undefined }) %></span>
+        <span class="strip-num"><%= Number(d.date.slice(8)) %></span>
+      </a>
+    <% }) %>
+  </nav>
+</div>
+<% if (ok) { %><p class="alert alert-good page-flash" role="status"><%= ok %></p><% } %>
+<% if (err) { %><p class="alert alert-bad page-flash" role="alert"><%= err %></p><% } %>
+
+<main class="page wk">
+  <header class="board-head">
+    <h1><%= person.name %> <span class="board-week"><%= date === today ? 'today' : fmtDate(date, { weekday: 'long', month: 'long' }) %></span></h1>
+    <p class="muted"><%= person.role || '' %> · tick each task by 11 am on working days. A day counts when every task is done.</p>
+  </header>
+
+  <section class="wk-facts" aria-label="This week">
+    <div class="wk-fact">
+      <span class="wk-k">Days fully done this week</span>
+      <span class="wk-v<%= w.pct === null ? '' : w.pct >= 0.95 ? ' s-on_track' : w.pct >= 0.855 ? ' s-watch' : ' s-off_track' %>"><%= w.workingDays ? w.fullDays + ' of ' + w.workingDays : '–' %></span>
+      <span class="wk-sub"><%= w.pct === null ? 'No working days yet this week' : fmt.pct(w.pct) + ' · target 95%' %></span>
+    </div>
+    <div class="wk-fact">
+      <span class="wk-k">This week, Mon–Fri</span>
+      <span class="wk-days"><% w.days.forEach(function (d) { %><span class="wk-day<%= d.full ? ' s-on_track' : d.ticked ? ' s-off_track' : '' %>" title="<%= fmtDate(d.date) %>: <%= d.done %> of <%= d.total %>"><%= fmtDate(d.date, { day: undefined, month: undefined }) %> <%= d.full ? '✔' : d.ticked ? '✕' : '–' %></span><% }) %></span>
+    </div>
+  </section>
+
+  <% if (!tasks.length) { %>
+    <section class="wk-card"><p class="muted">No daily tasks yet. <%= canManage ? 'Add 3–6 things you do every working day that move your KPIs (below).' : '' %></p></section>
+  <% } else { %>
+    <form method="post" action="/hq/today" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="person" value="<%= person.id %>"><input type="hidden" name="date" value="<%= date %>">
+      <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
+      <section class="wk-card" aria-label="Daily tasks">
+        <% tasks.forEach(function (t) { const v = t.tick ? (t.tick.done ? 'yes' : 'no') : ''; %>
+          <fieldset class="commit-done">
+            <legend><b><%= t.label %></b><% if (t.tick && t.tick.entered_by) { %> <span class="muted small">– <%= t.tick.entered_by %></span><% } %></legend>
+            <div class="yesno">
+              <label class="yn yn-yes"><input type="radio" name="t[k<%= t.id %>]" value="yes"<%= v === 'yes' ? ' checked' : '' %><%= off %>><span>Done</span></label>
+              <label class="yn yn-no"><input type="radio" name="t[k<%= t.id %>]" value="no"<%= v === 'no' ? ' checked' : '' %><%= off %>><span>Not done</span></label>
+            </div>
+          </fieldset>
+        <% }) %>
+      </section>
+      <% if (!blocked) { %><button class="button wide" type="submit">Save</button><% } %>
+    </form>
+  <% } %>
+
+  <% if (canManage) { %>
+    <details class="wk-card admin-details" id="tasks">
+      <summary>Change the task list</summary>
+      <% tasks.forEach(function (t) { %>
+        <form method="post" action="/hq/today/tasks" class="inline-form task-row">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="person" value="<%= person.id %>"><input type="hidden" name="date" value="<%= date %>">
+          <input type="hidden" name="retire" value="<%= t.id %>">
+          <span><%= t.label %></span> <button class="link-button" type="submit">Remove</button>
+        </form>
+      <% }) %>
+      <form method="post" action="/hq/today/tasks" class="admin-fields">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="person" value="<%= person.id %>"><input type="hidden" name="date" value="<%= date %>">
+        <label class="wide">New daily task <input name="label" maxlength="120" placeholder="e.g. POs checked against 30-day sales before placing" required></label>
+        <button class="button small-button" type="submit">Add task</button>
+      </form>
+    </details>
+  <% } %>
+</main>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'hqcommit' }) %>
+<%- include('partials/week-bar', { base: '/hq/commitments', pickAny: false }) %>
+<%
+  const typedFor = (pid) => (typed && typed.c && typed.c['p' + pid]) || null;
+  const doneTyped = (id) => (typed && typed.done ? typed.done['k' + id] : undefined);
+  const anyEditable = people.some(function (p) { return canActFor(p.id); });
+%>
+<main class="page wk">
+  <header class="board-head">
+    <h1>HQ commitments <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">“This week I will ___ by ___ to move ___.” Written at the Monday HQ session; marked the following week. Target: 80% kept.</p>
+  </header>
+  <% if (tooOld) { %><p class="alert alert-info">Only this week and last week can be changed. Ask admin to fix older weeks.</p><% } %>
+
+  <form method="post" action="/hq/commitments" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
+
+    <section class="wk-card" aria-labelledby="last-h">
+      <h2 id="last-h">Last week’s commitments <span class="muted small"><%= kept.made ? kept.kept + ' of ' + kept.made + ' kept' + (kept.pct === null ? '' : ' (' + fmt.pct(kept.pct) + ')') : '' %></span></h2>
+      <% if (!last.length) { %><p class="muted">None were made for the week of <%= fmtDate(prev) %>.</p><% } %>
+      <% last.forEach(function (c) {
+           const t = doneTyped(c.id); const v = t !== undefined ? t : (c.done || '');
+           const off = canActFor(c.person_id) ? '' : ' disabled'; %>
+        <fieldset class="commit-done">
+          <legend><b><%= c.person_name %></b>: <%= c.commitment %><% if (c.moves) { %><span class="muted small"> – <%= c.moves %></span><% } %></legend>
+          <div class="yesno yesno-3">
+            <label class="yn yn-yes"><input type="radio" name="done[k<%= c.id %>]" value="yes"<%= v === 'yes' ? ' checked' : '' %><%= off %>><span>Done</span></label>
+            <label class="yn yn-partly"><input type="radio" name="done[k<%= c.id %>]" value="partly"<%= v === 'partly' ? ' checked' : '' %><%= off %>><span>Partly</span></label>
+            <label class="yn yn-no"><input type="radio" name="done[k<%= c.id %>]" value="no"<%= v === 'no' ? ' checked' : '' %><%= off %>><span>No</span></label>
+          </div>
+        </fieldset>
+      <% }) %>
+    </section>
+
+    <section class="wk-card" aria-labelledby="new-h">
+      <h2 id="new-h">This week – one commitment each</h2>
+      <% people.forEach(function (p) {
+           const c = current.get(p.id); const t = typedFor(p.id);
+           const text = t ? t.text : (c ? c.commitment : ''); const mv = t ? t.moves : (c ? c.moves : ''); const by = t ? t.by : (c ? c.by_when : '');
+           const off = canActFor(p.id) ? '' : ' disabled'; %>
+        <div class="commit<%= errors[p.id] ? ' has-error' : '' %>">
+          <h3><%= p.name %> <span class="muted small"><%= p.role || '' %></span></h3>
+          <label class="wk-field"><span class="wk-label">This week I will…</span>
+            <textarea name="c[p<%= p.id %>][text]" rows="2" maxlength="300"<%= off %>><%= text || '' %></textarea></label>
+          <div class="commit-row">
+            <label class="wk-field"><span class="wk-label">To move</span>
+              <select name="c[p<%= p.id %>][moves]"<%= off %>><option value="">–</option>
+                <% (moves.get(p.id) || []).forEach(function (m) { %><option value="<%= m %>"<%= m === mv ? ' selected' : '' %>><%= m %></option><% }) %>
+              </select></label>
+            <label class="wk-field"><span class="wk-label">By when</span><input type="date" name="c[p<%= p.id %>][by]" value="<%= by || '' %>"<%= off %>></label>
+          </div>
+          <% if (errors[p.id]) { %><span class="wk-error"><%= errors[p.id] %></span><% } %>
+        </div>
+      <% }) %>
+    </section>
+    <% if (anyEditable) { %><button class="button wide" type="submit">Save commitments</button><% } %>
+  </form>
+</main>
+</body>
+</html>

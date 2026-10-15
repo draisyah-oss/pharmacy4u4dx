@@ -16,6 +16,30 @@
     <span><b class="s-on_track">✔</b> 100% or more</span><span><b class="s-watch">▲</b> 90–99%</span><span><b class="s-off_track">✕</b> under 90%</span>
   </div>
 
+  <%
+    const tw = teamWeek;
+    const doneText = { yes: 'Done ✔', partly: 'Partly ▲', no: 'No ✕' };
+    const doneClass = { yes: 's-on_track', partly: 's-watch', no: 's-off_track' };
+  %>
+  <h2 class="g-h">Team this week</h2>
+  <div class="table-wrap">
+    <table class="admin-table hq-team">
+      <thead><tr><th scope="col">Who</th><th scope="col">Daily tasks (Mon–Fri)</th><th scope="col">Last week’s commitment</th><th scope="col">This week’s commitment</th></tr></thead>
+      <tbody>
+        <% tw.rows.forEach(function (r) { const d = r.daily; const lc = r.lastCommitment; const tc = r.thisCommitment; %>
+          <tr>
+            <th scope="row"><span class="t-label"><%= r.person.name %></span><span class="t-meta"><%= r.person.role || '' %></span></th>
+            <td><% if (!d) { %><span class="muted">No daily tasks</span><% } else { %><a class="<%= d.pct === null ? '' : d.pct >= 0.95 ? 's-on_track' : d.pct >= 0.855 ? 's-watch' : 's-off_track' %>" href="/hq/today?person=<%= r.person.id %>&date=<%= board.weekEnd < today ? board.weekEnd : today %>"><%= d.fullDays %> of <%= d.workingDays %> days</a><% } %></td>
+            <td><% if (!lc) { %><span class="muted">–</span><% } else { %><span class="<%= lc.done ? doneClass[lc.done] : '' %>"><%= lc.done ? doneText[lc.done] : 'Not marked' %></span><span class="t-meta"><%= lc.commitment %></span><% } %></td>
+            <td><% if (!tc) { %><span class="muted">Not written yet</span><% } else { %><%= tc.commitment %><% } %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small">Last week’s commitments kept: <a href="/hq/commitments?week=<%= board.week %>"><%= tw.kept.made ? tw.kept.kept + ' of ' + tw.kept.made + (tw.kept.pct === null ? '' : ' (' + fmt.pct(tw.kept.pct) + ')') : 'none made' %></a> · target 80%.
+    Projects: <a href="/hq/projects"><%= tw.projects.done %> of <%= tw.projects.total %> milestones done, <%= tw.projects.inProgress %> in progress<%= tw.projects.overdue ? ', ' + tw.projects.overdue + ' overdue' : '' %></a>.</p>
+
   <% board.groups.forEach(function (g) { %>
     <h2 class="g-h"><%= g.owner %></h2>
     <div class="table-wrap">

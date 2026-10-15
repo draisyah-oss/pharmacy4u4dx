@@ -40,6 +40,7 @@ async function backfillNewSettings(db, seed, log) {
     if (r.affectedRows || r.rowCount) log(`Added the sales sheet columns for ${b.code}.`);
   }
   await backfillHqTeam(db, seed, log);
+  await backfillHqAccess(db, seed, log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -68,8 +69,8 @@ async function backfillHqTeam(db, seed, log) {
       let username = o.name.toLowerCase().replace(/[^a-z0-9]+/g, '');
       if ((await tx.query('SELECT 1 FROM users WHERE username = $1', [username])).rows.length) username += '.hq';
       await tx.query(
-        `INSERT INTO users (username, display_name, role, person_id, enters_all_hq) VALUES ($1, $2, 'hq', $3, $4)`,
-        [username, o.name, rows[0].id, Boolean(o.enters_all)]);
+        `INSERT INTO users (username, display_name, role, person_id, enters_all_hq) VALUES ($1, $2, $3, $4, $5)`,
+        [username, o.name, o.access === 'staff' ? 'hq_staff' : 'hq', rows[0].id, Boolean(o.enters_all)]);
     }
     const codes = new Set((await tx.query('SELECT code FROM hq_measures')).rows.map((r) => r.code));
     let newMeasures = 0;
@@ -93,4 +94,39 @@ async function backfillHqTeam(db, seed, log) {
   });
 }
 
-module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam };
+// 15 Oct: HQ access levels, daily tasks and projects. Done once (app_settings flag), so later
+// changes in Admin – a different login type, a retired task, a project edited – are kept.
+async function backfillHqAccess(db, seed, log) {
+  const done = await db.query("SELECT 1 FROM app_settings WHERE key = 'hq_access_v1'");
+  if (done.rows.length) return;
+  await db.transaction(async (tx) => {
+    const people = new Map((await tx.query('SELECT id, name FROM people WHERE branch_id IS NULL')).rows.map((p) => [p.name, p.id]));
+    for (const o of seed.hq.owners || []) {
+      if (o.access !== 'staff' || !people.has(o.name)) continue;
+      // A changed login type needs a new PIN; any old password is cleared.
+      await tx.query(
+        `UPDATE users SET role = 'hq_staff', password_hash = NULL WHERE person_id = $1 AND role = 'hq'`, [people.get(o.name)]);
+    }
+    if (!(await tx.query('SELECT 1 FROM hq_daily_tasks LIMIT 1')).rows.length) {
+      for (const [name, labels] of Object.entries(seed.hq.daily_tasks || {})) {
+        if (!people.has(name)) continue;
+        for (const [i, label] of labels.entries()) {
+          await tx.query('INSERT INTO hq_daily_tasks (person_id, label, sort_order) VALUES ($1,$2,$3)', [people.get(name), label, i + 1]);
+        }
+      }
+    }
+    if (!(await tx.query('SELECT 1 FROM hq_projects LIMIT 1')).rows.length) {
+      for (const [i, pr] of (seed.hq.projects || []).entries()) {
+        await tx.query(
+          'INSERT INTO hq_projects (project, milestone, owner, start_date, due_date, sort_order) VALUES ($1,$2,$3,$4,$5,$6)',
+          [pr.project, pr.milestone, pr.owner, pr.start || null, pr.due || null, i + 1]);
+      }
+    }
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('hq_access_v1', $1)", [new Date().toISOString()]);
+    await tx.query(
+      `INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'users', 'HQ access levels, daily tasks, projects', NULL)`);
+  });
+  log('Set HQ access levels and added HQ daily tasks and projects from seed.json.');
+}
+
+module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess };

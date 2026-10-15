@@ -472,12 +472,12 @@
   "hq": {
     "owners": [
       {"name": "Dr Aisyah", "role": "CEO", "login": false},
-      {"name": "Alia", "role": "Inventory & Products, B2B"},
-      {"name": "Syarafana", "role": "Inventory (ordering)"},
-      {"name": "Fariz", "role": "Warehouse intern"},
-      {"name": "Azwani", "role": "Accounts"},
-      {"name": "Hanin", "role": "Operations Manager"},
-      {"name": "Iman", "role": "HR & Admin Executive", "enters_all": true}
+      {"name": "Alia", "role": "Inventory & Products, B2B", "access": "hq"},
+      {"name": "Syarafana", "role": "Inventory (ordering)", "access": "staff"},
+      {"name": "Fariz", "role": "Warehouse intern", "access": "staff"},
+      {"name": "Azwani", "role": "Accounts", "access": "staff"},
+      {"name": "Hanin", "role": "Operations Manager", "access": "hq"},
+      {"name": "Iman", "role": "HR & Admin Executive", "enters_all": true, "access": "hq"}
     ],
     "measures": [
       {
@@ -788,6 +788,28 @@
         "kind": "Lead",
         "note": "Iman messages anyone whose number is missing at 9:30 am."
       }
+    ],
+    "daily_tasks": {"Iman": ["Attendance & roster checked by 10 am", "Closing reports received from all 5 branches", "Tracker logs filled for all 5 branches", "Branch requests received today logged", "No branch request open over 2 working days", "No leave application waiting over 1 day"]},
+    "projects": [
+      {"project": "Central ordering", "milestone": "Min/max stock levels set for top 300 items", "owner": "Syarafana, with Alia", "due": "2026-10-31"},
+      {"project": "Central ordering", "milestone": "Supplier order days fixed; branch daily request template live", "owner": "Syarafana", "due": "2026-10-31"},
+      {"project": "Central ordering", "milestone": "All branch orders placed by HQ; invoices go to Accounts", "owner": "Syarafana, Azwani", "due": "2026-11-30"},
+      {"project": "Company wiki", "milestone": "Wiki live with org chart and JDs; all staff have access", "owner": "Iman, with Hanin", "due": "2026-11-15"},
+      {"project": "Company wiki", "milestone": "SOPs and blueprints filed", "owner": "Iman", "due": "2026-12-31"},
+      {"project": "Staff training", "milestone": "Training calendar published: staff 2 product + 2 self-development a month; managers 15 min every Tuesday", "owner": "Hanin", "due": "2026-10-31"},
+      {"project": "Staff training", "milestone": "Competency checklist for every role", "owner": "Hanin, with Alia", "due": "2026-11-30"},
+      {"project": "AI dispensary (Rx4U)", "milestone": "Pilot workflow and success measures agreed", "owner": "CEO + pilot PIC", "due": "2026-10-31"},
+      {"project": "AI dispensary (Rx4U)", "milestone": "Pilot running in one branch", "owner": "CEO + pilot PIC", "due": "2026-11-30"},
+      {"project": "AI dispensary (Rx4U)", "milestone": "Pilot results reviewed", "owner": "CEO", "due": "2026-12-20"},
+      {"project": "Branch opening blueprint", "milestone": "Blueprint approved (Ampang as case study)", "owner": "Hanin and CEO; Alia: opening stock list", "due": "2026-12-15"},
+      {"project": "Daily operations blueprint", "milestone": "Each PIC writes 2 SOPs", "owner": "All PICs", "due": "2026-11-30"},
+      {"project": "Daily operations blueprint", "milestone": "10 SOPs approved; every branch audited once", "owner": "Hanin", "due": "2026-12-31"},
+      {"project": "Branding", "milestone": "Brand guide (Pharmacy4U, IMAN Wellness, BN)", "owner": "Hanin, with JH", "due": "2026-11-30"},
+      {"project": "Branding", "milestone": "All 5 branches pass brand audit; 640 Google reviews", "owner": "Hanin", "due": "2026-12-31"},
+      {"project": "Stock", "milestone": "RM 60,000 excess stock released", "owner": "Alia", "due": "2026-12-31"},
+      {"project": "BR walk-in", "milestone": "New signboard up at BR", "owner": "Amira", "due": "2026-10-31"},
+      {"project": "Ampang Shopee IMAN Wellness", "milestone": "Join the 11.11 campaign with a store voucher", "owner": "Ampang supervisor", "due": "2026-11-11"},
+      {"project": "Ampang Shopee IMAN Wellness", "milestone": "Join the 12.12 campaign with a store voucher", "owner": "Ampang supervisor", "due": "2026-12-12"}
     ]
   }
 }

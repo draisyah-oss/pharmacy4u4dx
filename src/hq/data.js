@@ -34,8 +34,8 @@ function targetFor(m, week) {
 // as on the HQ KPIs tab; admin can enter any.
 function canEditMeasure(user, m) {
   if (user.role === 'admin') return true;
-  if (user.role !== 'hq') return false;
-  if (user.enters_all_hq) return true;
+  if (user.role !== 'hq' && user.role !== 'hq_staff') return false;
+  if (user.role === 'hq' && user.enters_all_hq) return true;
   if (m.person_id && user.person_id) return m.person_id === user.person_id;
   return m.owner_name.toLowerCase() === String(user.display_name).toLowerCase();
 }
@@ -45,7 +45,7 @@ function weekDenied(user, week, today) {
   const thisWeek = calc.weekStart(today);
   if (week > thisWeek) return 'That week hasn’t started yet.';
   if (user.role === 'admin') return null;
-  if (user.role !== 'hq') return 'Only HQ and admin enter HQ numbers.';
+  if (user.role !== 'hq' && user.role !== 'hq_staff') return 'Only HQ and admin enter HQ numbers.';
   if (week < calc.addDays(thisWeek, -7)) return 'Only this week and last week can be changed. Ask admin to fix older weeks.';
   return null;
 }

@@ -575,3 +575,29 @@ a.wk-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .company-sales { margin: 12px 0 16px; }
 .company-sales .dd-note { display: block; white-space: normal; }
 .company-sales .dd-note a { white-space: nowrap; }
+
+/* Login: HQ box and role tags */
+.pick-hq { border: 2px solid var(--brand); }
+.pick-tag { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; background: var(--good-tint); color: var(--brand); font-size: 0.75rem; font-weight: 700; vertical-align: middle; }
+
+/* HQ day, commitments, projects */
+.wk-days { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.wk-day { font-size: 0.85rem; font-weight: 700; padding: 2px 8px; border-radius: 8px; background: var(--page); }
+.yesno-3 { grid-template-columns: 1fr 1fr 1fr; }
+.yn-partly input:checked + span { background: #d99a1e; border-color: #d99a1e; color: #fff; }
+.task-row { justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.hq-team td, .hq-team th { white-space: normal; }
+
+/* Branch sales at a glance (home cards, daily entry) */
+.bsales { background: var(--card); border-radius: 14px; padding: 12px 14px; box-shadow: 0 1px 0 var(--line); margin: 8px 0 12px; }
+.bsales-top { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.bsales-k { font-size: 0.85rem; font-weight: 700; color: var(--ink-soft); }
+.bsales-v { font-size: 1.45rem; font-weight: 700; color: var(--ink); white-space: nowrap; }
+a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
+.bsales .bar { margin: 6px 0; }
+.bsales-sub { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0; font-size: 0.88rem; color: var(--ink-soft); }
+.pick-two .bsales { box-shadow: none; padding: 8px 0 0; margin: 4px 0; background: transparent; }
+.page.home { max-width: 1000px; }
+@media (min-width: 760px) { .home-branches { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } }
+.commit-done { display: block; min-width: 0; }
+.commit-done > .yesno { clear: both; width: 100%; }

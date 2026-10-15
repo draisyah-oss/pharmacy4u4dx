@@ -1,18 +1,16 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
-<main class="page narrow">
-  <div class="home-links">
-    <a class="button" href="/group">Group scoreboard</a>
-    <a class="button secondary" href="/hq">HQ input</a>
-    <a class="button secondary" href="/hq/scoreboard">HQ scoreboard</a>
-  </div>
+<%- include('partials/nav', { navActive: 'home' }) %>
+<main class="page home">
   <%- include('partials/company-sales', { company }) %>
   <h1>Branches</h1>
-  <p class="muted">Open a branch's daily entry for <%= fmtDate(today) %>, or its scoreboard.</p>
-  <div class="pick-list">
-    <% branches.forEach(function (b) { %>
+  <p class="muted">Month sales per branch, counted to the last closed day. Tap the amount for the daily numbers behind it.</p>
+  <div class="pick-list home-branches">
+    <% branches.forEach(function (b) {
+         const r = company && company.rows ? company.rows.find(function (x) { return x.code === b.code; }) : null; %>
       <div class="pick pick-two">
         <span class="pick-main"><%= b.name %></span>
+        <% if (r) { %><%- include('partials/branch-sales', { s: r.sales, started: r.started, asOf: r.asOf, href: r.started ? '/scoreboard/trace?type=sales&from=' + r.sales.month + '-01&to=' + r.asOf + '&branch=' + encodeURIComponent(b.code) : null }) %><% } %>
         <span class="pick-sub"><%= b.today_entries ? b.today_entries + ' of ' + b.fields + ' numbers in today' : 'Nothing in yet today' %></span>
         <span class="pick-links">
           <a class="button secondary small-button" href="/daily?branch=<%= encodeURIComponent(b.code) %>">Daily entry</a>

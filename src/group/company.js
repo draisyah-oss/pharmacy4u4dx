@@ -70,7 +70,9 @@ async function companySalesForWeek(db, { week, today, trackerStart }) {
     const b = await buildScoreboard(db, { branch, weekStart: week, today, trackerStart });
     rows.push({ code: branch.code, name: branch.name, sales: b.sales, asOf: b.asOf, started: b.started });
   }
-  return buildCompanySales(db, rows);
+  const company = await buildCompanySales(db, rows);
+  if (company) company.rows = rows; // each branch's sales card (home page)
+  return company;
 }
 
 module.exports.companySalesForWeek = companySalesForWeek;

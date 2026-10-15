@@ -7,7 +7,7 @@ const { scoreboardAccess } = require('../scoreboard/routes');
 const { weekChoices, pickWeek } = require('../lib/weeks');
 const { buildGroup } = require('./data');
 
-const canSeeGroup = (user) => ['branch_manager', 'hq', 'admin'].includes(user.role);
+const canSeeGroup = (user) => ['branch_manager', 'hq', 'hq_staff', 'admin'].includes(user.role);
 
 function groupRoutes(db, { now, trackerStart }) {
   const router = express.Router();

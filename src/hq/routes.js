@@ -1,4 +1,5 @@
-// HQ input (Alia, Hanin – Mondays) and the HQ scoreboard. HQ and admin only.
+// HQ input (Mondays) and the HQ scoreboard. Full HQ (hq) and admin see every HQ measure;
+// HQ staff (hq_staff) see and enter only their own KPIs, and can read the HQ scoreboard.
 
 const express = require('express');
 const calc = require('../calc');
@@ -6,8 +7,9 @@ const fmt = require('../scoreboard/format');
 const { weekChoices, lastFinishedWeek, pickWeek } = require('../lib/weeks');
 const hq = require('./data');
 const { companySalesForWeek } = require('../group/company');
+const team = require('./team');
 
-const isHqOrAdmin = (user) => user.role === 'hq' || user.role === 'admin';
+const isHqOrAdmin = (user) => ['hq', 'hq_staff', 'admin'].includes(user.role);
 
 function hqRoutes(db, { now, trackerStart }) {
   const router = express.Router();
@@ -26,9 +28,10 @@ function hqRoutes(db, { now, trackerStart }) {
   const deny = (res) => res.status(403).render('message', { title: 'HQ only', message: 'HQ numbers are for HQ (Alia, Hanin) and admin.' });
 
   async function renderInput(req, res, ctx, extra = {}) {
-    const rows = await hq.loadHqWeek(db, { week: ctx.week, user: req.user });
+    let rows = await hq.loadHqWeek(db, { week: ctx.week, user: req.user });
+    if (req.user.role === 'hq_staff') rows = rows.filter((r) => r.canEdit); // own KPIs only
     res.status(extra.status || 200).render('hq-input', {
-      title: 'HQ input', ...ctx, rows, hq, fmt, pills: pills(ctx, '/hq'), weekEnd: calc.addDays(ctx.week, 6),
+      title: req.user.role === 'hq_staff' ? 'My KPIs' : 'HQ input', ...ctx, rows, hq, fmt, pills: pills(ctx, '/hq'), weekEnd: calc.addDays(ctx.week, 6),
       blocked: hq.weekDenied(req.user, ctx.week, ctx.today), typed: extra.typed || null,
       errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || null,
     });
@@ -60,7 +63,8 @@ function hqRoutes(db, { now, trackerStart }) {
       const ctx = await context(req);
       const board = await hq.buildHqScoreboard(db, { week: ctx.week, trackerStart: ctx.start });
       const company = await companySalesForWeek(db, { week: ctx.week, today: ctx.today, trackerStart: ctx.start });
-      res.render('hq-scoreboard', { title: 'HQ scoreboard', ...ctx, board, company, hq, fmt, pills: pills(ctx, '/hq/scoreboard') });
+      const teamWeek = await team.teamSummary(db, { week: ctx.week, today: ctx.today });
+      res.render('hq-scoreboard', { title: 'HQ scoreboard', ...ctx, board, company, teamWeek, hq, fmt, pills: pills(ctx, '/hq/scoreboard') });
     } catch (err) { next(err); }
   });
 

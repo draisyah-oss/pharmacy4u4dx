@@ -387,8 +387,10 @@ test('group Excel export includes the Monday screens', async () => {
 // ───────────── The whole HQ team (Q4 4DX HQ Tracker) ─────────────
 
 test('HQ team: Syarafana, Fariz, Azwani and Iman have logins; the CEO has measures but logs in as admin', async () => {
-  const users = (await db.query("SELECT username, role, enters_all_hq FROM users WHERE role = 'hq' ORDER BY username")).rows;
+  const users = (await db.query("SELECT username, role, enters_all_hq FROM users WHERE role IN ('hq', 'hq_staff') ORDER BY username")).rows;
   assert.deepEqual(users.map((u) => u.username), ['alia', 'azwani', 'fariz', 'hanin', 'iman', 'syarafana']);
+  assert.deepEqual(users.filter((u) => u.role === 'hq').map((u) => u.username), ['alia', 'hanin', 'iman'], 'full HQ access');
+  assert.deepEqual(users.filter((u) => u.role === 'hq_staff').map((u) => u.username), ['azwani', 'fariz', 'syarafana']);
   assert.deepEqual(users.filter((u) => u.enters_all_hq).map((u) => u.username), ['iman']);
   assert.equal((await db.query("SELECT count(*)::int AS n FROM users WHERE display_name = 'Dr Aisyah'")).rows[0].n, 0);
   const owners = (await db.query('SELECT DISTINCT owner_name FROM hq_measures')).rows.map((r) => r.owner_name).sort();
@@ -396,12 +398,12 @@ test('HQ team: Syarafana, Fariz, Azwani and Iman have logins; the CEO has measur
 });
 
 test('HQ team: each enters their own; Iman can fill in for everyone; Yes/No and zero targets work', async () => {
-  const set = (u, v) => db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [bcrypt.hashSync(v, 4), u]);
-  await set('syarafana', 'syarafana-1'); await set('iman', 'iman-pass-1'); await set('azwani', 'azwani-pass1');
+  const set = (u, v, col = 'password_hash') => db.query(`UPDATE users SET ${col} = $1 WHERE username = $2`, [bcrypt.hashSync(v, 4), u]);
+  await set('syarafana', '2468', 'pin_hash'); await set('iman', 'iman-pass-1'); await set('azwani', '1357', 'pin_hash');
   const ids = Object.fromEntries((await db.query('SELECT code, id FROM hq_measures')).rows.map((r) => [r.code, r.id]));
   const entry = async (code, week = THIS) => (await db.query('SELECT value, total FROM hq_entries WHERE hq_measure_id = $1 AND week_start = $2', [ids[code], week])).rows[0];
 
-  const sy = await session('/login/password', { username: 'syarafana', password: 'syarafana-1' });
+  const sy = await session('/login/pin', { username: 'syarafana', pin: '2468' });
   await sy.post('/hq', { week: THIS, [`v[m${ids.slow}]`]: '50', [`v[m${ids.turn}]`]: '80' });
   assert.equal(Number((await entry('slow')).value), 50);
   assert.equal(await entry('turn'), undefined, 'Syarafana can’t enter Alia’s turnover');
@@ -412,7 +414,7 @@ test('HQ team: each enters their own; Iman can fill in for everyone; Yes/No and 
   assert.equal(Number((await entry('ready')).value), 1);
   assert.equal(Number((await entry('sessions')).value), 2);
 
-  const az = await session('/login/password', { username: 'azwani', password: 'azwani-pass1' });
+  const az = await session('/login/pin', { username: 'azwani', pin: '1357' });
   await az.post('/hq', { week: THIS, [`v[m${ids.update}]`]: 'no', [`v[m${ids.ar30}]`]: '0', [`v[m${ids.cash}]`]: '45,000' });
   const board = await hqData.buildHqScoreboard(db, { week: THIS, trackerStart: START });
   const rows = Object.fromEntries(board.groups.flatMap((g) => g.rows).map((r) => [r.code, r]));

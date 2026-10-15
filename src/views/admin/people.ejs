@@ -7,10 +7,12 @@
     if (!p.user_id) return 'No login';
     if (!p.login_active) return 'Login off';
     if (p.locked) return 'Locked – too many wrong tries';
-    if (p.login_role === 'branch_staff') return p.has_pin ? 'PIN set' : 'No PIN yet';
+    if (p.login_role === 'branch_staff' || p.login_role === 'hq_staff') return p.has_pin ? 'PIN set' : 'No PIN yet';
     return p.has_password ? 'Password set' : 'No password yet';
   };
-  const roleText = { branch_staff: 'Staff (PIN)', branch_manager: 'Manager (password)', hq: 'HQ (password)' };
+  const roleText = { branch_staff: 'Staff (PIN)', branch_manager: 'Manager (password)', hq: 'HQ – full access (password)', hq_staff: 'HQ staff – own KPIs (PIN)' };
+  const hqOptions = (sel) => '<option value="hq_staff"' + (sel === 'hq_staff' ? ' selected' : '') + '>HQ staff – PIN: group + HQ scoreboard, own KPIs</option>'
+    + '<option value="hq"' + (sel === 'hq' ? ' selected' : '') + '>HQ full access – password: all branches, HQ input</option>';
 %>
 <main class="page admin">
   <%- include('../partials/branch-pick', { list, branch, hq, base: '/admin/people', withHq: true }) %>
@@ -29,7 +31,7 @@
           <% if (p.user_id) { %>
             <form method="post" action="/admin/users/<%= p.user_id %>/secret" class="inline-form">
               <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= code %>">
-              <% if (p.login_role === 'branch_staff') { %>
+              <% if (p.login_role === 'branch_staff' || p.login_role === 'hq_staff') { %>
                 <label>New PIN <input name="secret" inputmode="numeric" pattern="\d{4}" maxlength="4" autocomplete="off" required></label>
                 <button class="button small-button" type="submit"><%= p.has_pin ? 'Change PIN' : 'Set PIN' %></button>
               <% } else { %>
@@ -60,6 +62,8 @@
                   <option value="branch_manager"<%= p.login_role === 'branch_manager' ? ' selected' : '' %>>Manager – password, scoreboard too</option>
                 </select>
               </label>
+            <% } else if (p.user_id) { %>
+              <label>Logs in as <select name="login_role"><%- hqOptions(p.login_role) %></select></label>
             <% } %>
             <p class="small muted">A new name carries over to the measures and daily fields they own.</p>
             <button class="button small-button" type="submit">Save changes</button>
@@ -89,6 +93,8 @@
         <label>Logs in as
           <select name="login_role"><option value="branch_staff">Staff – PIN, daily entry only</option><option value="branch_manager">Manager – password, scoreboard too</option></select>
         </label>
+      <% } else { %>
+        <label>Logs in as <select name="login_role"><%- hqOptions('hq_staff') %></select></label>
       <% } %>
       <button class="button small-button" type="submit">Add</button>
     </form>

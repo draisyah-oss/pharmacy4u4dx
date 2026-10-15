@@ -71,14 +71,26 @@ test('pages need a login', async () => {
   assert.match(r.location, /^\/login\?next=/);
 });
 
-test('login page lists branches, then only that branch\'s staff', async () => {
+test('login page lists branches and an HQ box, then that branch\'s staff and manager', async () => {
   const b = browser();
-  assert.match((await b.get('/login')).html, /Wangsa Maju[\s\S]*Ampang/);
+  const first = (await b.get('/login')).html;
+  assert.match(first, /Wangsa Maju[\s\S]*Ampang[\s\S]*branch=HQ/);
+  assert.match(first, /Admin login/);
   const names = (await b.get('/login?branch=WM')).html;
   assert.match(names, /Hazera/);
   assert.match(names, /Zawiyah/);
+  assert.match(names, /Hafizah[\s\S]*Manager/, 'the manager logs in from her own branch');
   assert.doesNotMatch(names, /Afifah/);            // JH
-  assert.doesNotMatch(names, /href="[^"]*hafizah/); // managers use a password
+  assert.doesNotMatch(names, /Alia/);              // HQ
+  // The manager gets a password box, not the PIN keypad
+  const mgr = (await b.get('/login?branch=WM&user=hafizah')).html;
+  assert.match(mgr, /Hi Hafizah, enter your password/);
+  assert.doesNotMatch(mgr, /pin-form/);
+  // HQ box: HQ people only
+  const hq = (await b.get('/login?branch=HQ')).html;
+  assert.match(hq, /Alia/);
+  assert.match(hq, /Syarafana/);
+  assert.doesNotMatch(hq, /Hazera/);
 });
 
 test('staff PIN: wrong PIN is refused, right PIN logs in', async () => {
