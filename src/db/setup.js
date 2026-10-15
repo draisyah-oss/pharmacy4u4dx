@@ -41,6 +41,7 @@ async function backfillNewSettings(db, seed, log) {
   }
   await backfillHqTeam(db, seed, log);
   await backfillHqAccess(db, seed, log);
+  await backfillHqTasks(db, seed, log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -129,4 +130,29 @@ async function backfillHqAccess(db, seed, log) {
   log('Set HQ access levels and added HQ daily tasks and projects from seed.json.');
 }
 
-module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess };
+// 15 Oct (later): starting daily tasks for every HQ person. Once only, and only for people
+// who have never had a task – a list someone already made or trimmed is left alone.
+async function backfillHqTasks(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'hq_daily_tasks_v2'")).rows.length) return;
+  const added = [];
+  await db.transaction(async (tx) => {
+    const people = new Map((await tx.query('SELECT id, name FROM people WHERE branch_id IS NULL')).rows.map((p) => [p.name, p.id]));
+    for (const [name, labels] of Object.entries(seed.hq.daily_tasks || {})) {
+      const id = people.get(name);
+      if (!id || (await tx.query('SELECT 1 FROM hq_daily_tasks WHERE person_id = $1 LIMIT 1', [id])).rows.length) continue;
+      for (const [i, label] of labels.entries()) {
+        await tx.query('INSERT INTO hq_daily_tasks (person_id, label, sort_order) VALUES ($1,$2,$3)', [id, label, i + 1]);
+      }
+      added.push(name);
+    }
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('hq_daily_tasks_v2', $1)", [new Date().toISOString()]);
+    if (added.length) {
+      await tx.query(
+        `INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_daily_tasks', 'Starting daily tasks', $1)`,
+        [JSON.stringify(added)]);
+    }
+  });
+  if (added.length) log(`Added starting daily tasks for ${added.join(', ')}.`);
+}
+
+module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks };

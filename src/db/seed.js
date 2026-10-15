@@ -325,6 +325,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       sales_sheet_id: seed.company.sales_sheet_id || null,
       seed_loaded_at: new Date().toISOString(),
       hq_access_v1: new Date().toISOString(),
+      hq_daily_tasks_v2: new Date().toISOString(),
     };
     for (const [key, value] of Object.entries(settings)) {
       if (value === null) continue;

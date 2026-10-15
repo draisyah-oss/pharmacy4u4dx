@@ -789,7 +789,14 @@
         "note": "Iman messages anyone whose number is missing at 9:30 am."
       }
     ],
-    "daily_tasks": {"Iman": ["Attendance & roster checked by 10 am", "Closing reports received from all 5 branches", "Tracker logs filled for all 5 branches", "Branch requests received today logged", "No branch request open over 2 working days", "No leave application waiting over 1 day"]},
+    "daily_tasks": {
+      "Iman": ["Attendance & roster checked by 10 am", "Closing reports received from all 5 branches", "Tracker logs filled for all 5 branches", "Branch requests received today logged", "No branch request open over 2 working days", "No leave application waiting over 1 day"],
+      "Syarafana": ["Branch requests received and checked by 11 am", "POs placed for today's branch requests", "Every PO checked against the last 30 days' sales before placing", "5 slow movers reviewed today (25 a week)", "Min/max levels set or updated for the items ordered today"],
+      "Azwani": ["Bank balance checked and cash position updated", "Supplier invoices from HQ orders entered in the accounts", "Payments due in the next 14 days checked", "Customers with AR over 30 days followed up today", "Unpaid zakat claims over 30 days followed up today"],
+      "Fariz": ["Each branch PO picked and packed within 1 hour", "Every delivery received today checked against its PO", "Transfers dispatched within 24 hours", "Receiving and transfer log updated before going home"],
+      "Alia": ["POs over RM 5,000 approved against 30-day sales", "Top 100 items checked – any gap ordered today", "At least 1 B2B call or visit", "B2B quotes sent within 24 hours", "Transfers from slow-mover reviews arranged within 48 hours"],
+      "Hanin": ["Today's roster checked – every shift fully staffed", "Any gap covered or swapped before opening", "Branch managers' issues answered the same day", "Training or SOP work moved forward today"]
+    },
     "projects": [
       {"project": "Central ordering", "milestone": "Min/max stock levels set for top 300 items", "owner": "Syarafana, with Alia", "due": "2026-10-31"},
       {"project": "Central ordering", "milestone": "Supplier order days fixed; branch daily request template live", "owner": "Syarafana", "due": "2026-10-31"},

@@ -165,11 +165,15 @@ test('Iman ticks her HR daily checks; HQ staff only their own; changes are audit
   const s = await syarafana();
   assert.equal((await s.post('/hq/today', { person: String(ids.Iman), date: TODAY, [`t[k${tasks[0].id}]`]: 'no' })).status, 403);
   assert.doesNotMatch((await s.get(`/hq/today?person=${ids.Iman}`)).html, /Attendance/, 'she only sees her own day');
+  // Her starting list (from her KPIs), and she can change it
+  const start = (await db.query('SELECT label FROM hq_daily_tasks WHERE person_id = $1 AND active ORDER BY sort_order', [ids.Syarafana])).rows.map((t) => t.label);
+  assert.equal(start.length, 5);
+  assert.match(start.join(' | '), /checked against the last 30 days' sales/);
   await s.post('/hq/today/tasks', { person: String(ids.Syarafana), date: TODAY, label: 'Branch daily requests turned into POs' });
-  const mine = (await db.query('SELECT id, label FROM hq_daily_tasks WHERE person_id = $1 AND active', [ids.Syarafana])).rows;
-  assert.deepEqual(mine.map((t) => t.label), ['Branch daily requests turned into POs']);
-  await s.post('/hq/today/tasks', { person: String(ids.Syarafana), date: TODAY, retire: String(mine[0].id) });
-  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_tasks WHERE person_id = $1 AND active', [ids.Syarafana])).rows[0].n, 0);
+  const added = (await db.query("SELECT id FROM hq_daily_tasks WHERE person_id = $1 AND active AND label = 'Branch daily requests turned into POs'", [ids.Syarafana])).rows[0];
+  assert.ok(added);
+  await s.post('/hq/today/tasks', { person: String(ids.Syarafana), date: TODAY, retire: String(added.id) });
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_tasks WHERE person_id = $1 AND active', [ids.Syarafana])).rows[0].n, 5);
   // Salary words are refused here too
   const bad = await s.post('/hq/today/tasks', { person: String(ids.Syarafana), date: TODAY, label: 'Send payroll inputs' });
   assert.match(decodeURIComponent(bad.location), /can’t be stored/);
@@ -261,5 +265,28 @@ test('an older database gets the HQ access levels, tasks and projects once', asy
   await old.query("UPDATE users SET role = 'hq' WHERE username = 'fariz'");
   await backfillHqAccess(old, seed, () => {});
   assert.equal((await old.query("SELECT role FROM users WHERE username = 'fariz'")).rows[0].role, 'hq');
+  await old.close();
+});
+
+test('every HQ person starts with daily tasks; an older database gets them once, without touching existing lists', async () => {
+  const seed = readSeed();
+  for (const name of ['Alia', 'Syarafana', 'Fariz', 'Azwani', 'Hanin', 'Iman']) {
+    const n = (await db.query('SELECT count(*)::int AS n FROM hq_daily_tasks WHERE person_id = $1', [ids[name]])).rows[0].n;
+    assert.ok(n >= 4, `${name} has daily tasks`);
+  }
+  const { backfillHqTasks } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, { ...seed, hq: { ...seed.hq, daily_tasks: { Iman: seed.hq.daily_tasks.Iman } } }, { adminPassword: 'admin-pass-1' });
+  await old.query("DELETE FROM app_settings WHERE key = 'hq_daily_tasks_v2'");
+  const imanId = (await old.query("SELECT id FROM people WHERE name = 'Iman' AND branch_id IS NULL")).rows[0].id;
+  await old.query("UPDATE hq_daily_tasks SET active = false WHERE person_id = $1 AND sort_order > 3", [imanId]); // Iman trimmed her list
+  await backfillHqTasks(old, seed, () => {});
+  const count = async (name) => (await old.query('SELECT count(*)::int AS n FROM hq_daily_tasks t JOIN people p ON p.id = t.person_id WHERE p.name = $1 AND t.active', [name])).rows[0].n;
+  assert.equal(await count('Azwani'), seed.hq.daily_tasks.Azwani.length);
+  assert.equal(await count('Iman'), 3, 'Iman’s own changes are kept');
+  await old.query("UPDATE hq_daily_tasks SET active = false WHERE person_id = (SELECT id FROM people WHERE name = 'Azwani' AND branch_id IS NULL)");
+  await backfillHqTasks(old, seed, () => {});
+  assert.equal(await count('Azwani'), 0, 'runs once – removed tasks stay removed');
   await old.close();
 });
