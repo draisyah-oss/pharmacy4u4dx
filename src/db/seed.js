@@ -109,7 +109,7 @@ function validateSeed(seed) {
   for (const m of (seed.hq && seed.hq.measures) || []) {
     if (hqIds.has(m.id)) err(`HQ measure ${m.id}: id appears twice`);
     hqIds.add(m.id);
-    if (!['single_value', 'done_and_total'].includes(m.input)) err(`HQ measure ${m.id}: unknown input "${m.input}"`);
+    if (!['single_value', 'done_and_total', 'yes_no'].includes(m.input)) err(`HQ measure ${m.id}: unknown input "${m.input}"`);
     if (!['high', 'low'].includes(m.better)) err(`HQ measure ${m.id}: better must be high or low`);
     if (!hqOwners.has(m.owner)) err(`HQ measure ${m.id}: owner "${m.owner}" is not an HQ owner`);
   }
@@ -134,7 +134,7 @@ function dayBefore(isoDate) {
 function makeUsernames(seed) {
   const all = [];
   for (const b of seed.branches) for (const p of b.people) all.push({ name: p.name, branch: b.code });
-  for (const o of seed.hq.owners) all.push({ name: o.name, branch: 'hq' });
+  for (const o of seed.hq.owners) if (o.login !== false) all.push({ name: o.name, branch: 'hq' });
 
   const base = (n) => n.toLowerCase().replace(/[^a-z0-9]+/g, '');
   const counts = {};
@@ -270,9 +270,10 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       );
       hqPeople[o.name] = person.id;
       summary.people++;
+      if (o.login === false) continue; // e.g. the CEO, who logs in as admin
       await tx.query(
-        `INSERT INTO users (username, display_name, role, person_id) VALUES ($1,$2,'hq',$3)`,
-        [usernames.get(`hq|${o.name}`), o.name, person.id]
+        `INSERT INTO users (username, display_name, role, person_id, enters_all_hq) VALUES ($1,$2,'hq',$3,$4)`,
+        [usernames.get(`hq|${o.name}`), o.name, person.id, Boolean(o.enters_all)]
       );
       summary.users++;
     }

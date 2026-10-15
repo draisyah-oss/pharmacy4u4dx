@@ -54,7 +54,7 @@ function loadUser(db) {
       const sid = parseCookies(req.headers.cookie)[COOKIE];
       if (sid) {
         const { rows } = await db.query(
-          `SELECT s.data, u.id, u.username, u.display_name, u.role, u.branch_id, u.person_id,
+          `SELECT s.data, u.id, u.username, u.display_name, u.role, u.branch_id, u.person_id, u.enters_all_hq,
                   b.code AS branch_code, b.name AS branch_name
            FROM sessions s
            JOIN users u ON u.id = (s.data->>'userId')::int AND u.active

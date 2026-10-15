@@ -468,8 +468,27 @@
     }
   ],
   "hq": {
-    "owners": [{"name": "Alia", "role": "Inventory & Products, B2B"}, {"name": "Hanin", "role": "Operations Manager"}],
+    "owners": [
+      {"name": "Dr Aisyah", "role": "CEO", "login": false},
+      {"name": "Alia", "role": "Inventory & Products, B2B"},
+      {"name": "Syarafana", "role": "Inventory (ordering)"},
+      {"name": "Fariz", "role": "Warehouse intern"},
+      {"name": "Azwani", "role": "Accounts"},
+      {"name": "Hanin", "role": "Operations Manager"},
+      {"name": "Iman", "role": "HR & Admin Executive", "enters_all": true}
+    ],
     "measures": [
+      {
+        "id": "sessions",
+        "owner": "Dr Aisyah",
+        "label": "Both WIG sessions held (Monday HQ, Tuesday branch)",
+        "unit": "sessions",
+        "input": "single_value",
+        "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Iman records it after the Tuesday session."
+      },
       {
         "id": "turn",
         "owner": "Alia",
@@ -491,17 +510,6 @@
         "better": "high",
         "kind": "Lead",
         "note": "Plan: 100%. Syarafana places; Alia approves POs over RM 5,000."
-      },
-      {
-        "id": "slow",
-        "owner": "Alia",
-        "label": "Slow movers reviewed – 10 per outlet (Lead 2)",
-        "unit": "items",
-        "input": "single_value",
-        "targets": {"2026-10": 50, "2026-11": 50, "2026-12": 50},
-        "better": "high",
-        "kind": "Lead",
-        "note": "Plan: 50 a week (Alia 5 + Syarafana 5 per outlet)."
       },
       {
         "id": "xfer",
@@ -539,13 +547,156 @@
       {
         "id": "b2b",
         "owner": "Alia",
-        "label": "B2B sales month to date (RM)",
+        "label": "B2B sales this week (RM)",
         "unit": "RM",
         "input": "single_value",
-        "targets": {"2026-10": 7000, "2026-11": 8500, "2026-12": 10000},
+        "targets": {"2026-10": 1617, "2026-11": 1963, "2026-12": 2309},
         "better": "high",
         "kind": "Result",
-        "note": "Plan: RM 7k / 8.5k / 10k a month, no B2B debts over 30 days."
+        "note": "Weekly target = month target ÷ 4.33 (RM 7k / 8.5k / 10k a month), no B2B debts over 30 days."
+      },
+      {
+        "id": "b2bcalls",
+        "owner": "Alia",
+        "label": "B2B visits / calls this week",
+        "unit": "calls",
+        "input": "single_value",
+        "targets": {"2026-10": 5, "2026-11": 5, "2026-12": 5},
+        "better": "high",
+        "kind": "Lead",
+        "note": "From the B2B visit log."
+      },
+      {
+        "id": "quotes",
+        "owner": "Alia",
+        "label": "B2B quotes sent within 24 hours",
+        "unit": "%",
+        "input": "done_and_total",
+        "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Plan: 100%."
+      },
+      {
+        "id": "slow",
+        "owner": "Syarafana",
+        "label": "Slow movers reviewed – 10 per outlet, team total (Lead 2)",
+        "unit": "items",
+        "input": "single_value",
+        "targets": {"2026-10": 50, "2026-11": 50, "2026-12": 50},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Plan: 50 a week (Alia 5 + Syarafana 5 per outlet; Syarafana's share 25)."
+      },
+      {
+        "id": "orders",
+        "owner": "Syarafana",
+        "label": "Branch orders placed by HQ",
+        "unit": "%",
+        "input": "single_value",
+        "targets": {"2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Plan: 100% of branch orders placed by HQ by 30 Nov (central ordering). October is tracked only."
+      },
+      {
+        "id": "po1h",
+        "owner": "Fariz",
+        "label": "1 PO per branch completed within 1 hour",
+        "unit": "%",
+        "input": "done_and_total",
+        "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "From the transfer and receiving log."
+      },
+      {
+        "id": "deliv",
+        "owner": "Fariz",
+        "label": "Deliveries checked against the PO",
+        "unit": "%",
+        "input": "done_and_total",
+        "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Plan: 100%."
+      },
+      {
+        "id": "update",
+        "owner": "Azwani",
+        "label": "Weekly AP, AR and cash update sent before the HQ session",
+        "unit": "",
+        "input": "yes_no",
+        "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Every Monday before 10 am."
+      },
+      {
+        "id": "cash",
+        "owner": "Azwani",
+        "label": "Cash balance (RM)",
+        "unit": "RM",
+        "input": "single_value",
+        "targets": {},
+        "better": "high",
+        "kind": "Result",
+        "note": "Tracked only."
+      },
+      {
+        "id": "ap14",
+        "owner": "Azwani",
+        "label": "AP due in the next 14 days (RM)",
+        "unit": "RM",
+        "input": "single_value",
+        "targets": {},
+        "better": "low",
+        "kind": "Result",
+        "note": "Tracked only."
+      },
+      {
+        "id": "ar",
+        "owner": "Azwani",
+        "label": "AR outstanding (RM)",
+        "unit": "RM",
+        "input": "single_value",
+        "targets": {},
+        "better": "low",
+        "kind": "Result",
+        "note": "Tracked only."
+      },
+      {
+        "id": "ar30",
+        "owner": "Azwani",
+        "label": "AR over 30 days (RM)",
+        "unit": "RM",
+        "input": "single_value",
+        "targets": {"2026-10": 0, "2026-11": 0, "2026-12": 0},
+        "better": "low",
+        "kind": "Guardrail",
+        "note": "Plan: none over 30 days."
+      },
+      {
+        "id": "zakat30",
+        "owner": "Azwani",
+        "label": "Zakat claims unpaid over 30 days (RM)",
+        "unit": "RM",
+        "input": "single_value",
+        "targets": {"2026-10": 0, "2026-11": 0, "2026-12": 0},
+        "better": "low",
+        "kind": "Result",
+        "note": "From the branch zakat claims."
+      },
+      {
+        "id": "zakatfu",
+        "owner": "Azwani",
+        "label": "Unpaid zakat claims over 30 days followed up",
+        "unit": "%",
+        "input": "single_value",
+        "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Plan: 100%."
       },
       {
         "id": "staff",
@@ -612,6 +763,28 @@
         "better": "high",
         "kind": "Result",
         "note": "Plan: training calendar 31 Oct · wiki live 15 Nov · checklists 30 Nov · SOPs 31 Dec."
+      },
+      {
+        "id": "hrdaily",
+        "owner": "Iman",
+        "label": "HR daily checks fully done this week",
+        "unit": "%",
+        "input": "single_value",
+        "targets": {"2026-10": 0.95, "2026-11": 0.95, "2026-12": 0.95},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Attendance and roster by 10 am, closing reports, tracker logs, requests, leave – by 11 am on working days."
+      },
+      {
+        "id": "ready",
+        "owner": "Iman",
+        "label": "Scoreboard and commitments ready by 9:30 am Monday",
+        "unit": "",
+        "input": "yes_no",
+        "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1},
+        "better": "high",
+        "kind": "Lead",
+        "note": "Iman messages anyone whose number is missing at 9:30 am."
       }
     ]
   }

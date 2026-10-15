@@ -25,7 +25,12 @@
           <div class="wk-field hq-field<%= errors[m.id] ? ' has-error' : '' %>" id="hq-<%= m.code %>">
             <span class="wk-label"><%= m.label %>
               <small>Target <%= m.target === null ? 'none – tracked only' : hq.show(m, m.target) %><%= m.better === 'low' ? ' (lower is better)' : '' %><% if (m.entry) { %> · now <span class="s-<%= r.status %>"><%= hq.show(m, r.actual) %> <%= fmt.symbol(r.status) %></span> · entered by <%= m.entry.entered_by_name || '–' %><% } %></small></span>
-            <% if (m.input === 'done_and_total') { %>
+            <% if (m.input === 'yes_no') { const yv = typedV(m); %>
+              <span class="yesno">
+                <label class="yn yn-yes"><input type="radio" name="v[m<%= m.id %>]" value="yes"<%= yv === 'yes' ? ' checked' : '' %><%= off %>><span>Yes</span></label>
+                <label class="yn yn-no"><input type="radio" name="v[m<%= m.id %>]" value="no"<%= yv === 'no' ? ' checked' : '' %><%= off %>><span>No</span></label>
+              </span>
+            <% } else if (m.input === 'done_and_total') { %>
               <span class="hq-pair">
                 <label><span class="sr-only">Done</span><input class="num" name="v[m<%= m.id %>]" inputmode="decimal" autocomplete="off" placeholder="done" value="<%= typedV(m) %>"<%= off %>></label>
                 <span>of</span>

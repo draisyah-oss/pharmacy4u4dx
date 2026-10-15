@@ -358,7 +358,7 @@ test('HQ scoreboard: turnover days lower is better; done-of-total shown as %', a
   const po = rows.find((r) => r.code === 'po');
   near(po.result.actual, 0.9);
   assert.equal(po.result.status, 'watch');
-  assert.deepEqual(board.groups.map((g) => g.owner), ['Alia', 'Hanin']);
+  assert.deepEqual(board.groups.map((g) => g.owner), ['Dr Aisyah', 'Alia', 'Syarafana', 'Fariz', 'Azwani', 'Hanin', 'Iman']);
 
   const html = (await (await hanin()).get(`/hq/scoreboard?week=${LAST}`)).html;
   assert.match(html, /100 days/);
@@ -382,4 +382,67 @@ test('group Excel export includes the Monday screens', async () => {
   const ws = wb.getWorksheet('Weekly check-ins');
   const values = ws.getSheetValues().flat().filter((v) => v !== undefined && v !== null).map(String);
   assert.ok(values.includes('Hit walk-in target 5 days running'));
+});
+
+// ───────────── The whole HQ team (Q4 4DX HQ Tracker) ─────────────
+
+test('HQ team: Syarafana, Fariz, Azwani and Iman have logins; the CEO has measures but logs in as admin', async () => {
+  const users = (await db.query("SELECT username, role, enters_all_hq FROM users WHERE role = 'hq' ORDER BY username")).rows;
+  assert.deepEqual(users.map((u) => u.username), ['alia', 'azwani', 'fariz', 'hanin', 'iman', 'syarafana']);
+  assert.deepEqual(users.filter((u) => u.enters_all_hq).map((u) => u.username), ['iman']);
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM users WHERE display_name = 'Dr Aisyah'")).rows[0].n, 0);
+  const owners = (await db.query('SELECT DISTINCT owner_name FROM hq_measures')).rows.map((r) => r.owner_name).sort();
+  assert.deepEqual(owners, ['Alia', 'Azwani', 'Dr Aisyah', 'Fariz', 'Hanin', 'Iman', 'Syarafana']);
+});
+
+test('HQ team: each enters their own; Iman can fill in for everyone; Yes/No and zero targets work', async () => {
+  const set = (u, v) => db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [bcrypt.hashSync(v, 4), u]);
+  await set('syarafana', 'syarafana-1'); await set('iman', 'iman-pass-1'); await set('azwani', 'azwani-pass1');
+  const ids = Object.fromEntries((await db.query('SELECT code, id FROM hq_measures')).rows.map((r) => [r.code, r.id]));
+  const entry = async (code, week = THIS) => (await db.query('SELECT value, total FROM hq_entries WHERE hq_measure_id = $1 AND week_start = $2', [ids[code], week])).rows[0];
+
+  const sy = await session('/login/password', { username: 'syarafana', password: 'syarafana-1' });
+  await sy.post('/hq', { week: THIS, [`v[m${ids.slow}]`]: '50', [`v[m${ids.turn}]`]: '80' });
+  assert.equal(Number((await entry('slow')).value), 50);
+  assert.equal(await entry('turn'), undefined, 'Syarafana can’t enter Alia’s turnover');
+
+  const im = await session('/login/password', { username: 'iman', password: 'iman-pass-1' });
+  await im.post('/hq', { week: THIS, [`v[m${ids.po1h}]`]: '4', [`t[m${ids.po1h}]`]: '5', [`v[m${ids.ready}]`]: 'yes', [`v[m${ids.sessions}]`]: '2' });
+  assert.equal(Number((await entry('po1h')).total), 5, 'Iman fills in Fariz’s numbers');
+  assert.equal(Number((await entry('ready')).value), 1);
+  assert.equal(Number((await entry('sessions')).value), 2);
+
+  const az = await session('/login/password', { username: 'azwani', password: 'azwani-pass1' });
+  await az.post('/hq', { week: THIS, [`v[m${ids.update}]`]: 'no', [`v[m${ids.ar30}]`]: '0', [`v[m${ids.cash}]`]: '45,000' });
+  const board = await hqData.buildHqScoreboard(db, { week: THIS, trackerStart: START });
+  const rows = Object.fromEntries(board.groups.flatMap((g) => g.rows).map((r) => [r.code, r]));
+  assert.equal(rows.update.result.status, 'off_track', 'No = off track');
+  assert.equal(rows.ready.result.status, 'on_track', 'Yes = on track');
+  assert.equal(rows.ar30.result.status, 'on_track', 'RM 0 over 30 days is on target');
+  assert.equal(rows.cash.result.status, 'track_only');
+  assert.equal(hqData.show(rows.update, 0), 'No');
+  const html = (await im.get(`/hq/scoreboard?week=${THIS}`)).html;
+  assert.match(html, /Syarafana/);
+  assert.match(html, /Fariz/);
+  assert.match(html, /4 of 5/);
+});
+
+test('an older database gets the new HQ people and measures on start, without touching edits', async () => {
+  const { backfillHqTeam } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  const seed = readSeed();
+  // Load the seed as it was before 15 Oct: Alia and Hanin only.
+  const before = { ...seed, hq: { owners: seed.hq.owners.filter((o) => ['Alia', 'Hanin'].includes(o.name)), measures: seed.hq.measures.filter((m) => ['Alia', 'Hanin'].includes(m.owner)) } };
+  await loadSeed(old, before, { adminPassword: 'admin-pass-1' });
+  await old.query("UPDATE hq_measure_targets SET target = 90 WHERE month = '2026-10' AND hq_measure_id = (SELECT id FROM hq_measures WHERE code = 'turn')");
+  const logs = [];
+  await backfillHqTeam(old, seed, (m) => logs.push(m));
+  assert.match(logs.join(' '), /Syarafana/);
+  assert.equal((await old.query('SELECT count(*)::int AS n FROM hq_measures')).rows[0].n, seed.hq.measures.length);
+  assert.equal(Number((await old.query("SELECT target FROM hq_measure_targets t JOIN hq_measures m ON m.id = t.hq_measure_id WHERE m.code = 'turn' AND month = '2026-10'")).rows[0].target), 90);
+  assert.equal((await old.query("SELECT enters_all_hq FROM users WHERE username = 'iman'")).rows[0].enters_all_hq, true);
+  await backfillHqTeam(old, seed, (m) => logs.push(m));
+  assert.equal((await old.query("SELECT count(*)::int AS n FROM people WHERE name = 'Fariz'")).rows[0].n, 1, 'runs once');
+  await old.close();
 });

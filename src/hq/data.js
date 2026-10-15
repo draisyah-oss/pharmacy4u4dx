@@ -30,10 +30,12 @@ function targetFor(m, week) {
   return t === null || t === undefined ? null : Number(t);
 }
 
-// Alia enters Alia's measures, Hanin enters Hanin's; admin can enter any.
+// Each HQ person enters their own measures; Iman (enters_all_hq) fills in for everyone,
+// as on the HQ KPIs tab; admin can enter any.
 function canEditMeasure(user, m) {
   if (user.role === 'admin') return true;
   if (user.role !== 'hq') return false;
+  if (user.enters_all_hq) return true;
   if (m.person_id && user.person_id) return m.person_id === user.person_id;
   return m.owner_name.toLowerCase() === String(user.display_name).toLowerCase();
 }
@@ -64,6 +66,13 @@ async function loadHqWeek(db, { week, user }) {
 
 // What a person typed → { value, total } in stored units, or { error }.
 function parseEntry(m, valueText, totalText) {
+  if (m.input === 'yes_no') {
+    const v = String(valueText ?? '').trim().toLowerCase();
+    if (v === '') return { value: null, total: null };
+    if (v === 'yes' || v === '1') return { value: 1, total: null };
+    if (v === 'no' || v === '0') return { value: 0, total: null };
+    return { error: 'Choose Yes or No.' };
+  }
   if (m.input === 'done_and_total') {
     const done = parseOptional(valueText, { min: 0 });
     const total = parseOptional(totalText, { min: 0 });
@@ -154,6 +163,7 @@ async function buildHqScoreboard(db, { week, trackerStart }) {
 function show(m, n) {
   if (n === null || n === undefined || Number.isNaN(n)) return '–';
   const g = (x, d) => Number(x).toLocaleString('en-MY', { maximumFractionDigits: d });
+  if (m.input === 'yes_no') return Number(n) >= 1 ? 'Yes' : 'No';
   if (isPercent(m)) return `${g(n * 100, 1)}%`;
   if (m.unit === 'RM') return `RM ${g(n, 0)}`;
   return `${g(n, 1)}${m.unit ? ` ${m.unit}` : ''}`;
@@ -163,6 +173,7 @@ function show(m, n) {
 function inputValue(m, entry, field = 'value') {
   if (!entry || entry[field] === null || entry[field] === undefined) return '';
   const n = Number(entry[field]);
+  if (m.input === 'yes_no') return n >= 1 ? 'yes' : 'no';
   return field === 'value' && isPercent(m) && m.input !== 'done_and_total' ? String(Math.round(n * 10000) / 100) : String(n);
 }
 

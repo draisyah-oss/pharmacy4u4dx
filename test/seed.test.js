@@ -92,7 +92,7 @@ test('loads seed.json into an empty database with the right counts', async () =>
   assert.equal(await count('hq_measures'), seed.hq.measures.length);
   assert.equal(await count('people'), sum((b) => b.people.length) + seed.hq.owners.length);
   // one login per person + admin
-  assert.equal(await count('users'), sum((b) => b.people.length) + seed.hq.owners.length + 1);
+  assert.equal(await count('users'), sum((b) => b.people.length) + seed.hq.owners.filter((o) => o.login !== false).length + 1);
   await db.close();
 });
 

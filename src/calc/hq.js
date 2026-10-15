@@ -13,7 +13,10 @@ function evaluateHq({ measure, entry, target }) {
     }
   }
   const hasTarget = target !== null && target !== undefined;
-  const pct = hasTarget ? percentOf(actual, Number(target), measure.better) : null;
+  let pct = hasTarget ? percentOf(actual, Number(target), measure.better) : null;
+  // "Lower is better" with a target of 0 (AR over 30 days, unpaid zakat over 30 days):
+  // 0 is on target, anything above it is off track.
+  if (hasTarget && measure.better === 'low' && Number(target) === 0 && actual !== null) pct = actual <= 0 ? 1 : 0;
   return { actual, target: hasTarget ? Number(target) : null, pct, status: statusFor(pct, { hasTarget }) };
 }
 

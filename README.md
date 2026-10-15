@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 145, fail 0
+npm test                    # should end with: pass 148, fail 0
 npm start
 ```
 
@@ -159,6 +159,7 @@ No table stores salaries; a test checks this.
 
 ## Logins
 
-Everyone has their own login. Usernames are first names in lowercase (`hafizah`, `alia`); `admin`
+Everyone has their own login. Usernames are first names in lowercase (`hafizah`, `alia`,
+`syarafana`, `fariz`, `azwani`, `iman`); Iman can enter every HQ number. `admin`
 uses `ADMIN_PASSWORD`. Branch managers, HQ and admin use passwords; branch staff use a 4-digit PIN.
 Set them in **Admin → People & logins** (or `npm run set-password`).
