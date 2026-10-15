@@ -8,8 +8,9 @@ if (process.env.RAILWAY_ENVIRONMENT && !process.env.NODE_ENV) process.env.NODE_E
 // On Railway the built-in local database would be wiped on every deploy, losing everything
 // typed in. Refuse to start until the app is pointed at the Postgres database.
 if (process.env.RAILWAY_ENVIRONMENT && !process.env.DATABASE_URL) {
-  console.error('DATABASE_URL is not set. In Railway, open the app service → Variables and add');
-  console.error('DATABASE_URL = ${{Postgres.DATABASE_URL}} – then redeploy.');
+  console.error('DATABASE_URL is not set (or is empty). In Railway: open the Postgres service → Variables,');
+  console.error('copy the value of DATABASE_URL (postgresql://…@postgres.railway.internal:5432/railway),');
+  console.error('paste it into this app service → Variables → DATABASE_URL, then click Deploy.');
   process.exit(1);
 }
 
