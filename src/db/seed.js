@@ -218,10 +218,10 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       for (const [mi, m] of b.measures.entries()) {
         const measure = await one(
           `INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per,
-             calc, numerator_field, denominator_field, note, sort_order)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING id`,
+             calc, numerator_field, denominator_field, note, sort_order, score_by)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
           [branch.id, m.id, m.owner, personIds[m.owner] || null, m.label, m.kind, m.unit, m.target_per,
-            m.calc, m.numerator_field, m.denominator_field, m.note, mi + 1]
+            m.calc, m.numerator_field, m.denominator_field, m.note, mi + 1, m.score_by || 'week']
         );
         summary.measures++;
         const weekend = m.weekend_targets || {};
@@ -327,6 +327,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       hq_access_v1: new Date().toISOString(),
       hq_daily_tasks_v2: new Date().toISOString(),
       sales_sheet_v2: new Date().toISOString(),
+      jh_update_v1: new Date().toISOString(),
     };
     for (const [key, value] of Object.entries(settings)) {
       if (value === null) continue;

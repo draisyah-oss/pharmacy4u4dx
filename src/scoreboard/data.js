@@ -82,14 +82,16 @@ async function buildScoreboard(db, { branch, weekStart, today, trackerStart }) {
   const started = asOf >= weekStart && asOf >= trackerStart;
 
   const rows = ctx.measures.map((m) => {
-    const week = calc.evaluateMeasure({ measure: m, entries, from: weekStart, to: asOf, trackerStart });
+    let week = calc.evaluateMeasure({ measure: m, entries, from: weekStart, to: asOf, trackerStart });
+    // Scored month to date only (e.g. JH zakat): the week shows its actual, no target or status.
+    if (m.score_by === 'month') week = { ...week, target: null, pct: null, status: 'track_only' };
     const mtd = calc.evaluateMeasure({ measure: m, entries, from: mtdFrom, to: asOf, trackerStart });
     return {
       code: m.code, label: m.label, owner: m.owner_name, kind: m.kind, unit: m.unit, calc: m.calc,
       targetPer: m.target_per, note: m.note, top: isTopMeasure(m, branch),
       monthTarget: calc.monthTarget(m.targets, started ? asOf : weekStart),
       weekendTarget: calc.monthTarget(m.weekend_targets, started ? asOf : weekStart),
-      money: m.unit === 'RM', week: strip(week), mtd: strip(mtd),
+      money: m.unit === 'RM', week: strip(week), mtd: strip(mtd), scoreBy: m.score_by || 'week',
     };
   });
 

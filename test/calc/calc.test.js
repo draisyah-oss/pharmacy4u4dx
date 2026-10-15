@@ -181,10 +181,12 @@ test('week 26 Oct – 1 Nov uses each day\'s own month target', () => {
 });
 
 test('week from a track-only month into a month with a target compares like with like', () => {
-  // JH TikTok commission: Oct blank, Nov RM 300 → only 1 Nov has a target (300/30 = 10)
+  // A monthly measure: Oct blank, Nov RM 300 → only 1 Nov has a target (300/30 = 10)
+  // (shaped like JH's TikTok commission before 15 Oct, when Nov had RM 300)
   const entries = calc.indexEntries(calc.rowsFromDays({ '2026-10-27': { ttcom: 50 }, '2026-11-01': { ttcom: 12 } }));
+  const m = { ...measure('JH', 'Y0'), targets: { '2026-10': null, '2026-11': 300, '2026-12': 1000 } };
   const r = calc.evaluateMeasure({
-    measure: measure('JH', 'Y0'), entries, from: '2026-10-26', to: '2026-11-01', trackerStart: START,
+    measure: m, entries, from: '2026-10-26', to: '2026-11-01', trackerStart: START,
   });
   near(r.target, 10);
   assert.equal(r.actual, 12);          // only 1 Nov counts against the Nov target

@@ -43,6 +43,7 @@ async function backfillNewSettings(db, seed, log) {
   await backfillHqAccess(db, seed, log);
   await backfillHqTasks(db, seed, log);
   await updateSalesSheetColumns(db, seed, log);
+  await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -173,4 +174,60 @@ async function updateSalesSheetColumns(db, seed, log) {
   log('Updated the sales sheet columns (Grab Pay = Grab sales, GrabMart = Grab orders, walk-in without Grab Pay).');
 }
 
-module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns };
+// A branch's fields, measures, targets and running totals brought in line with seed.json,
+// once (flag in app_settings). Used for JH's own tracker notes (15 Oct). Fields and measures
+// no longer in seed.json are retired (history kept), new ones added, the rest updated.
+async function syncBranchFromSeed(db, seed, code, flag, log) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const b = seed.branches.find((x) => x.code === code);
+  if (!b) return;
+  await db.transaction(async (tx) => {
+    const branch = (await tx.query('SELECT id FROM branches WHERE code = $1', [code])).rows[0];
+    if (!branch) return;
+    const people = new Map((await tx.query('SELECT id, name FROM people WHERE branch_id = $1', [branch.id])).rows.map((p) => [p.name, p.id]));
+
+    for (const [i, f] of b.daily_fields.entries()) {
+      await tx.query(
+        `INSERT INTO daily_fields (branch_id, key, label, owner_name, person_id, type, sort_order, active)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,true)
+         ON CONFLICT (branch_id, key) DO UPDATE SET label = EXCLUDED.label, owner_name = EXCLUDED.owner_name,
+           person_id = EXCLUDED.person_id, type = EXCLUDED.type, sort_order = EXCLUDED.sort_order, active = true`,
+        [branch.id, f.key, f.label, f.owner, people.get(f.owner) || null, f.type, i + 1]);
+    }
+    await tx.query('UPDATE daily_fields SET active = false WHERE branch_id = $1 AND NOT (key = ANY($2))', [branch.id, b.daily_fields.map((f) => f.key)]);
+
+    for (const [i, m] of b.measures.entries()) {
+      const { rows } = await tx.query(
+        `INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per, calc,
+           numerator_field, denominator_field, note, sort_order, score_by, active)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,true)
+         ON CONFLICT (branch_id, code) DO UPDATE SET owner_name = EXCLUDED.owner_name, person_id = EXCLUDED.person_id,
+           label = EXCLUDED.label, kind = EXCLUDED.kind, unit = EXCLUDED.unit, target_per = EXCLUDED.target_per,
+           calc = EXCLUDED.calc, numerator_field = EXCLUDED.numerator_field, denominator_field = EXCLUDED.denominator_field,
+           note = EXCLUDED.note, sort_order = EXCLUDED.sort_order, score_by = EXCLUDED.score_by, active = true
+         RETURNING id`,
+        [branch.id, m.id, m.owner, people.get(m.owner) || null, m.label, m.kind, m.unit, m.target_per, m.calc,
+          m.numerator_field, m.denominator_field, m.note, i + 1, m.score_by || 'week']);
+      const id = rows[0].id;
+      await tx.query('DELETE FROM measure_targets WHERE measure_id = $1', [id]);
+      const weekend = m.weekend_targets || {};
+      for (const month of [...new Set([...Object.keys(m.targets || {}), ...Object.keys(weekend)])].sort()) {
+        await tx.query('INSERT INTO measure_targets (measure_id, month, target, weekend_target) VALUES ($1,$2,$3,$4)',
+          [id, month, (m.targets || {})[month] ?? null, weekend[month] ?? null]);
+      }
+    }
+    await tx.query('UPDATE measures SET active = false WHERE branch_id = $1 AND NOT (code = ANY($2))', [branch.id, b.measures.map((m) => m.id)]);
+
+    for (const rt of b.running_totals || []) {
+      await tx.query('UPDATE running_totals SET label = $3, end_target = $4 WHERE branch_id = $1 AND code = $2',
+        [branch.id, rt.id, rt.label, rt.end_target ?? null]);
+    }
+    await tx.query('UPDATE branches SET lead_measures = $2 WHERE id = $1', [branch.id, JSON.stringify(b.lead_measures || [])]);
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+    await tx.query(`INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', $1, NULL)`,
+      [`${code} fields and measures updated from seed.json (${flag})`]);
+  });
+  log(`Updated ${code}'s fields and measures from seed.json.`);
+}
+
+module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

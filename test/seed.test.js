@@ -110,7 +110,7 @@ test('targets, blanks and branch numbers load exactly as in seed.json', async ()
   assert.equal(await target('WM', 'T1', '2026-12'), 2100);
   assert.equal(await target('WM', 'L3', '2026-10'), 0.45);
   assert.equal(await target('JH', 'Y0', '2026-10'), null); // blank = track only
-  assert.equal(await target('JH', 'Y3', '2026-11'), 21);
+  assert.equal(await target('JH', 'Y3', '2026-11'), 50); // JH 15 Oct: 50 new followers a month
   const weekend = (await db.query(
     `SELECT t.target, t.weekend_target FROM measure_targets t JOIN measures m ON m.id = t.measure_id
      JOIN branches b ON b.id = m.branch_id WHERE b.code = 'BR' AND m.code = 'T1' AND t.month = '2026-10'`)).rows[0];

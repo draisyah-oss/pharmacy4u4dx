@@ -82,6 +82,14 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Nov/Dec (confirmed 14 Oct): BR's split continues – Shopee 7.5k, zakat 10k, Alpine 0.5k a month. Month totals stay 61.6k / 69k (4DX), so walk-in fills the rest: Nov RM 1,330 weekdays / 1,750 weekends, Dec RM 1,520 / 2,000.
 - Grabmart (confirmed 14 Oct): same proposed ramp as the other branches – sales RM 1k / 2.5k / 4.5k, items 15 / 10 / 5 a week.
 
+## JH update (15 Oct, JH's own tracker notes)
+- P1–P5 are now JH's measured PWP pairings (2/day each kept – confirm): cough & cold (Androchi / Digezmune), gout (Loyuric / Stella / RM2-off uric acid test), body pain (Biorelief spray), wound care (Dermacyn / Hydrocyn), kids (Shine). PWP matched to customer purchasing power and trends.
+- New: T5 walk-in customers 60/day (POS transactions); T6 sales lost to out-of-stock (est. RM, track only); T7 OOS items logged (track only).
+- T4 new Google reviews 50/month (GR 162 → 294 by 31 Dec). Y3 new TikTok followers 50/month – note: reaches ~894 by 31 Dec, short of the 1,000 WIG target (kept). Y1 TikTok content 4/week (2 per staff). Y2 lives = variety of products, BN not the focus. Y0 affiliate commission track only until 1,000 followers.
+- Zakat: F5 scored month to date only (measures.score_by = 'month', migration 010 – week column shows the actual, no target/status); F7 now Zakat claims submitted (RM), track only (JH never claims late); new F9 RFQ invitations approved % (track only).
+- N1 WhatsApp blasting & follow-ups to LH customers 15/day; N2/N3 are Routine (daily tasks, don't move the result); new N4 Grab cancelled orders, N5 WhatsApp orders average days to fulfil (wadays ÷ waord), both track only.
+- Older databases get this once (syncBranchFromSeed, flag jh_update_v1): fields/measures upserted from seed.json, ones no longer listed retired (history kept).
+
 ## Sales sheet link (14 Oct)
 - Source: 2026 Sales Dashboard (Google Sheet id in seed.json → company.sales_sheet_id), the five branch daily tabs. Column → field mapping per branch in branch.sales_sheet.
 - Columns (confirmed 15 Oct): Grab sales (RM) = **GRAB PAY** (BR: "Grabpay"); Grab orders (#) = **GrabMart** (BR: "Grab Order"); walk-in = **Total minus GRAB PAY** (Total includes Grab Pay, so Grab isn't counted twice – walk-in + Grab = the till Total); Zakat = "Zakat" (WM, JH, BR); BR also Shopee Sales, Alpine. A column setting can be a header or { column, minus: [...] }; headers match without case or spaces. Older databases get the new columns once (app_settings sales_sheet_v2) and the next sync rewrites the sheet numbers.
