@@ -97,6 +97,12 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - While the link is on, those fields are read-only in Daily Entry (fix in the sheet); with no service account they're typed as before.
 - Auth: Google service account, read-only scope, signed JWT with Node crypto (no googleapis package). GOOGLE_SERVICE_ACCOUNT_JSON (Railway) or GOOGLE_SERVICE_ACCOUNT_FILE (local).
 
+## Sales page – sheet's own summary tabs (15 Oct)
+- Each sync also reads the sheet's **"Overall Daily Sales"** (one row per day, till sales per branch + Total) and **"Total Sales"** (first "Bulan … TOTAL M" table: Retail per branch incl. zakat/Shopee/Alpine, B2B, TOTAL M) tabs into sheet_sales_summary (migration 011). Read separately, so a renamed summary tab never stops the daily numbers; problem shown on Setup as summaryError. Tab names can be overridden in app_settings sales_summary_daily_tab / sales_summary_monthly_tab.
+- **/sales** (managers, HQ, HQ staff, admin; not branch staff): company year so far incl. B2B, latest day per branch, month-by-month table with cumulative "year so far", day-by-day table for a chosen month. Numbers are mirrored exactly as the sheet shows them (YTD 1,815,396 at 14 Oct).
+- "Year so far" strip on the branch scoreboard (branch YTD vs YTD target to date) and the group scoreboard (company YTD incl. B2B, latest daily total).
+- YTD target to date = last month-end YTD target + this month's share by days; when last month has no row, last month-end = this month-end YTD target − this month's sales target.
+
 ## Security (review 14 Oct)
 - Redirects only to same-site paths (src/lib/safe-path.js; blocks //, /\, spaces).
 - Login: 5 wrong tries lock a login 15 min; 30 wrong tries from one device (IP) in 15 min block that device. Sessions: staff 14 h, admin 12 h, others 7 days; expired ones cleared hourly; a new PIN/password ends that person's other sessions.

@@ -4,6 +4,7 @@ const express = require('express');
 const calc = require('../calc');
 const fmt = require('./format');
 const { loadBranch } = require('../daily/data');
+const { sheetYearCard } = require('../sales/data');
 const { weekList, buildScoreboard, traceMeasure, traceSales, traceRunning } = require('./data');
 
 const { isRealDate } = require('../lib/dates');
@@ -44,8 +45,9 @@ function scoreboardRoutes(db, { now, trackerStart }) {
       const week = weeks.includes(req.query.week) ? req.query.week : current;
 
       const board = await buildScoreboard(db, { branch, weekStart: week, today, trackerStart: start });
+      const yearCard = await sheetYearCard(db, { today, code: branch.code });
       res.render('scoreboard', {
-        title: `${branch.name} scoreboard`, branch, branches, board, fmt, today,
+        title: `${branch.name} scoreboard`, branch, branches, board, fmt, today, yearCard,
         weeks: weeks.map((w) => ({ week: w, label: w === current ? 'This week' : fmt.weekLabel(w, calc.addDays(w, 6)), current: w === week })),
         canPickBranch: u.role === 'admin' || u.role === 'hq',
         branchQs: u.role === 'admin' || u.role === 'hq' ? `&branch=${encodeURIComponent(branch.code)}` : '',

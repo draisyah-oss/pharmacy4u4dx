@@ -22,6 +22,7 @@
     <p class="muted">Month-to-date sales, this week’s walk-in and lead measures, and last Monday’s check-in, per branch. Tap a number for the entries behind it.</p>
   </header>
 
+  <%- include('partials/sheet-year', { card: yearCard }) %>
   <%- include('partials/company-sales', { company: group.company }) %>
 
   <div class="legend" aria-label="Status key">

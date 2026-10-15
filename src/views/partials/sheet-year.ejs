@@ -1,0 +1,11 @@
+<%# "Year so far" strip from the sales sheet. Input: card (from sheetYearCard) or null. %>
+<% if (card) { %>
+  <a class="sheet-year" href="/sales">
+    <span class="sy-item"><span class="sy-k"><%= card.code ? card.code + ' ' : 'Company ' %><%= card.year %> so far</span>
+      <b class="sy-v"><%= fmt.money(card.ytd) %></b>
+      <% if (card.pct !== null) { %><span class="sy-n s-<%= card.pct >= 1 ? 'on_track' : card.pct >= 0.9 ? 'watch' : 'off_track' %>"><%= fmt.pct(card.pct) %> of YTD target to date (<%= fmt.money(card.target) %>)</span><% } %>
+      <% if (card.b2b !== null) { %><span class="sy-n">incl. B2B <%= fmt.money(card.b2b) %></span><% } %></span>
+    <% if (card.latest) { %><span class="sy-item"><span class="sy-k">Daily sales <%= fmtDate(card.latest.date) %></span><b class="sy-v"><%= fmt.money(card.latest.amount) %></b></span><% } %>
+    <span class="sy-item sy-more">From the sales sheet · details ›</span>
+  </a>
+<% } %>

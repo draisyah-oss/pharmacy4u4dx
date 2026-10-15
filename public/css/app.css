@@ -601,3 +601,18 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 @media (min-width: 760px) { .home-branches { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; } }
 .commit-done { display: block; min-width: 0; }
 .commit-done > .yesno { clear: both; width: 100%; }
+/* Sales page and the "year so far" strip (from the Google sales sheet). */
+.page.sales-page { max-width: 1100px; }
+.sales-page h2 { margin: 22px 0 8px; font-size: 1.15rem; }
+.sales-table td, .sales-table th { white-space: nowrap; }
+.sales-table tr.is-current th, .sales-table tr.is-current td { background: var(--info-tint); }
+.sales-table tfoot th, .sales-table tfoot td { border-top: 2px solid var(--line); }
+.sales-table th:first-child { position: sticky; left: 0; background: var(--card); z-index: 1; }
+.sheet-year { display: flex; flex-wrap: wrap; gap: 8px 22px; align-items: baseline; margin: 10px 0 14px; padding: 12px 14px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; color: var(--ink); text-decoration: none; }
+.sheet-year:hover { border-color: var(--brand); }
+.sy-item { display: flex; flex-direction: column; min-width: 0; }
+.sy-k { font-size: 0.85rem; color: var(--ink-soft); }
+.sy-v { font-size: 1.3rem; }
+.sy-n { font-size: 0.85rem; }
+.sy-more { margin-left: auto; font-size: 0.85rem; color: var(--brand); align-self: center; }

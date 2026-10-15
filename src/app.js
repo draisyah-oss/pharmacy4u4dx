@@ -11,6 +11,7 @@ const { weeklyRoutes } = require('./weekly/routes');
 const { groupRoutes } = require('./group/routes');
 const { hqRoutes } = require('./hq/routes');
 const { hqTeamRoutes } = require('./hq/team-routes');
+const { salesRoutes } = require('./sales/routes');
 const calc = require('./calc');
 const fmt = require('./scoreboard/format');
 const { companySalesForWeek } = require('./group/company');
@@ -88,6 +89,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(groupRoutes(db, { now, trackerStart }));
   app.use(hqRoutes(db, { now, trackerStart }));
   app.use(hqTeamRoutes(db, { now, trackerStart }));
+  app.use(salesRoutes(db, { now, salesSheet }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

@@ -1,0 +1,119 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'sales' }) %>
+<%
+  const v = view;
+  const codes = v.branches.map(function (b) { return b.code; });
+  const mName = (m, long) => new Date(m + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: long ? 'long' : 'short' });
+  // Tables: plain numbers (headers say RM) so all columns fit on a phone.
+  const cellMoney = (n) => (n === null || n === undefined ? '<span class="muted">–</span>' : fmt.number(n, 0));
+  const ytdBranches = codes.reduce(function (a, c) { return a + (v.ytd[c] || 0); }, 0);
+  const ytdPct = v.ytdTargetBranches ? ytdBranches / v.ytdTargetBranches : null;
+%>
+<div class="daybar">
+  <nav class="strip week-strip" aria-label="Choose a month">
+    <% months.forEach(function (m) { %>
+      <a href="/sales?month=<%= m %>" class="strip-pill<%= m === month ? ' is-current' : '' %>"<%= m === month ? ' aria-current="true"' : '' %>><%= mName(m) %></a>
+    <% }) %>
+  </nav>
+</div>
+<main class="page sales-page">
+  <header class="board-head">
+    <h1>Sales <span class="board-week"><%= v.year %></span></h1>
+    <p class="muted">From the Google sales sheet (“Total Sales” and “Overall Daily Sales” tabs), the same numbers HQ sees there.
+      <% if (v.syncedAt) { %>Last read <%= new Date(v.syncedAt).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) %>.<% } %></p>
+  </header>
+
+  <% if (!v.hasData) { %>
+    <section class="card">
+      <p><b>No numbers from the sales sheet yet.</b></p>
+      <% if (sheet && !sheet.enabled) { %>
+        <p class="muted">The Google sheet link isn’t set up on this server yet (the robot key GOOGLE_SERVICE_ACCOUNT_JSON and the sheet link). Once it is, this page fills itself within 10 minutes.</p>
+      <% } else if (sheet && sheet.summaryError) { %>
+        <p class="s-off_track">Last problem reading the summary tabs: <%= sheet.summaryError %></p>
+      <% } else { %>
+        <p class="muted">It fills on the next sync (every 10 minutes).</p>
+      <% } %>
+    </section>
+  <% } else { %>
+
+  <section class="sales company-sales" aria-label="Year so far">
+    <div class="sales-main">
+      <span class="sales-k">Company sales <%= v.year %> so far (branches + B2B)</span>
+      <span class="sales-big"><%= fmt.money(v.ytd.TOTAL) %></span>
+      <% if (ytdPct !== null) { %>
+        <span class="sales-of">Branches <%= fmt.money(ytdBranches) %> = <%= fmt.pct(ytdPct) %> of the year’s target to <%= fmtDate(v.ytdAsOf, { weekday: undefined }) %> (<%= fmt.money(v.ytdTargetBranches) %>)</span>
+        <div class="bar" aria-hidden="true"><span class="s-<%= ytdPct >= 1 ? 'on_track' : ytdPct >= 0.9 ? 'watch' : 'off_track' %>" style="width:<%= Math.min(ytdPct, 1) * 100 %>%"></span></div>
+      <% } %>
+    </div>
+    <dl class="sales-facts">
+      <% if (v.latest) { %>
+        <div><dt>Latest day <%= fmtDate(v.latest.date) %></dt><dd><%= fmt.money(v.latest.TOTAL) %><span class="dd-note"><%= codes.filter(function (c) { return v.latest[c] !== undefined; }).map(function (c) { return c + ' ' + fmt.money(v.latest[c]); }).join(' · ') %></span></dd></div>
+      <% } %>
+      <div><dt>Branches</dt><dd><%= fmt.money(ytdBranches) %></dd></div>
+      <div><dt>B2B</dt><dd><%= fmt.money(v.ytd.B2B || 0) %></dd></div>
+    </dl>
+  </section>
+
+  <h2 id="year">Month by month <small class="muted">(RM)</small></h2>
+  <div class="table-wrap">
+    <table class="admin-table sales-table">
+      <thead>
+        <tr><th scope="col">Month</th>
+          <% codes.forEach(function (c) { %><th scope="col" class="n"><%= c %></th><% }) %>
+          <th scope="col" class="n">B2B</th><th scope="col" class="n">Total</th><th scope="col" class="n">Year so far</th></tr>
+      </thead>
+      <tbody>
+        <% v.months.forEach(function (m) { %>
+          <tr<%= m.month === month ? ' class="is-current"' : '' %>>
+            <th scope="row"><a href="/sales?month=<%= m.month %>#days"><%= mName(m.month) %></a></th>
+            <% codes.forEach(function (c) { %><td class="n"><%- cellMoney(m[c]) %></td><% }) %>
+            <td class="n"><%- cellMoney(m.B2B) %></td><td class="n"><b><%- cellMoney(m.TOTAL) %></b></td><td class="n"><%- cellMoney(m.cumulative) %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr><th scope="row">Total</th>
+          <% codes.forEach(function (c) { %><td class="n"><%- cellMoney(v.ytd[c]) %></td><% }) %>
+          <td class="n"><%- cellMoney(v.ytd.B2B) %></td><td class="n"><b><%- cellMoney(v.ytd.TOTAL) %></b></td><td></td></tr>
+        <% if (Object.keys(v.ytdTarget).length) { %>
+          <tr class="muted"><th scope="row">YTD target to <%= fmtDate(v.ytdAsOf, { weekday: undefined }) %></th>
+            <% codes.forEach(function (c) { %><td class="n"><%- v.ytdTarget[c] === undefined ? '–' : fmt.number(v.ytdTarget[c], 0) + (v.ytd[c] ? '<br><small>' + fmt.pct(v.ytd[c] / v.ytdTarget[c]) + '</small>' : '') %></td><% }) %>
+            <td></td><td class="n"><%- cellMoney(v.ytdTargetBranches) %></td><td></td></tr>
+        <% } %>
+      </tfoot>
+    </table>
+  </div>
+  <p class="muted small">Month figures are the sheet’s “Total Sales” tab (branch sales incl. zakat, Shopee and Alpine, plus B2B).</p>
+
+  <h2 id="days">Day by day – <%= mName(month, true) %> <small class="muted">(RM)</small></h2>
+  <% if (!v.days.length) { %>
+    <p class="muted">No daily numbers in the sheet for <%= mName(month, true) %>.</p>
+  <% } else { %>
+  <div class="table-wrap">
+    <table class="admin-table sales-table">
+      <thead>
+        <tr><th scope="col">Day</th>
+          <% codes.forEach(function (c) { %><th scope="col" class="n"><%= c %></th><% }) %>
+          <th scope="col" class="n">Total</th></tr>
+      </thead>
+      <tbody>
+        <% v.days.slice().reverse().forEach(function (d) { %>
+          <tr><th scope="row"><%= fmtDate(d.date) %></th>
+            <% codes.forEach(function (c) { %><td class="n"><%- cellMoney(d[c]) %></td><% }) %>
+            <td class="n"><b><%- cellMoney(d.TOTAL) %></b></td></tr>
+        <% }) %>
+      </tbody>
+      <tfoot>
+        <tr><th scope="row">Month so far</th>
+          <% codes.forEach(function (c) { %><td class="n"><%- cellMoney(v.monthTotals[c]) %></td><% }) %>
+          <td class="n"><b><%- cellMoney(v.monthTotals.TOTAL) %></b></td></tr>
+      </tfoot>
+    </table>
+  </div>
+  <p class="muted small">Daily figures are the sheet’s “Overall Daily Sales” tab (till sales per branch). They can differ slightly from the month table, which also counts zakat, Shopee, Alpine and B2B.</p>
+  <% } %>
+  <% } %>
+</main>
+</body>
+</html>

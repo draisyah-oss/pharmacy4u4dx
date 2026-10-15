@@ -6,6 +6,7 @@ const fmt = require('../scoreboard/format');
 const { scoreboardAccess } = require('../scoreboard/routes');
 const { weekChoices, pickWeek } = require('../lib/weeks');
 const { buildGroup } = require('./data');
+const { sheetYearCard } = require('../sales/data');
 
 const canSeeGroup = (user) => ['branch_manager', 'hq', 'hq_staff', 'admin'].includes(user.role);
 
@@ -29,8 +30,9 @@ function groupRoutes(db, { now, trackerStart }) {
       const canOpen = (code) => scoreboardAccess(req.user, { id: branchIds.get(code) }) === null;
       const qs = (code) => (req.user.role === 'branch_manager' ? '' : `&branch=${encodeURIComponent(code)}`);
 
+      const yearCard = await sheetYearCard(db, { today });
       res.render('group', {
-        title: 'Group scoreboard', group, fmt, today, week, canOpen, qs,
+        title: 'Group scoreboard', group, fmt, today, week, canOpen, qs, yearCard,
         pills: weeks.map((w) => ({ href: `/group?week=${w}`, current: w === week, label: w === current ? 'This week' : fmt.weekLabel(w, calc.addDays(w, 6)) })),
       });
     } catch (err) { next(err); }

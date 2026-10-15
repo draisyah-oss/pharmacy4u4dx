@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 166, fail 0
+npm test                    # should end with: pass 171, fail 0
 npm start
 ```
 
@@ -86,6 +86,10 @@ go where is in `seed.json` → each branch's `sales_sheet`). It checks every 10 
 there's a "Check the sheet now" button on the daily entry page. Those boxes become read-only
 and are tagged *Sales sheet* – to change a number, fix it in the sheet. Until the link is set
 up, they're typed in the app as before.
+
+The same sync reads the sheet's **Overall Daily Sales** and **Total Sales** tabs, which fill the
+**Sales** tab in the app (daily totals per branch and the year so far, month by month, incl. B2B)
+and the "year so far" strip on the scoreboards.
 
 Set it up once (free, about 10 minutes):
 

@@ -8,11 +8,13 @@
        tabs = [
          ['hq', '/hq', 'My KPIs'], ['hqtoday', '/hq/today', 'My day'], ['hqcommit', '/hq/commitments', 'Commitments'],
          ['projects', '/hq/projects', 'Projects'], ['hqboard', '/hq/scoreboard', 'HQ scoreboard'], ['group', '/group', 'Group'],
+         ['sales', '/sales', 'Sales'],
        ];
      } else {
        tabs = [
          ['daily', '/daily' + bq, 'Daily entry'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard'],
          ['weekly', '/weekly' + bq, 'Check-in'], ['commitments', '/commitments' + bq, 'Commitments'], ['group', '/group', 'Group'],
+         ['sales', '/sales', 'Sales'],
        ];
        if (many) {
          tabs.push(['hq', '/hq', 'HQ input'], ['hqtoday', '/hq/today', 'HQ day'], ['hqcommit', '/hq/commitments', 'HQ commitments'],

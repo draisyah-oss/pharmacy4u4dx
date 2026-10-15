@@ -11,6 +11,22 @@ const calc = require('../calc');
 const { parseSalesTab } = require('./parse');
 const { loadServiceAccount, readTabs } = require('./google');
 const { mentionsSalary } = require('../privacy');
+const summary = require('./summary');
+
+// The sheet's own summary tabs (daily totals, year table). Names can be changed in app_settings.
+const SUMMARY_TABS = { daily: 'Overall Daily Sales', monthly: 'Total Sales' };
+
+async function syncSummaryTabs(db, { readRows, today }) {
+  const s = await sheetSettings(db);
+  const tabs = { daily: s.sales_summary_daily_tab || SUMMARY_TABS.daily, monthly: s.sales_summary_monthly_tab || SUMMARY_TABS.monthly };
+  if (mentionsSalary(tabs.daily, tabs.monthly)) throw new Error('Summary tab names mention salaries – not read (privacy rule).');
+  const data = await readRows([tabs.daily, tabs.monthly]);
+  const codes = (await db.query('SELECT code FROM branches ORDER BY sort_order')).rows.map((r) => r.code);
+  const daily = data[tabs.daily] ? summary.parseOverallDaily(data[tabs.daily], codes) : null;
+  const monthly = data[tabs.monthly] ? summary.parseTotalSales(data[tabs.monthly], codes, Number(today.slice(0, 4))) : null;
+  await summary.storeSummary(db, { daily, monthly, today });
+  return { days: daily ? daily.length : 0, months: monthly ? monthly.months.length : 0 };
+}
 
 async function sheetSettings(db) {
   const { rows } = await db.query("SELECT key, value FROM app_settings WHERE key LIKE 'sales_sheet_%'");
@@ -135,6 +151,14 @@ function createSalesSheetLink(db, { env = process.env, now = () => new Date(), f
         });
         await setSetting(db, 'sales_sheet_last_sync', new Date().toISOString());
         await setSetting(db, 'sales_sheet_last_error', '');
+        // Summary tabs separately: a renamed summary tab mustn't stop the daily numbers.
+        try {
+          await syncSummaryTabs(db, { readRows: (tabs) => readTabs({ account, sheetId: id, tabs, fetchImpl }), today });
+          await setSetting(db, 'sales_summary_last_error', '');
+        } catch (err) {
+          await setSetting(db, 'sales_summary_last_error', err.message);
+          log(`Sales sheet summary tabs not read: ${err.message}`);
+        }
         if (summary.changed || summary.removed) log(`Sales sheet: ${summary.changed} numbers updated, ${summary.removed} removed.`);
         return summary;
       } catch (err) {
@@ -154,6 +178,7 @@ function createSalesSheetLink(db, { env = process.env, now = () => new Date(), f
       sheetId: await sheetId(),
       lastSync: s.sales_sheet_last_sync || null,
       lastError: s.sales_sheet_last_error || null,
+      summaryError: s.sales_summary_last_error || null,
     };
   }
 
@@ -180,4 +205,4 @@ async function sheetFieldsFor(db, branchId, link) {
   return new Set(obj && obj.columns ? Object.keys(obj.columns) : []);
 }
 
-module.exports = { syncSalesSheet, createSalesSheetLink, sheetFieldsFor, linkedBranches };
+module.exports = { syncSalesSheet, syncSummaryTabs, createSalesSheetLink, sheetFieldsFor, linkedBranches, SUMMARY_TABS };
