@@ -37,7 +37,7 @@ async function linkedBranches(db) {
       ...b,
       sales_sheet: {
         ...b.sales_sheet,
-        columns: Object.fromEntries(Object.entries(b.sales_sheet.columns).filter(([k, h]) => !mentionsSalary(k, h))),
+        columns: Object.fromEntries(Object.entries(b.sales_sheet.columns).filter(([k, h]) => !mentionsSalary(k, JSON.stringify(h)))),
       },
     }));
 }

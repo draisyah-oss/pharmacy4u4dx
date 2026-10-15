@@ -84,6 +84,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 
 ## Sales sheet link (14 Oct)
 - Source: 2026 Sales Dashboard (Google Sheet id in seed.json → company.sales_sheet_id), the five branch daily tabs. Column → field mapping per branch in branch.sales_sheet.
+- Columns (confirmed 15 Oct): Grab sales (RM) = **GRAB PAY** (BR: "Grabpay"); Grab orders (#) = **GrabMart** (BR: "Grab Order"); walk-in = **Total minus GRAB PAY** (Total includes Grab Pay, so Grab isn't counted twice – walk-in + Grab = the till Total); Zakat = "Zakat" (WM, JH, BR); BR also Shopee Sales, Alpine. A column setting can be a header or { column, minus: [...] }; headers match without case or spaces. Older databases get the new columns once (app_settings sales_sheet_v2) and the next sync rewrites the sheet numbers.
 - Synced every 10 min + "Check the sheet now" into daily_entries with source = 'sheet' (migration 004), only 12 Oct → today. Audit actions sheet_sync / sheet_delete. Repeated dates in the sheet are merged (empty never wipes a number).
 - While the link is on, those fields are read-only in Daily Entry (fix in the sheet); with no service account they're typed as before.
 - Auth: Google service account, read-only scope, signed JWT with Node crypto (no googleapis package). GOOGLE_SERVICE_ACCOUNT_JSON (Railway) or GOOGLE_SERVICE_ACCOUNT_FILE (local).

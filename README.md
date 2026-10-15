@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 162, fail 0
+npm test                    # should end with: pass 163, fail 0
 npm start
 ```
 
@@ -81,7 +81,7 @@ Log in as `admin` → **Admin** tab:
 ## Sales sheet (2026 Sales Dashboard)
 
 The app reads each branch's daily tab in the **2026 Sales Dashboard** Google Sheet and fills in
-walk-in sales, transactions, zakat, Shopee, Alpine and Grab orders automatically (which columns
+walk-in sales (Total minus Grab Pay), transactions, zakat, Shopee, Alpine, Grab sales (Grab Pay) and Grab orders (GrabMart) automatically (which columns
 go where is in `seed.json` → each branch's `sales_sheet`). It checks every 10 minutes, and
 there's a "Check the sheet now" button on the daily entry page. Those boxes become read-only
 and are tagged *Sales sheet* – to change a number, fix it in the sheet. Until the link is set

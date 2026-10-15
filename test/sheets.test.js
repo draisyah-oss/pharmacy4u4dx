@@ -35,12 +35,22 @@ test('numbers and dates as the sheet writes them', () => {
   assert.equal(parseDate('Total'), null);
 });
 
-test('every branch tab: 12 Oct walk-in and transactions match the sheet', () => {
-  assert.deepEqual(day('WM', '2026-10-12').values, { walkin: 1565.85, tx: 55, graord: 1 });
-  assert.deepEqual(day('BR', '2026-10-12').values, { walkin: 1507.2, tx: 59, graord: 1 });
-  assert.deepEqual(day('JH', '2026-10-12').values, { walkin: 1497.8, tx: 59, graord: 2 });
-  assert.deepEqual(day('Bangi', '2026-10-12').values, { walkin: 1700.82, tx: 52, graord: 5 });
-  assert.deepEqual(day('Ampang', '2026-10-12').values, { walkin: 1004.3, tx: 35, graord: 1 });
+test('every branch tab: 12 Oct walk-in (Total minus Grab Pay), Grab Pay as Grab sales, GrabMart as Grab orders', () => {
+  // WM: Total 1,565.85 − Grab Pay 18.70 = walk-in 1,547.15; GrabMart column = 1 order
+  assert.deepEqual(day('WM', '2026-10-12').values, { walkin: 1547.15, tx: 55, grab: 18.7, graord: 1 });
+  assert.deepEqual(day('BR', '2026-10-12').values, { walkin: 1490.95, tx: 59, grab: 16.25, graord: 1 }); // BR: "Grabpay", "Grab Order"
+  assert.deepEqual(day('JH', '2026-10-12').values, { walkin: 1403.2, tx: 59, grab: 94.6, graord: 2 });
+  assert.deepEqual(day('Bangi', '2026-10-12').values, { walkin: 1525.8, tx: 52, grab: 175.02, graord: 5 });
+  assert.deepEqual(day('Ampang', '2026-10-12').values, { walkin: 963.7, tx: 35, grab: 40.6, graord: 1 });
+  // Branch total sales are unchanged: walk-in + Grab = the till Total
+  const wm = day('WM', '2026-10-12').values;
+  assert.ok(Math.abs(wm.walkin + wm.grab - 1565.85) < 0.001);
+});
+
+test('column headers match without case or spaces, and "minus" columns may be blank', () => {
+  const rows = [['Day', 'Date', 'Transaction', 'Grabpay', 'Total', 'Zakat '], ['Mon', '12/10/2026', '10', '', '100.00', '5']];
+  assert.deepEqual(parseSalesTab(rows, { walkin: { column: 'Total', minus: ['GRAB PAY'] }, grab: 'GRAB PAY', zakat: 'Zakat' })[0].values,
+    { walkin: 100, zakat: 5 });
 });
 
 test('zakat, Shopee and Alpine come through (different columns per branch)', () => {
@@ -53,7 +63,7 @@ test('zakat, Shopee and Alpine come through (different columns per branch)', () 
 
 test('the sheet agrees with the app\'s starting figure: WM 1–11 Oct = RM 19,900', () => {
   const rows = parseSalesTab(tabs[cfg('WM').tab], cfg('WM').columns).filter((d) => d.date <= '2026-10-11' && d.date >= '2026-10-01');
-  const total = rows.reduce((a, d) => a + (d.values.walkin || 0) + (d.values.zakat || 0), 0);
+  const total = rows.reduce((a, d) => a + (d.values.walkin || 0) + (d.values.grab || 0) + (d.values.zakat || 0), 0);
   assert.ok(Math.abs(total - seed.branches[0].before_tracker.sales_1_to_11_oct) < 1, `got ${total}`);
 });
 
@@ -65,7 +75,7 @@ test('every month block is read, January to October', () => {
 
 test('a repeated date is merged – the stray empty 01/09 row in the WM tab doesn\'t hide the real one', () => {
   const sep1 = parseSalesTab(tabs[cfg('WM').tab], cfg('WM').columns).find((d) => d.date === '2026-09-01');
-  assert.equal(sep1.values.walkin, 2562.03);
+  assert.equal(sep1.values.walkin, 2473.35); // Total 2,562.03 − Grab Pay 88.68
   assert.equal(sep1.duplicate, true);
   const flipped = parseSalesTab([['Day', 'Date', 'Transaction', 'Total'], ['Tue', '01/09/2026', '66', '2,562.03'], ['Tue', '01/09/2026', '', '']], { walkin: 'Total' });
   assert.deepEqual(flipped[0].values, { walkin: 2562.03 });
@@ -110,12 +120,13 @@ const entry = async (code, date, field) => (await db.query(
 test('sync writes the sheet\'s numbers from 12 Oct to today only, marked as from the sheet', async () => {
   const r = await fakeLink().syncNow();
   assert.ok(r.changed > 0);
-  assert.deepEqual(await entry('WM', '2026-10-12', 'walkin'), { value: 1565.85, source: 'sheet' });
+  assert.deepEqual(await entry('WM', '2026-10-12', 'walkin'), { value: 1547.15, source: 'sheet' });
+  assert.deepEqual(await entry('WM', '2026-10-12', 'grab'), { value: 18.7, source: 'sheet' });
   assert.deepEqual(await entry('BR', '2026-10-13', 'zakat'), { value: 732.72, source: 'sheet' });
   assert.equal(await entry('WM', '2026-10-11', 'walkin'), null);  // before the tracker: in the starting figure
   assert.equal(await entry('JH', '2026-11-01', 'walkin'), null);  // template row in the future
   const audit = (await db.query("SELECT action, new_value FROM audit_log WHERE record_key = 'WM 2026-10-12 walkin'")).rows;
-  assert.deepEqual(audit, [{ action: 'sheet_sync', new_value: 1565.85 }]);
+  assert.deepEqual(audit, [{ action: 'sheet_sync', new_value: 1547.15 }]);
 });
 
 test('syncing again changes nothing; a changed cell is updated and logged', async () => {
@@ -127,9 +138,9 @@ test('syncing again changes nothing; a changed cell is updated and logged', asyn
   try {
     const r = await fakeLink().syncNow();
     assert.equal(r.changed, 1);
-    assert.equal((await entry('WM', '2026-10-12', 'walkin')).value, 1600);
+    assert.equal((await entry('WM', '2026-10-12', 'walkin')).value, 1581.3); // 1,600 − Grab Pay 18.70
     const last = (await db.query("SELECT old_value, new_value FROM audit_log WHERE record_key = 'WM 2026-10-12 walkin' ORDER BY id DESC LIMIT 1")).rows[0];
-    assert.deepEqual(last, { old_value: 1565.85, new_value: 1600 });
+    assert.deepEqual(last, { old_value: 1547.15, new_value: 1581.3 });
   } finally {
     wm[row][8] = saved;
     await fakeLink().syncNow();
@@ -154,13 +165,13 @@ test('daily entry shows sheet numbers read-only and saving never overwrites them
   const s = await staffSession();
   const html = await s.get('/daily?date=2026-10-13');
   assert.match(html, /Walk-in sales \(RM\) <span class="sheet-tag">Sales sheet<\/span>/);
-  assert.match(html, /name="f\[walkin\]"[^>]*value="1067.55"[^>]*disabled/);
+  assert.match(html, /name="f\[walkin\]"[^>]*value="1042.3"[^>]*disabled/);
   assert.match(html, /fill in from the 2026 Sales Dashboard/);
   const csrf = html.match(/name="_csrf" value="([^"]+)"/)[1];
   // a browser doesn't send disabled boxes; even a forged value must be ignored
   const r = await s.post('/daily', { _csrf: csrf, date: '2026-10-13', 'f[walkin]': '1', 'f[two]': '20', 'f[pwp]': '3' });
   assert.equal(r.status, 302);
-  assert.deepEqual(await entry('WM', '2026-10-13', 'walkin'), { value: 1067.55, source: 'sheet' });
+  assert.deepEqual(await entry('WM', '2026-10-13', 'walkin'), { value: 1042.3, source: 'sheet' });
   assert.equal((await entry('WM', '2026-10-13', 'pwp')).value, 3);
 });
 

@@ -42,6 +42,7 @@ async function backfillNewSettings(db, seed, log) {
   await backfillHqTeam(db, seed, log);
   await backfillHqAccess(db, seed, log);
   await backfillHqTasks(db, seed, log);
+  await updateSalesSheetColumns(db, seed, log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -155,4 +156,21 @@ async function backfillHqTasks(db, seed, log) {
   if (added.length) log(`Added starting daily tasks for ${added.join(', ')}.`);
 }
 
-module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks };
+// 15 Oct: sheet columns corrected – Grab sales (RM) = Grab Pay, Grab orders = GrabMart, and
+// walk-in = Total minus Grab Pay (so Grab isn't counted twice). Applied once to older databases;
+// the next sync rewrites the numbers that came from the sheet.
+async function updateSalesSheetColumns(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'sales_sheet_v2'")).rows.length) return;
+  await db.transaction(async (tx) => {
+    for (const b of seed.branches) {
+      if (!b.sales_sheet) continue;
+      await tx.query('UPDATE branches SET sales_sheet = $2 WHERE code = $1', [b.code, JSON.stringify(b.sales_sheet)]);
+    }
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('sales_sheet_v2', $1)", [new Date().toISOString()]);
+    await tx.query(
+      `INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'branches', 'Sales sheet columns: Grab Pay = Grab sales, GrabMart = Grab orders', NULL)`);
+  });
+  log('Updated the sales sheet columns (Grab Pay = Grab sales, GrabMart = Grab orders, walk-in without Grab Pay).');
+}
+
+module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns };

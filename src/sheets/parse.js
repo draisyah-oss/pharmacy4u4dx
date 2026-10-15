@@ -29,23 +29,35 @@ function parseDate(v) {
   return new Date(`${iso}T00:00:00Z`).toISOString().slice(0, 10) === iso ? iso : null;
 }
 
-const norm = (s) => String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+// Header text compared without case or spaces: "GRAB PAY" (WM) = "Grabpay" (BR), "Zakat " = "Zakat".
+const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, '');
 
 function isHeaderRow(row) {
   const cells = row.map(norm);
   return cells.includes('date') && cells.includes('transaction');
 }
 
+// A column setting is a header ("Zakat") or a header minus others:
+// { "column": "Total", "minus": ["GRAB PAY"] } – walk-in = the till total without Grab Pay,
+// because Grab Pay is counted separately as Grab sales.
+function columnSpec(spec) {
+  if (spec && typeof spec === 'object') {
+    return { column: norm(spec.column), minus: (spec.minus || []).map(norm) };
+  }
+  return { column: norm(spec), minus: [] };
+}
+
 // rows: the tab as an array of rows (arrays of cells).
-// columns: { appFieldKey: 'Header text in the sheet', ... } e.g. { walkin: 'Total', tx: 'Transaction' }
+// columns: { appFieldKey: 'Header text in the sheet' or { column, minus }, ... }
+//   e.g. { walkin: { column: 'Total', minus: ['GRAB PAY'] }, grab: 'GRAB PAY', tx: 'Transaction' }
 // Returns [{ date: '2026-10-12', values: { walkin: 1565.85, tx: 55 }, row: 412 }] – row is
 // the 1-based sheet row, so the app can say exactly where a number came from.
 // A date that appears twice (e.g. a stray empty "01/09/2026" row above the real one) is
 // merged: empty cells never wipe a number, and the last filled-in value wins.
 function parseSalesTab(rows, columns) {
   const byDate = new Map();
-  const wanted = Object.entries(columns).map(([field, header]) => [field, norm(header)]);
-  let colOf = null;   // field → column index for the current month block
+  const wanted = Object.entries(columns).map(([field, spec]) => [field, columnSpec(spec)]);
+  let colOf = null;   // field → { idx, minus: [idx…] } for the current month block
   let dateCol = -1;
 
   rows.forEach((row, i) => {
@@ -54,9 +66,9 @@ function parseSalesTab(rows, columns) {
       const cells = row.map(norm);
       dateCol = cells.indexOf('date');
       colOf = {};
-      for (const [field, header] of wanted) {
-        const idx = cells.indexOf(header);
-        if (idx >= 0) colOf[field] = idx;
+      for (const [field, spec] of wanted) {
+        const idx = cells.indexOf(spec.column);
+        if (idx >= 0) colOf[field] = { idx, minus: spec.minus.map((h) => cells.indexOf(h)).filter((j) => j >= 0) };
       }
       return;
     }
@@ -64,9 +76,11 @@ function parseSalesTab(rows, columns) {
     const date = parseDate(row[dateCol]);
     if (!date) return;
     const values = {};
-    for (const [field, idx] of Object.entries(colOf)) {
-      const n = parseNumber(row[idx]);
-      if (n !== null) values[field] = n;
+    for (const [field, c] of Object.entries(colOf)) {
+      let n = parseNumber(row[c.idx]);
+      if (n === null) continue;
+      for (const j of c.minus) n -= parseNumber(row[j]) || 0;
+      values[field] = Math.round(n * 100) / 100;
     }
     const seen = byDate.get(date);
     if (seen) {
