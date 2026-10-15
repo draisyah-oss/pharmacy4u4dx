@@ -97,7 +97,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Group Excel export includes check-ins, OOS list, commitments and HQ entries.
 
 ## Deploy (Railway)
-- railway.json: `npm start`, health check /health. Variables: DATABASE_URL = ${{Postgres.DATABASE_URL}}, ADMIN_PASSWORD (first start only), optional GOOGLE_SERVICE_ACCOUNT_JSON. RAILWAY_ENVIRONMENT makes the app run as production (secure cookies, APP_TODAY ignored).
+- railway.json: `npm start`, health check /health. Variables: DATABASE_URL = ${{Postgres.DATABASE_URL}}, ADMIN_PASSWORD (first start only), optional GOOGLE_SERVICE_ACCOUNT_JSON. RAILWAY_ENVIRONMENT makes the app run as production (secure cookies, APP_TODAY ignored), and the app refuses to start there without DATABASE_URL (PGlite on Railway is wiped on every deploy).
 
 ## Open items
 - Ampang storefront fields and measures (2 staff on duty, storefront hours, health checks/promos = Lead 1, outreach) are owned by "Team" until an owner is named (Ayuni is Bangi only).
