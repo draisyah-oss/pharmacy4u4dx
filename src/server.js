@@ -11,6 +11,10 @@ if (process.env.RAILWAY_ENVIRONMENT && !process.env.DATABASE_URL) {
   console.error('DATABASE_URL is not set (or is empty). In Railway: open the Postgres service → Variables,');
   console.error('copy the value of DATABASE_URL (postgresql://…@postgres.railway.internal:5432/railway),');
   console.error('paste it into this app service → Variables → DATABASE_URL, then click Deploy.');
+  // Names only (never values), to spot a typo such as "DATABASE URL" or a variable left empty.
+  const near = Object.keys(process.env).filter((k) => /data|pg|postgres|url/i.test(k) && !/^RAILWAY_/.test(k));
+  console.error(`Variables this app can see that look related: ${near.length ? near.join(', ') : 'none'}.`);
+  if ('DATABASE_URL' in process.env) console.error('DATABASE_URL exists but is EMPTY – a ${{...}} reference that pointed nowhere. Paste the full postgresql://… address instead.');
   process.exit(1);
 }
 
