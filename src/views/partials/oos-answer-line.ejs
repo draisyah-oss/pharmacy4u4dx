@@ -1,0 +1,8 @@
+<%# What Inventory decided, in one line. Input: it, of %>
+<% if (it.answer === 'transfer') { %><b>Transfer <%= it.answer_qty %> from <%= it.from_code %></b> · arrives <%= of.dateLabel(it.expected_back) %>
+<% } else if (it.answer === 'order') { %><b>Ordered <%= it.answer_qty %> from the supplier</b> · expected <%= of.dateLabel(it.expected_back) %>
+<% } else if (it.answer === 'substitute') { %><b>Offer instead: <%= it.substitute %></b><%= it.expected_back ? ' · original back ' + of.dateLabel(it.expected_back) : '' %>
+<% } else if (it.answer === 'discontinue') { %><b>Discontinued</b> – no longer stocked
+<% } else if (it.reason_for_delay || it.expected_back) { %>HQ: <%= it.reason_for_delay || '' %><%= it.expected_back ? ' · back by ' + of.dateLabel(it.expected_back) : '' %>
+<% } else { %><span class="muted">Waiting for Inventory – answer by <%= it.answer_due ? of.when(it.answer_due, at) : 'the next working day' %></span><% } %>
+<% if (it.reason_for_delay && it.answer) { %><span class="oo-note">“<%= it.reason_for_delay %>”</span><% } %>

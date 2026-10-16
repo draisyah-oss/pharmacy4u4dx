@@ -22,8 +22,8 @@ const TEXTS = [
   { key: 'issue_needing_hq_help', label: 'One issue that needs HQ help' },
 ];
 
-const OOS_STATUSES = ['Open', 'Ordered', 'Back in stock', 'Discontinued / use substitute'];
-const OOS_OPEN = ['Open', 'Ordered'];
+const OOS_STATUSES = ['Open', 'Ordered', 'On the way', 'Substitute offered', 'Back in stock', 'Discontinued', 'Discontinued / use substitute'];
+const OOS_OPEN = ['Open', 'Ordered', 'On the way', 'Substitute offered']; // same as src/oos/data.js OPEN
 
 const numbersFor = (branch) => NUMBERS.filter((n) => !n.zakat || branch.zakat_field);
 const num = (v) => (v === null || v === undefined ? null : Number(v));

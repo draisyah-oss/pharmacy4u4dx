@@ -12,20 +12,24 @@
        quick = [['hqtoday', '/hq/today', 'My day'], ['hq', '/hq', 'My KPIs']];
        groups = [
          ['My work', [['hqtoday', '/hq/today', 'My day', 'tasks daily'], ['hq', '/hq', 'My KPIs', 'input lead measures'],
-           ['hqcommit', '/hq/commitments', 'Commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones']]],
+           ['hqcommit', '/hq/commitments', 'Commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones'],
+           ['oostransfers', '/oos/transfers', 'Transfers to send', 'out of stock oos restock']]],
          ['Scoreboards', [['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi'], ['group', '/group', 'Group scoreboard', 'branches company'],
-           ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat']]],
+           ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'], ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];
      } else {
-       quick = role === 'hq' ? [['group', '/group', 'Group'], ['sales', '/sales', 'Sales']]
+       quick = role === 'hq' ? [['oosinbox', '/oos/inbox', 'Out of stock'], ['group', '/group', 'Group'], ['sales', '/sales', 'Sales']]
          : [['daily', '/daily' + bq, 'Daily entry'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard']];
        groups = [
          ['Branch', [['daily', '/daily' + bq, 'Daily entry', 'log today walk-in'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard', 'week lead'],
-           ['weekly', '/weekly' + bq, 'Weekly check-in', 'monday oos'], ['commitments', '/commitments' + bq, 'Commitments', 'weekly']]],
-         ['Company', [['group', '/group', 'Group scoreboard', 'branches'], ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat']]],
+           ['oos', '/oos' + bq, 'Out of stock', 'oos report restock'],
+           ['weekly', '/weekly' + bq, 'Weekly check-in', 'monday'], ['commitments', '/commitments' + bq, 'Commitments', 'weekly']]],
+         ['Company', [['group', '/group', 'Group scoreboard', 'branches'], ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'],
+           ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];
        if (many) {
-         groups.push(['HQ', [['hq', '/hq', 'HQ input', 'kpi b2b'], ['hqtoday', '/hq/today', 'HQ day', 'tasks daily'],
+         groups.push(['HQ', [['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'], ['oostransfers', '/oos/transfers', 'Transfers to send', 'oos'],
+           ['hq', '/hq', 'HQ input', 'kpi b2b'], ['hqtoday', '/hq/today', 'HQ day', 'tasks daily'],
            ['hqcommit', '/hq/commitments', 'HQ commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones'],
            ['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi']]]);
        }
@@ -36,19 +40,20 @@
            ['/admin/audit', '/admin/audit', 'Audit log', 'history changes'], ['status', '/status', 'Setup check', 'google sheet database']]]);
        }
      }
+     const badge = (key) => key === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount ? '<span class="sn-badge" aria-label="' + oosCount + ' to answer">' + oosCount + '</span>' : '';
      const sub = role === 'admin' ? 'Admin' : role === 'hq' || role === 'hq_staff' ? 'HQ' : (user.branch_name || user.branch_code || '');
 %>
 <input type="checkbox" id="nav-open" class="nav-check" aria-hidden="true" tabindex="-1">
 <label for="nav-open" class="nav-backdrop" aria-hidden="true"></label>
 <aside class="sidenav" id="sidenav" aria-label="Menu">
   <div class="sn-head">
-    <div class="sn-title"><a href="/">Pharmacy4U</a><span><%= sub %></span></div>
+    <div class="sn-title"><a href="/" class="sn-logo"><img src="/img/wordmark.png" alt="Pharmacy4U" width="168" height="20"></a><span><%= sub %></span></div>
     <button type="button" class="sn-collapse" data-nav-collapse aria-label="Hide menu" title="Hide menu">«</button>
     <label for="nav-open" class="sn-close" aria-label="Close menu">✕</label>
   </div>
   <div class="sn-quick">
     <% quick.forEach(function (q, i) { %>
-      <a href="<%= q[1] %>" class="sn-tile<%= here === q[0] ? ' is-current' : '' %><%= quick.length % 2 && i === quick.length - 1 ? ' sn-wide' : '' %>"><%= q[2] %></a>
+      <a href="<%= q[1] %>" class="sn-tile<%= here === q[0] ? ' is-current' : '' %><%= quick.length % 2 && i === quick.length - 1 ? ' sn-wide' : '' %>"><%= q[2] %><%- badge(q[0]) %></a>
     <% }) %>
   </div>
   <input type="search" class="sn-search" data-nav-search placeholder="Search… e.g. sales, OOS" aria-label="Search the menu" hidden>
@@ -57,7 +62,7 @@
       <details class="sn-group" open>
         <summary><%= g[0] %></summary>
         <% g[1].forEach(function (l) { %>
-          <a href="<%= l[1] %>" class="sn-link<%= here === l[0] ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- here === l[0] ? ' aria-current="page"' : '' %>><%= l[2] %></a>
+          <a href="<%= l[1] %>" class="sn-link<%= here === l[0] ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- here === l[0] ? ' aria-current="page"' : '' %>><%= l[2] %><%- badge(l[0]) %></a>
         <% }) %>
       </details>
     <% }) %>

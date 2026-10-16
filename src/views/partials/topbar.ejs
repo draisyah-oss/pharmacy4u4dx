@@ -1,6 +1,6 @@
 <header class="topbar">
   <% if (user && user.role !== 'branch_staff') { %><label for="nav-open" class="menu-btn" role="button" tabindex="0" aria-controls="sidenav">☰ <span>Menu</span></label><% } %>
-  <a class="brand" href="/">Pharmacy4U<% if (typeof branch !== 'undefined' && branch) { %> <span class="brand-branch"><%= branch.name %></span><% } %></a>
+  <a class="brand" href="/"><img class="brand-mark" src="/img/mark-white.png" alt="" width="20" height="24"><img class="brand-word" src="/img/wordmark-white.png" alt="Pharmacy4U" width="121" height="14"><% if (typeof branch !== 'undefined' && branch) { %> <span class="brand-branch"><%= branch.name %></span><% } %></a>
   <% if (user) { %>
     <form method="post" action="/logout" class="who">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">

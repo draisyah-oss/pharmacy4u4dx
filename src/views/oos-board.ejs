@@ -1,0 +1,53 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oosboard' }) %>
+<div class="daybar"><nav class="strip week-strip" aria-label="Choose a week">
+  <% pills.forEach(function (p) { %><a href="<%= p.href %>" class="strip-pill<%= p.current ? ' is-current' : '' %>"<%- p.current ? ' aria-current="true"' : '' %>><%= p.label %></a><% }) %>
+</nav></div>
+<%
+  const b = board; const T = b.targets;
+  const st = (v, target, low) => v === null || v === undefined ? '' : (low ? (v <= target ? 'on_track' : v <= target * 1.1 ? 'watch' : 'off_track') : (v >= target ? 'on_track' : v >= target * 0.9 ? 'watch' : 'off_track'));
+  const pct = (x) => x === null ? '–' : fmt.pct(x);
+  const d1 = (x) => x === null || x === undefined ? '–' : x.toFixed(1);
+%>
+<main class="page oo-board">
+  <header class="board-head">
+    <h1>Out of stock <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">Inventory’s and Fariz’s lead measures for the Tuesday WIG session.</p>
+  </header>
+  <div class="oo-kpis">
+    <div class="oo-kpi"><span>Answered by <%= T.answer_by_hour %> am next working day · Inventory</span>
+      <b class="s-<%= st(b.answered.pct, T.answer_on_time) %>"><%= pct(b.answered.pct) %> <%= fmt.symbol(st(b.answered.pct, T.answer_on_time)) %></b>
+      <small><%= b.answered.done %> of <%= b.answered.total %> · target <%= fmt.pct(T.answer_on_time) %></small></div>
+    <div class="oo-kpi"><span>Transfers sent within <%= T.transfer_hours %> h · Fariz</span>
+      <b class="s-<%= st(b.transfers.pct, T.transfer_on_time) %>"><%= pct(b.transfers.pct) %> <%= fmt.symbol(st(b.transfers.pct, T.transfer_on_time)) %></b>
+      <small><%= b.transfers.done %> of <%= b.transfers.total %> · target <%= fmt.pct(T.transfer_on_time) %></small></div>
+    <div class="oo-kpi"><span>Average days to back in stock</span>
+      <b class="s-<%= st(b.restock.all, T.restock_days, true) %>"><%= d1(b.restock.all) %> <%= fmt.symbol(st(b.restock.all, T.restock_days, true)) %></b>
+      <small>transfer <%= d1(b.restock.transfer) %> · order <%= d1(b.restock.order) %> · <%= b.restock.count %> back · target <%= T.restock_days %></small></div>
+    <div class="oo-kpi"><span>Open right now</span><b><%= b.open.total %></b>
+      <small><%= b.open.toAnswer %> to answer · <%= b.open.late %> late</small></div>
+  </div>
+  <div class="oo-cols">
+    <section class="oo-card oo-wide">
+      <h2>Per branch</h2>
+      <div class="table-wrap"><table class="admin-table">
+        <thead><tr><th scope="col">Branch</th><th scope="col" class="n">Reported</th><th scope="col" class="n">Open</th><th scope="col" class="n">Avg days</th><th scope="col" class="n">Customers turned away</th></tr></thead>
+        <tbody>
+          <% b.branches.forEach(function (r) { const s = st(r.avgDays, T.restock_days, true); %>
+            <tr><th scope="row"><a href="/oos?branch=<%= encodeURIComponent(r.code) %>"><%= r.name %></a></th><td class="n"><%= r.reported %></td><td class="n"><%= r.open %></td>
+              <td class="n<%= s ? ' s-' + s : '' %>"><%= d1(r.avgDays) %> <%= fmt.symbol(s) %></td><td class="n"><%= r.customers %></td></tr>
+          <% }) %>
+        </tbody>
+      </table></div>
+    </section>
+    <section class="oo-card">
+      <h2>Ran out again (30 days)</h2>
+      <p class="muted small">Raise the minimum on the shelf for these.</p>
+      <% if (!b.repeats.length) { %><p class="muted">None.</p><% } %>
+      <% b.repeats.forEach(function (r) { %><div class="oo-row"><span><%= r.item %></span><b class="<%= r.n >= 3 ? 's-off_track' : 's-watch' %>"><%= r.n %>× · <%= r.branches.join(', ') %></b></div><% }) %>
+    </section>
+  </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oosinbox' }) %>
+<% const t = typed; const pick = t.answer || (item.answer || 'transfer'); %>
+<main class="page oo-page">
+  <p><a href="/oos/inbox">‹ Inbox</a></p>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <section class="oo-card">
+    <header class="oo-top"><h1><%= item.item %></h1><%- include('partials/oos-chip', { it: item, of: of }) %></header>
+    <p class="oo-meta"><b><%= item.branch_name %></b> · <%= item.left_qty === 0 ? 'none left' : item.left_qty ? item.left_qty + ' left' : '' %><%= item.customers_count ? ' · ' + (item.customers_count >= 3 ? '3+' : '1–2') + ' customers asking' : '' %><%= item.urgent ? ' · urgent' : '' %></p>
+    <% if (item.note) { %><p class="oo-note">“<%= item.note %>” – <%= item.reported_by_name %></p><% } %>
+    <p class="oo-meta">Reported <%= of.when(item.reported_at, at) %><%= item.answer_due && !item.answered_at ? ' · answer by ' + of.when(item.answer_due, at) : '' %><%= history.length ? ' · ran out before: ' + history.map(function (h) { return of.when(h.reported_at, at); }).join(', ') : '' %></p>
+    <% if (item.answer) { %><p class="oo-line">Current answer: <%- include('partials/oos-answer-line', { it: item, of: of, at: at }) %></p><% } %>
+  </section>
+
+  <form method="post" action="/oos/<%= item.id %>/answer" class="oo-card oo-form" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <fieldset class="oo-set">
+      <legend>Your answer</legend>
+      <div class="oo-answers">
+        <% [['transfer', 'Transfer', 'from a branch'], ['order', 'Order', 'from the supplier'], ['substitute', 'Substitute', 'offer another'], ['discontinue', 'Discontinue', 'stop stocking']].forEach(function (a) { %>
+          <label class="oo-ans"><input type="radio" name="answer" value="<%= a[0] %>"<%= pick === a[0] ? ' checked' : '' %>><span><b><%= a[1] %></b><small><%= a[2] %></small></span></label>
+        <% }) %>
+      </div>
+    </fieldset>
+    <fieldset class="oo-set oo-when-transfer">
+      <legend>From which branch? <small class="muted">(transfer)</small></legend>
+      <div class="oo-pills">
+        <% branches.forEach(function (b, i) { %><label class="oo-pill"><input type="radio" name="from" value="<%= b.code %>"<%= (t.from || item.from_code) === b.code ? ' checked' : '' %>><span><%= b.code %></span></label><% }) %>
+      </div>
+    </fieldset>
+    <div class="oo-two">
+      <label class="oo-label">Quantity <small class="muted">(transfer / order)</small><input name="qty" inputmode="numeric" class="num" value="<%= t.qty || item.answer_qty || '' %>" autocomplete="off"></label>
+      <label class="oo-label">Arrives by<input type="date" name="expected_back" min="<%= today %>" value="<%= t.expected_back || item.expected_back || tomorrow %>"></label>
+    </div>
+    <label class="oo-label">Offer instead <small class="muted">(substitute)</small><input name="substitute" maxlength="160" value="<%= t.substitute || item.substitute || '' %>" placeholder="e.g. Androchi 60ml × 2"></label>
+    <label class="oo-label">Note to the branch (optional)<input name="reason" maxlength="300" value="<%= t.reason || item.reason_for_delay || '' %>" placeholder="e.g. supplier out until Nov"></label>
+    <p class="muted small">Transfer: Fariz gets a job to send it within 24 hours. The branch sees your answer on Daily entry.</p>
+    <button class="button wide" type="submit">Send answer</button>
+  </form>
+</main>
+</body>
+</html>

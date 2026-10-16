@@ -1,0 +1,40 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oosinbox' }) %>
+<main class="page oo-page">
+  <header class="oo-head">
+    <h1>Out of stock <% if (toAnswer.length) { %><span class="oo-badge"><%= toAnswer.length %></span><% } %></h1>
+    <p class="muted">Urgent first, then the oldest. Answer each by 11 am the next working day.</p>
+  </header>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <div class="oo-stats">
+    <a href="/oos/inbox" class="oo-stat<%= tab === 'answer' ? ' is-current' : '' %>"><span>To answer</span><b class="<%= toAnswer.length ? 's-off_track' : '' %>"><%= toAnswer.length %></b></a>
+    <a href="/oos/inbox?tab=waiting" class="oo-stat<%= tab === 'waiting' ? ' is-current' : '' %>"><span>Waiting for stock</span><b><%= waiting.length %></b></a>
+    <a href="/oos/inbox?tab=waiting" class="oo-stat"><span>Late or overdue</span><b class="<%= overdue ? 's-watch' : '' %>"><%= overdue %></b></a>
+  </div>
+  <nav class="strip oo-tabs" aria-label="Lists">
+    <a href="/oos/inbox" class="strip-pill<%= tab === 'answer' ? ' is-current' : '' %>">To answer (<%= toAnswer.length %>)</a>
+    <a href="/oos/inbox?tab=waiting" class="strip-pill<%= tab === 'waiting' ? ' is-current' : '' %>">Waiting for stock (<%= waiting.length %>)</a>
+    <a href="/oos/inbox?tab=done" class="strip-pill<%= tab === 'done' ? ' is-current' : '' %>">Done lately</a>
+  </nav>
+  <% const list = tab === 'answer' ? toAnswer : tab === 'waiting' ? waiting : done; %>
+  <% if (!list.length) { %><p class="muted"><%= tab === 'answer' ? 'Nothing to answer – all caught up.' : 'Nothing here.' %></p><% } %>
+  <div class="oo-list">
+  <% list.forEach(function (it) { %>
+    <a class="oo-item oo-link<%= it.urgent && it.unanswered ? ' is-urgent' : '' %><%= it.late || it.late_flagged_at ? ' is-late' : '' %>" href="/oos/<%= it.id %>">
+      <span class="oo-top"><b><%= it.item %></b>
+        <% if (it.urgent && it.unanswered) { %><span class="oo-chip oc-bad">URGENT</span><% } else { %><%- include('partials/oos-chip', { it: it, of: of }) %><% } %></span>
+      <span class="oo-meta"><b><%= it.branch_code %></b> · <%= it.left_qty === 0 ? '0 left' : it.left_qty ? it.left_qty + ' left' : 'from the Monday list' %><%= it.customers_count ? ' · ' + (it.customers_count >= 3 ? '3+' : '1–2') + ' customers asking' : '' %><%= it.note ? ' · “' + it.note + '”' : '' %></span>
+      <% if (it.unanswered) { %>
+        <span class="oo-due<%= it.dueMs < 0 ? ' s-off_track' : it.dueMs < 3 * 3600e3 ? ' s-watch' : '' %>">Reported <%= of.when(it.reported_at, at) %><%= it.dueMs !== null ? ' · ' + of.left(it.dueMs) : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %></span>
+      <% } else { %>
+        <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></span>
+        <% if (it.late_flagged_at) { %><span class="oo-due s-watch">Branch says it’s late (<%= of.when(it.late_flagged_at, at) %>)</span><% } %>
+      <% } %>
+    </a>
+  <% }) %>
+  </div>
+  <p class="wk-next"><a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Transfers →</a></p>
+</main>
+</body>
+</html>

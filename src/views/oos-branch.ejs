@@ -1,0 +1,75 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oos' }) %>
+<% if (branches.length) { %>
+<div class="daybar"><nav class="strip" aria-label="Choose a branch">
+  <% branches.forEach(function (b) { %><a href="/oos?branch=<%= encodeURIComponent(b.code) %>" class="strip-pill<%= b.code === branch.code ? ' is-current' : '' %>"><%= b.code %></a><% }) %>
+</nav></div>
+<% } %>
+<main class="page oo-page">
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <% if (canReport) { const t = typed; %>
+  <section class="oo-card" aria-labelledby="rep-h">
+    <h1 id="rep-h">Report out of stock</h1>
+    <p class="muted">Report it when it hits the minimum on the shelf – don’t wait for zero, and don’t wait for Monday.</p>
+    <form method="post" action="/oos<%= bq %>" class="oo-form" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">Item
+        <input name="item" maxlength="120" autocomplete="off" required value="<%= t.item || '' %>" placeholder="e.g. Loyuric 100mg (30s)"<%= errors.item ? ' aria-invalid="true"' : '' %>>
+        <% if (errors.item) { %><span class="wk-error"><%= errors.item %></span><% } %>
+      </label>
+      <fieldset class="oo-set">
+        <legend>How many left?</legend>
+        <div class="yesno">
+          <label class="yn yn-no"><input type="radio" name="left" value="none"<%= t.left === 'none' ? ' checked' : '' %>><span>None (0)</span></label>
+          <label class="yn yn-yes"><input type="radio" name="left" value="low"<%= t.left === 'low' ? ' checked' : '' %>><span>Low</span></label>
+        </div>
+        <label class="oo-inline">If low, how many? <input name="left_qty" inputmode="numeric" class="num oo-qty" value="<%= t.left_qty || '' %>" autocomplete="off"></label>
+        <% if (errors.left) { %><span class="wk-error"><%= errors.left %></span><% } %>
+      </fieldset>
+      <fieldset class="oo-set">
+        <legend>Customers asking for it today?</legend>
+        <div class="yesno yesno-3">
+          <% [['0', 'None'], ['1-2', '1–2'], ['3+', '3 or more']].forEach(function (o) { %>
+            <label class="yn yn-yes"><input type="radio" name="asking" value="<%= o[0] %>"<%= t.asking === o[0] ? ' checked' : '' %>><span><%= o[1] %></span></label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <label class="oo-urgent"><input type="checkbox" name="urgent" value="1"<%= t.urgent ? ' checked' : '' %>> Urgent – chronic patient waiting</label>
+      <label class="oo-label">Note (optional)
+        <input name="note" maxlength="200" autocomplete="off" value="<%= t.note || '' %>" placeholder="e.g. patient collects every 2 weeks">
+        <% if (errors.note) { %><span class="wk-error"><%= errors.note %></span><% } %>
+      </label>
+      <button class="button wide" type="submit">Send to Inventory</button>
+      <p class="muted small oo-center">Inventory answers by <%= targets.answer_by_hour %> am the next working day. The answer shows here and on Daily entry.</p>
+    </form>
+  </section>
+  <% } %>
+
+  <section aria-labelledby="ours-h">
+    <h2 id="ours-h"><%= canReport ? 'Our out-of-stock items' : branch.name + ' – out of stock' %></h2>
+    <% if (!items.length) { %><p class="muted">Nothing out of stock right now.</p><% } %>
+    <% items.forEach(function (it) { %>
+      <article class="oo-item<%= it.late ? ' is-late' : '' %><%= it.isOpen ? '' : ' is-closed' %>" id="oos-<%= it.id %>">
+        <header class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></header>
+        <p class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></p>
+        <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %>
+          <%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? ' · back ' + of.when(it.received_at, at) : '' %></p>
+        <% if (canClose && it.isOpen) { %>
+          <div class="oo-actions">
+            <% if (it.answer === 'transfer' || it.answer === 'order' || it.answer === 'substitute' || it.status === 'Open') { %>
+              <form method="post" action="/oos/<%= it.id %>/received"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button oo-good" type="submit">Received – back in stock</button></form>
+            <% } %>
+            <% if (it.late && !it.late_flagged_at) { %>
+              <form method="post" action="/oos/<%= it.id %>/late"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-button" type="submit">Tell Inventory it’s late</button></form>
+            <% } else if (it.late_flagged_at) { %><span class="muted small">Inventory told it’s late <%= of.when(it.late_flagged_at, at) %></span><% } %>
+          </div>
+        <% } %>
+      </article>
+    <% }) %>
+  </section>
+</main>
+</body>
+</html>

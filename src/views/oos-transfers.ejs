@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oostransfers' }) %>
+<main class="page oo-page">
+  <header class="oo-head"><h1>Transfers to send</h1><p class="muted">From Inventory’s answers. Send within <%= hours %> hours.</p></header>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (!toSend.length) { %><p class="muted">Nothing to send right now.</p><% } %>
+  <div class="oo-list">
+  <% toSend.forEach(function (it) { %>
+    <article class="oo-item<%= it.urgent ? ' is-urgent' : '' %>">
+      <header class="oo-top"><b><%= it.item %> × <%= it.answer_qty %></b><% if (it.urgent) { %><span class="oo-chip oc-bad">URGENT</span><% } %></header>
+      <p class="oo-route"><b><%= it.from_code %></b> → <b><%= it.branch_code %></b> · send by <%= of.when(it.sendBy, at) %></p>
+      <p class="oo-due<%= it.sendMs < 0 ? ' s-off_track' : it.sendMs < 4 * 3600e3 ? ' s-watch' : ' s-on_track' %>"><%= of.left(it.sendMs) %><%= it.picked_at ? ' · picked ' + of.when(it.picked_at, at) : '' %></p>
+      <div class="oo-two">
+        <form method="post" action="/oos/<%= it.id %>/picked"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button secondary wide" type="submit"<%= it.picked_at ? ' disabled' : '' %>><%= it.picked_at ? 'Picked ✔' : 'Picked' %></button></form>
+        <form method="post" action="/oos/<%= it.id %>/sent"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button wide" type="submit">Sent</button></form>
+      </div>
+    </article>
+  <% }) %>
+  </div>
+  <% if (sent.length) { %>
+    <h2 class="oo-sub">Sent – waiting for the branch to confirm</h2>
+    <div class="oo-list">
+    <% sent.forEach(function (it) { %>
+      <div class="oo-item oo-row"><span><%= it.item %> × <%= it.answer_qty %> · <%= it.from_code %> → <%= it.branch_code %></span><span class="muted small">sent <%= of.when(it.sent_at, at) %></span></div>
+    <% }) %>
+    </div>
+  <% } %>
+</main>
+</body>
+</html>

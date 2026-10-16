@@ -41,6 +41,18 @@
 
 <main class="page daily">
   <%- include('partials/branch-sales', monthSales) %>
+  <section class="oo-strip" aria-labelledby="oos-strip-h">
+    <div class="oo-strip-top">
+      <h2 id="oos-strip-h">Out of stock<%= oosItems.length ? ' · ' + oosItems.length + ' open' : '' %></h2>
+      <% if (oosCanReport) { %><a class="button small-button" href="<%= oosLink %>">Report out of stock</a><% } %>
+    </div>
+    <% oosItems.slice(0, 4).forEach(function (it) { %>
+      <a class="oo-mini" href="<%= oosLink %>#oos-<%= it.id %>"><span class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></span>
+        <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: new Date() }) %></span></a>
+    <% }) %>
+    <% if (oosItems.length > 4) { %><a href="<%= oosLink %>">All <%= oosItems.length %> items ›</a><% } %>
+    <% if (!oosItems.length) { %><p class="muted small">Nothing out of stock. Running low on something? Report it before it hits zero.</p><% } %>
+  </section>
   <h1 class="day-title"><%= isToday ? 'Today' : fmtDate(date, { weekday: 'long', day: undefined, month: undefined }) %> <span class="day-date"><%= fmtDate(date, { weekday: isToday ? 'long' : undefined, month: 'long' }) %></span></h1>
   <p class="muted day-meta">
     <% if (lastSaved) { %>Last updated by <%= lastSaved.display_name || 'someone' %> at <%= new Date(lastSaved.updated_at).toLocaleTimeString('en-MY', { timeZone: 'Asia/Kuala_Lumpur', hour: 'numeric', minute: '2-digit' }) %>.<% } else { %>Nothing entered for this day yet.<% } %>

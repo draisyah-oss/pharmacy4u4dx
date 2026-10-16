@@ -14,7 +14,7 @@
   const ends = yrs.map(function (yr) { const pts = h.lines[yr]; let i = 11; while (i >= 0 && pts[i] === null) i--; return { yr: yr, i: i, v: pts[i], ly: i >= 0 ? y(pts[i]) : 0 }; }).filter(function (e) { return e.i >= 0; }).sort(function (a, b) { return a.ly - b.ly; });
   for (let j = 1; j < ends.length; j++) if (ends[j].ly - ends[j - 1].ly < 14) ends[j].ly = ends[j - 1].ly + 14;
 %>
-<figure class="year-chart">
+<figure class="year-chart" data-w="<%= W %>" data-h="<%= H %>">
   <figcaption class="sr-only"><%= h.code === 'TOTAL' ? 'Company' : h.code %> sales per month for <%= yrs.join(', ') %>. The table below has every number.</figcaption>
   <div class="yc-legend" aria-hidden="true">
     <% yrs.forEach(function (yr) { %><span><i style="background:<%= COLORS[yr] || '#52514e' %>"></i><%= yr %><%= yr === h.thisYear ? ' (so far)' : '' %></span><% }) %>
@@ -39,9 +39,15 @@
       <path d="<%= d %>" fill="none" stroke="<%= c %>" stroke-width="<%= yr === h.thisYear ? 3 : 2 %>" stroke-linejoin="round" stroke-linecap="round"/>
       <% if (dash) { %><path d="<%= dash %>" fill="none" stroke="<%= c %>" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round"/><% } %>
       <% pts.forEach(function (v, i) { if (v === null) return; %>
-        <g class="yc-pt"><circle cx="<%= x(i) %>" cy="<%= y(v) %>" r="12" fill="transparent"/><circle cx="<%= x(i) %>" cy="<%= y(v) %>" r="4" fill="<%= c %>" stroke="#fff" stroke-width="2"/><title><%= MON[i] %> <%= yr %>: <%= fmt.money(v) %><%= yr === h.thisYear && i + 1 === h.currentMonth ? ' (month not finished)' : '' %></title></g>
+        <% const prev = h.lines[yr - 1] ? h.lines[yr - 1][i] : null;
+           const vs = prev ? ((v / prev - 1) >= 0 ? '+' : '') + ((v / prev - 1) * 100).toFixed(0) + '% vs ' + MON[i] + ' ' + (yr - 1) : '';
+           const tip = MON[i] + ' ' + yr + ': ' + fmt.money(v) + (yr === h.thisYear && i + 1 === h.currentMonth ? ' (so far)' : ''); %>
+        <g class="yc-pt" tabindex="0" role="button" aria-label="<%= tip %><%= vs ? ', ' + vs : '' %>" data-tip="<%= tip %>" data-vs="<%= vs %>" data-x="<%= x(i) %>" data-y="<%= y(v) %>" data-color="<%= c %>"><circle cx="<%= x(i) %>" cy="<%= y(v) %>" r="14" fill="transparent"/><circle class="yc-dot" cx="<%= x(i) %>" cy="<%= y(v) %>" r="4" fill="<%= c %>" stroke="#fff" stroke-width="2"/></g>
       <% }) %>
     <% }) %>
     <% ends.forEach(function (e) { %><text x="<%= x(e.i) + 9 %>" y="<%= e.ly + 4 %>" class="yc-end"><%= e.yr %></text><% }) %>
   </svg>
+  <div class="yc-tip" hidden role="status" aria-live="polite"><i></i><b></b><span></span></div>
+  <p class="yc-hint muted">Tap a dot to see its number.</p>
 </figure>
+<script src="/js/chart.js?v=2" defer></script>

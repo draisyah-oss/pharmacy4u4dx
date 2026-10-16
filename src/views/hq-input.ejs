@@ -3,8 +3,12 @@
 <%- include('partials/nav', { navActive: 'hq' }) %>
 <%- include('partials/week-bar', { base: '/hq', pickAny: false }) %>
 <%
-  const typedV = (m) => typed && typed.v && typed.v['m' + m.id] !== undefined ? typed.v['m' + m.id] : hq.inputValue(m, m.entry, 'value');
-  const typedT = (m) => typed && typed.t && typed.t['m' + m.id] !== undefined ? typed.t['m' + m.id] : hq.inputValue(m, m.entry, 'total');
+  // What's in each box: what was just typed, else the saved entry, else the app's suggestion.
+  const sug = (m) => (!m.entry && m.canEdit ? sugg.get(m.id) : null);
+  const sugValue = (m, f) => { const g = sug(m); if (!g || g[f] === undefined) return ''; return String(g[f]); };
+  const typedV = (m) => typed && typed.v && typed.v['m' + m.id] !== undefined ? typed.v['m' + m.id] : (m.entry ? hq.inputValue(m, m.entry, 'value') : sugValue(m, 'value'));
+  const typedT = (m) => typed && typed.t && typed.t['m' + m.id] !== undefined ? typed.t['m' + m.id] : (m.entry ? hq.inputValue(m, m.entry, 'total') : sugValue(m, 'total'));
+  const lastWk = (m) => { const p = prev.get(m.id); if (!p || p.value === null) return null; return m.input === 'done_and_total' ? Number(p.value) + ' of ' + Number(p.total) : hq.show(m, Number(p.value)); };
   const owners = [...new Set(rows.map(function (r) { return r.owner_name; }))];
   const mine = rows.filter(function (r) { return r.canEdit; }).length;
 %>
@@ -13,6 +17,13 @@
     <h1><%= title %> <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
     <p class="muted">Every Monday, for the week that just ended. Percentages are typed as percent (95 = 95%). Leave a box empty if there’s nothing to report.</p>
   </header>
+  <% if (progress.total) { %>
+    <div class="hq-progress">
+      <b><%= progress.filled %> of <%= progress.total %> saved</b>
+      <% if (progress.suggested) { %><span><%= progress.suggested %> filled in for you from what the app already knows (marked <span class="hq-sugg-tag">Suggested</span>) – check them and press Save.</span><% } %>
+      <% if (canToggle) { %><a href="/hq?week=<%= week %><%= showAll ? '' : '&show=all' %>"><%= showAll ? 'Show only mine' : 'See everyone’s numbers' %></a><% } %>
+    </div>
+  <% } %>
   <form method="post" action="/hq" novalidate>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
     <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
@@ -39,7 +50,9 @@
             <% } else { %>
               <span class="num-wrap<%= m.unit === 'RM' ? ' is-money' : '' %>"><% if (m.unit === 'RM') { %><span class="prefix">RM</span><% } %><input class="num" name="v[m<%= m.id %>]" inputmode="decimal" autocomplete="off" value="<%= typedV(m) %>"<%= off %>><% if (m.unit === '%') { %><span class="suffix">%</span><% } %></span>
             <% } %>
-            <% if (m.note) { %><span class="muted small"><%= m.note %></span><% } %>
+            <% if (sug(m)) { %><span class="hq-sugg"><span class="hq-sugg-tag">Suggested</span> from <%= sug(m).from %><%= sug(m).total !== undefined ? ' (' + sug(m).value + ' of ' + sug(m).total + ')' : '' %>.</span><% } %>
+            <% if (lastWk(m) !== null) { %><span class="muted small">Last week: <%= lastWk(m) %></span><% } %>
+            <% if (m.note) { %><details class="hq-note"><summary>How it’s counted</summary><span class="muted small"><%= m.note %></span></details><% } %>
             <% if (errors[m.id]) { %><span class="wk-error"><%= errors[m.id] %></span><% } %>
           </div>
         <% }) %>

@@ -1,6 +1,8 @@
 // Daily Entry screen: GET shows a branch's day, POST saves it.
 
 const express = require('express');
+const oosData = require('../oos/data');
+const oosFormat = require('../oos/format');
 const calc = require('../calc');
 const { canViewBranch, editBlockReason, dateStrip } = require('./rules');
 const { loadBranch, loadDailyPage, saveDailyEntries } = require('./data');
@@ -51,7 +53,11 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
     const salesHref = board.started && !scoreboardAccess(req.user, branch)
       ? `/scoreboard/trace?type=sales&from=${board.mtdFrom}&to=${board.asOf}${req.user.role === 'admin' || req.user.role === 'hq' ? `&branch=${encodeURIComponent(branch.code)}` : ''}`
       : null;
+    // The branch's open out-of-stock items, with Inventory's answers, plus the Report button.
+    const oosItems = (await oosData.loadBranchItems(db, branch, { now })).filter((it) => it.isOpen);
     res.status(extra.status || 200).render('daily', {
+      oosItems, of: oosFormat, oosLink: `/oos${req.user.role === 'admin' || req.user.role === 'hq' ? `?branch=${encodeURIComponent(branch.code)}` : ''}`,
+      oosCanReport: oosData.canReport(req.user, branch),
       monthSales: { s: board.sales, started: board.started, asOf: board.asOf, href: salesHref }, fmt,
       title: `${branch.name} – daily entry`,
       branch, date, today, ...page,

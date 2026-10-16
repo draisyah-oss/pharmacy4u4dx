@@ -1,0 +1,179 @@
+// Out-of-stock flow (16 Oct): branch reports any time → Inventory answers by 11 am next working
+// day → Fariz sends a transfer within 24 h → branch confirms back in stock → scoreboard.
+
+const test = require('node:test');
+const assert = require('node:assert/strict');
+const bcrypt = require('bcryptjs');
+
+const { createDb } = require('../../src/db');
+const { migrate } = require('../../src/db/migrate');
+const { readSeed, loadSeed } = require('../../src/db/seed');
+const { createApp } = require('../../src/app');
+const oos = require('../../src/oos/data');
+
+let db; let server; let base;
+// A clock the tests move: Thu 15 Oct 2026, 9:40 pm Malaysia time.
+let clock = new Date('2026-10-15T21:40:00+08:00');
+const now = () => clock;
+
+test.before(async () => {
+  db = await createDb({ url: '', localDir: 'memory' });
+  await migrate(db);
+  await loadSeed(db, readSeed(), { adminPassword: 'admin-pass-1' });
+  const pw = (u, v) => db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [bcrypt.hashSync(v, 4), u]);
+  const pin = (u, v) => db.query('UPDATE users SET pin_hash = $1 WHERE username = $2', [bcrypt.hashSync(v, 4), u]);
+  await pw('alia', 'alia-pass-1'); await pw('hafizah', 'manager-pass-1');
+  await pin('hazera', '1111'); await pin('fariz', '1357'); await pin('yaya', '2222');
+  server = createApp(db, { now }).listen(0);
+  base = `http://localhost:${server.address().port}`;
+});
+test.after(async () => { server.close(); await db.close(); });
+
+async function login(kind, username, secret) {
+  let cookie = '';
+  const req = async (method, p, body) => {
+    const r = await fetch(base + p, {
+      method, redirect: 'manual',
+      headers: { ...(cookie ? { cookie } : {}), ...(body ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) },
+      body: body ? new URLSearchParams(body).toString() : undefined,
+    });
+    const set = r.headers.get('set-cookie'); if (set) cookie = set.split(';')[0];
+    return { status: r.status, location: r.headers.get('location'), html: await r.text() };
+  };
+  const r = await req('POST', kind === 'pin' ? '/login/pin' : '/login/password', kind === 'pin' ? { username, pin: secret } : { username, password: secret });
+  assert.equal(r.status, 302, `${username} logs in`);
+  let csrf = null;
+  return {
+    get: (p) => req('GET', p),
+    post: async (p, body) => {
+      if (!csrf) csrf = ((await req('GET', '/sales')).html.match(/name="_csrf" value="([^"]+)"/) || (await req('GET', '/daily')).html.match(/name="_csrf" value="([^"]+)"/) || [])[1];
+      return req('POST', p, { _csrf: csrf, ...body });
+    },
+  };
+}
+
+test('answer deadline: 11 am the next working day (Friday or weekend → Monday)', () => {
+  const due = (s) => oos.answerDueFor(new Date(s), 11).toISOString();
+  assert.equal(due('2026-10-15T21:40:00+08:00'), new Date('2026-10-16T11:00:00+08:00').toISOString());
+  assert.equal(due('2026-10-16T09:00:00+08:00'), new Date('2026-10-19T11:00:00+08:00').toISOString(), 'Friday → Monday');
+  assert.equal(due('2026-10-17T15:00:00+08:00'), new Date('2026-10-19T11:00:00+08:00').toISOString(), 'Saturday → Monday');
+});
+
+test('the whole flow: report → inbox badge → transfer answer → Fariz sends → branch receives → scoreboard', async () => {
+  const staff = await login('pin', 'hazera', '1111');
+  // Daily entry shows the out-of-stock box with the Report button
+  const daily = (await staff.get('/daily')).html;
+  assert.match(daily, /Report out of stock/);
+  // A report with a missing choice is refused and nothing saved
+  const bad = await staff.post('/oos', { item: 'Loyuric 100mg (30s)' });
+  assert.equal(bad.status, 400);
+  assert.match(bad.html, /Pick none or low/);
+  const r = await staff.post('/oos', { item: 'Loyuric 100mg (30s)', left: 'none', asking: '1-2', urgent: '1', note: 'Pn. Rosnah, gout' });
+  assert.equal(r.status, 302);
+  const item = (await db.query("SELECT * FROM oos_items WHERE item = 'Loyuric 100mg (30s)'")).rows[0];
+  assert.equal(item.left_qty, 0); assert.equal(item.urgent, true); assert.equal(item.customers_count, 2);
+  assert.equal(item.week_start, '2026-10-12');
+  assert.equal(new Date(item.answer_due).toISOString(), new Date('2026-10-16T11:00:00+08:00').toISOString());
+
+  // Alia: red badge in the menu, item at the top of the inbox
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  const inbox = (await alia.get('/oos/inbox')).html;
+  assert.match(inbox, /class="sn-badge"[^>]*>1</);
+  assert.match(inbox, /Loyuric 100mg \(30s\)[\s\S]*URGENT/);
+  assert.match(inbox, /13 h 20 m left/);
+  // Staff and Fariz can't answer
+  const fariz = await login('pin', 'fariz', '1357');
+  assert.equal((await fariz.get(`/oos/${item.id}`)).status, 403);
+  assert.equal((await staff.post(`/oos/${item.id}/answer`, { answer: 'order', qty: '5', expected_back: '2026-10-20' })).status, 403);
+  // Answer: transfer 6 from WM? Not the same branch – WM reported it, so from JH
+  clock = new Date('2026-10-16T10:05:00+08:00');
+  const same = await alia.post(`/oos/${item.id}/answer`, { answer: 'transfer', from: 'WM', qty: '6', expected_back: '2026-10-17' });
+  assert.equal(same.status, 400);
+  assert.match(same.html, /same branch/);
+  const ans = await alia.post(`/oos/${item.id}/answer`, { answer: 'transfer', from: 'JH', qty: '6', expected_back: '2026-10-17' });
+  assert.equal(ans.status, 302);
+  // The branch sees the answer on Daily entry
+  assert.match((await staff.get('/daily')).html, /Transfer 6 from JH/);
+  // Fariz's list: send by 10:05 am tomorrow
+  const xfers = (await fariz.get('/oos/transfers')).html;
+  assert.match(xfers, /Loyuric 100mg \(30s\) × 6/);
+  assert.match(xfers, /<b>JH<\/b> → <b>WM<\/b>/);
+  clock = new Date('2026-10-16T15:40:00+08:00');
+  assert.equal((await fariz.post(`/oos/${item.id}/picked`, {})).status, 302);
+  assert.equal((await fariz.post(`/oos/${item.id}/sent`, {})).status, 302);
+  // Another branch's staff can't close it; this branch can
+  const jhStaff = await login('pin', 'yaya', '2222');
+  assert.equal((await jhStaff.post(`/oos/${item.id}/received`, {})).status, 403);
+  clock = new Date('2026-10-17T12:00:00+08:00');
+  assert.equal((await staff.post(`/oos/${item.id}/received`, {})).status, 302);
+  const done = (await db.query('SELECT status, received_at FROM oos_items WHERE id = $1', [item.id])).rows[0];
+  assert.equal(done.status, 'Back in stock');
+
+  // Scoreboard for the week of 12 Oct: answered on time, transfer on time, 1.6 days to restock
+  const b = await oos.buildBoard(db, { week: '2026-10-12', now });
+  assert.equal(b.answered.done, 1); assert.equal(b.answered.total, 1);
+  assert.equal(b.transfers.pct, 1);
+  assert.ok(Math.abs(b.restock.transfer - (1 + (14 * 60 + 20) / 1440)) < 1e-6, 'Thu 9:40 pm → Sat 12:00 pm = 1.6 days');
+  assert.equal(b.branches.find((x) => x.code === 'WM').customers, 2);
+  const page = (await alia.get('/oos/scoreboard?week=2026-10-12')).html;
+  assert.match(page, /100% ✔/);
+  // Audit trail for every step
+  const steps = (await db.query("SELECT record_key FROM audit_log WHERE table_name = 'oos_items' ORDER BY id")).rows.map((x) => x.record_key);
+  assert.deepEqual(steps.map((k) => k.replace(/^WM #\d+ ?/, '')), ['', 'answer', 'picked', 'sent', 'received']);
+});
+
+test('late items and repeats: order past its date shows LATE, branch can tell Inventory; repeats counted', async () => {
+  clock = new Date('2026-10-19T09:00:00+08:00');
+  const mgr = await login('password', 'hafizah', 'manager-pass-1');
+  await mgr.post('/oos', { item: 'Dermacyn wound gel', left: 'low', left_qty: '2', asking: '0' });
+  await mgr.post('/oos', { item: 'dermacyn wound gel', left: 'none', asking: '3+' });
+  const ids = (await db.query("SELECT id FROM oos_items WHERE lower(item) = 'dermacyn wound gel' ORDER BY id")).rows.map((r) => r.id);
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  await alia.post(`/oos/${ids[0]}/answer`, { answer: 'order', qty: '10', expected_back: '2026-10-20' });
+  await alia.post(`/oos/${ids[1]}/answer`, { answer: 'substitute', substitute: 'Hydrocyn gel 50g' });
+  clock = new Date('2026-10-22T09:00:00+08:00');
+  const page = (await mgr.get('/oos')).html;
+  assert.match(page, /LATE/);
+  assert.match(page, /Offer instead: Hydrocyn gel 50g/);
+  assert.equal((await mgr.post(`/oos/${ids[0]}/late`, {})).status, 302);
+  const inbox = (await alia.get('/oos/inbox?tab=waiting')).html;
+  assert.match(inbox, /Branch says it’s late/);
+  const b = await oos.buildBoard(db, { week: '2026-10-19', now });
+  assert.ok(b.repeats.some((r) => /dermacyn/i.test(r.item) && r.n === 2));
+  // The Monday check-in list and the group scoreboard still count them as open
+  const open = (await db.query("SELECT count(*)::int AS n FROM oos_items WHERE status = ANY($1)", [oos.OPEN])).rows[0].n;
+  assert.equal(open, 2);
+});
+
+test('who sees what: staff no inbox or scoreboard; HQ staff get transfers; salary words refused', async () => {
+  const staff = await login('pin', 'hazera', '1111');
+  assert.equal((await staff.get('/oos/inbox')).status, 403);
+  assert.equal((await staff.get('/oos/scoreboard')).status, 403);
+  const fariz = await login('pin', 'fariz', '1357');
+  assert.equal((await fariz.get('/oos')).location, '/oos/transfers');
+  assert.equal((await fariz.post('/oos', { item: 'x', left: 'none' })).status, 403);
+  const r = await staff.post('/oos', { item: 'Salary advance form', left: 'none', asking: '0' });
+  assert.equal(r.status, 400);
+});
+
+test('HQ input for Alia: only her own numbers, filled in from her daily ticks and the transfers', async () => {
+  clock = new Date('2026-10-19T09:00:00+08:00'); // Monday: entering the week of 12 Oct
+  const alia = (await db.query("SELECT id FROM people WHERE name = 'Alia' AND branch_id IS NULL")).rows[0].id;
+  const task = (await db.query("SELECT id FROM hq_daily_tasks WHERE person_id = $1 AND label LIKE 'B2B quotes%'", [alia])).rows[0].id;
+  const tick = (d, done, na = false) => db.query('INSERT INTO hq_daily_ticks (task_id, entry_date, done, na) VALUES ($1, $2, $3, $4)', [task, d, done, na]);
+  await tick('2026-10-13', true); await tick('2026-10-14', true); await tick('2026-10-15', false); await tick('2026-10-16', false, true);
+  const b = await login('password', 'alia', 'alia-pass-1');
+  const page = (await b.get('/hq?week=2026-10-12')).html;
+  assert.match(page, /My HQ numbers/);
+  assert.doesNotMatch(page, /Shifts fully staffed/, 'Hanin’s measures hidden by default');
+  assert.match(page, /Suggested<\/span> from days you ticked “quotes sent within 24 hours” Done, out of days ticked \(2 of 3\)/);
+  assert.match(page, /Suggested<\/span> from out-of-stock transfers sent within 48 hours of your answer \(1 of 1\)/);
+  assert.match((await b.get('/hq?week=2026-10-12&show=all')).html, /Shifts fully staffed/);
+  // Saving the suggested boxes stores them like typed numbers
+  const quotes = (await db.query("SELECT id FROM hq_measures WHERE code = 'quotes'")).rows[0].id;
+  const r = await b.post('/hq', { week: '2026-10-12', [`v[m${quotes}]`]: '2', [`t[m${quotes}]`]: '3' });
+  assert.equal(r.status, 302);
+  const e = (await db.query('SELECT value, total FROM hq_entries WHERE hq_measure_id = $1 AND week_start = $2', [quotes, '2026-10-12'])).rows[0];
+  assert.deepEqual([Number(e.value), Number(e.total)], [2, 3]);
+  assert.match((await b.get('/hq?week=2026-10-19')).html, /Last week: 2 of 3/);
+});

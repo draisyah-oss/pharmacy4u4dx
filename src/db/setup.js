@@ -40,6 +40,7 @@ async function backfillNewSettings(db, seed, log) {
     if (r.affectedRows || r.rowCount) log(`Added the sales sheet columns for ${b.code}.`);
   }
   await backfillHqTeam(db, seed, log);
+  await ensureSetting(db, 'oos_targets', seed.company.oos_targets, log);
   await backfillHqAccess(db, seed, log);
   await backfillHqTasks(db, seed, log);
   await updateSalesSheetColumns(db, seed, log);
@@ -161,6 +162,13 @@ async function backfillHqTasks(db, seed, log) {
     }
   });
   if (added.length) log(`Added starting daily tasks for ${added.join(', ')}.`);
+}
+
+// A setting from seed.json copied in once (JSON), only when the database has none.
+async function ensureSetting(db, key, value, log) {
+  if (value === undefined || (await db.query('SELECT 1 FROM app_settings WHERE key = $1', [key])).rows.length) return;
+  await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [key, JSON.stringify(value)]);
+  log(`Added ${key} from seed.json.`);
 }
 
 // 16 Oct: the add-on measure is now 3+ items a transaction (was 2+), every branch. Labels only;

@@ -333,6 +333,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       ampang_aishah_v1: new Date().toISOString(),
       three_items_v1: new Date().toISOString(),
       alia_zakat_task_v1: new Date().toISOString(),
+      oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
     };
     for (const [key, value] of Object.entries(settings)) {
       if (value === null) continue;

@@ -1,0 +1,12 @@
+<%# Status chip and one-line answer for an out-of-stock item. Input: it, of %>
+<%
+  let chip = ['SENT TO INVENTORY', 'oc-info'];
+  if (it.status === 'Back in stock') chip = ['BACK IN STOCK', 'oc-good'];
+  else if (it.status === 'Discontinued' || it.status === 'Discontinued / use substitute') chip = ['DISCONTINUED', 'oc-grey'];
+  else if (it.late) chip = ['LATE', 'oc-warn'];
+  else if (it.status === 'On the way') chip = [it.sent_at ? 'ON THE WAY' : 'TRANSFER COMING', 'oc-good'];
+  else if (it.status === 'Ordered') chip = ['ORDERED', 'oc-info'];
+  else if (it.status === 'Substitute offered') chip = ['SUBSTITUTE', 'oc-warn'];
+  else if (it.overdueAnswer) chip = ['NOT ANSWERED YET', 'oc-bad'];
+%>
+<span class="oo-chip <%= chip[1] %>"><%= chip[0] %></span>

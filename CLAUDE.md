@@ -114,6 +114,22 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Ampang: staff Aisyah is spelled **Aishah** (login aishah); older databases renamed once like Admin → People (ampang_aishah_v1), incl. labels "with Aishah". Dr Aisyah (CEO) unchanged.
 - Alia: new daily task "Zakat orders from the branches placed today" (zakat ordering moved from WM to HQ); added once to older databases (alia_zakat_task_v1).
 
+## Out-of-stock flow (16 Oct, from the approved mockup)
+- src/oos (data.js, routes.js, format.js), migration 013 (oos_items gains reported_at, left_qty, customers_count, urgent, note, answer_due, answer, answer_qty, from_branch_id, substitute, answered_at/by, picked_at, sent_at/by, received_at/by, late_flagged_at; statuses + 'On the way', 'Substitute offered', 'Discontinued'). Same table as the Monday OOS list, so check-in and the group scoreboard's open count keep working (OOS_OPEN = Open, Ordered, On the way, Substitute offered).
+- 1 Report (/oos, branch staff + manager of that branch, admin; Daily entry has an "Out of stock" box with the open items, Inventory's answers and the Report button): item, none/low (+how many), customers asking (0 / 1–2 / 3+), urgent (chronic patient), note. Salary guard on text.
+- 2 Answer (/oos/inbox + /oos/:id, HQ role + admin): to answer (urgent first, oldest first, time left to the deadline), waiting for stock (late / branch-flagged first), done lately. Deadline = 11 am the next working day (Mon–Fri; Fri/Sat/Sun → Monday). Four answers: transfer (from branch, qty, arrives by), order (qty, expected), substitute (what to offer, optional date), discontinue; optional note to the branch. Red count badge on the side menu, quick tile and HQ home.
+- 3 Transfers (/oos/transfers, HQ + HQ staff + admin – Fariz): Picked / Sent, send within 24 h of the answer.
+- 4 Close (/oos): branch taps "Received – back in stock"; past its date shows LATE and the branch can "Tell Inventory it's late".
+- Scoreboard (/oos/scoreboard, managers, HQ, HQ staff, admin; per week): answered on time (deadline in the week), transfers sent on time, average days reported → back in stock (transfer / order), open now, per branch (reported, open, avg days, customers turned away), items that ran out 2+ times in 30 days. Targets in app_settings oos_targets (seed company.oos_targets: 11 am, 90%, 24 h, 95%, 3 days). Every step audited; all times come from the app clock (tests move it).
+
+## HQ input made easier (16 Oct)
+- /hq for full-HQ people who only enter their own (Alia, Hanin) shows **only their measures** ("My HQ numbers"), with "See everyone's numbers"; Iman (enters_all_hq) and admin still see all.
+- Boxes with no entry are pre-filled from what the app knows, tagged Suggested with the source (src/hq/suggest.js): Alia's quotes and PO-check measures from her daily task ticks (Done ÷ Done + Not done, N/A left out), B2B calls from days a call/visit was ticked (to correct), inter-store transfers from the OOS transfers (sent within 48 h of the answer), Iman's HR daily checks from her days fully done. Nothing saves until Save. Each box shows last week's number; the "how it's counted" note folds away. A progress line shows "x of y saved".
+
+## Look (16 Oct)
+- Brand blue from the Pharmacy4U logo: --brand #004aad, --brand-light #308eff, --brand-deep #003a88; cool greys for page/lines/ink. Green and red stay only for on-track / off-track. Logo files in public/img (logo, logo-white, wordmark, wordmark-white, mark-white, icon-192 favicon), made from the logo the CEO sent: white mark + wordmark in the top bar (wordmark hidden on narrow phones with the Menu button), blue wordmark in the side menu, white full logo on the login page.
+- Sales progress chart: tap / hover / Tab to a dot shows the month, amount and change on the same month last year (public/js/chart.js).
+
 ## Security (review 14 Oct)
 - Redirects only to same-site paths (src/lib/safe-path.js; blocks //, /\, spaces).
 - Login: 5 wrong tries lock a login 15 min; 30 wrong tries from one device (IP) in 15 min block that device. Sessions: staff 14 h, admin 12 h, others 7 days; expired ones cleared hourly; a new PIN/password ends that person's other sessions.

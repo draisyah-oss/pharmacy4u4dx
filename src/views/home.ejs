@@ -2,6 +2,9 @@
 <%- include('partials/topbar') %>
 <%- include('partials/nav', { navActive: 'home' }) %>
 <main class="page home">
+  <% if (typeof oosCount !== 'undefined' && oosCount) { %>
+    <a class="oo-attn" href="/oos/inbox"><span class="oo-badge"><%= oosCount %></span> <b>out-of-stock <%= oosCount === 1 ? 'report' : 'reports' %> to answer</b> <span>Open the inbox ›</span></a>
+  <% } %>
   <%- include('partials/company-sales', { company }) %>
   <h1>Branches</h1>
   <p class="muted">Month sales per branch, counted to the last closed day. Tap the amount for the daily numbers behind it.</p>

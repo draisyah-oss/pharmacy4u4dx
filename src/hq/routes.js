@@ -8,6 +8,7 @@ const { weekChoices, lastFinishedWeek, pickWeek } = require('../lib/weeks');
 const hq = require('./data');
 const { companySalesForWeek } = require('../group/company');
 const team = require('./team');
+const suggest = require('./suggest');
 
 const isHqOrAdmin = (user) => ['hq', 'hq_staff', 'admin'].includes(user.role);
 
@@ -29,9 +30,18 @@ function hqRoutes(db, { now, trackerStart }) {
 
   async function renderInput(req, res, ctx, extra = {}) {
     let rows = await hq.loadHqWeek(db, { week: ctx.week, user: req.user });
-    if (req.user.role === 'hq_staff') rows = rows.filter((r) => r.canEdit); // own KPIs only
+    // Own measures first and only, unless the person fills in for everyone (Iman, admin) or asks to see all.
+    const entersAll = req.user.role === 'admin' || req.user.enters_all_hq;
+    const showAll = req.user.role !== 'hq_staff' && (entersAll || req.query.show === 'all');
+    if (!showAll) rows = rows.filter((r) => r.canEdit);
+    const sugg = await suggest.suggestions(db, { week: ctx.week, rows, today: ctx.today, at: now() });
+    const prev = await suggest.lastWeek(db, ctx.week);
+    const mine = rows.filter((r) => r.canEdit);
+    const progress = { filled: mine.filter((r) => r.entry).length, total: mine.length, suggested: sugg.size };
     res.status(extra.status || 200).render('hq-input', {
-      title: req.user.role === 'hq_staff' ? 'My KPIs' : 'HQ input', ...ctx, rows, hq, fmt, pills: pills(ctx, '/hq'), weekEnd: calc.addDays(ctx.week, 6),
+      title: req.user.role === 'hq' && !entersAll ? 'My HQ numbers' : req.user.role === 'hq_staff' ? 'My KPIs' : 'HQ input',
+      ...ctx, rows, hq, fmt, pills: pills(ctx, '/hq'), weekEnd: calc.addDays(ctx.week, 6),
+      sugg, prev, progress, showAll, canToggle: req.user.role === 'hq' && !entersAll,
       blocked: hq.weekDenied(req.user, ctx.week, ctx.today), typed: extra.typed || null,
       errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || null,
     });

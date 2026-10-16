@@ -12,6 +12,8 @@ const { groupRoutes } = require('./group/routes');
 const { hqRoutes } = require('./hq/routes');
 const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
+const { oosRoutes } = require('./oos/routes');
+const oosData = require('./oos/data');
 const calc = require('./calc');
 const fmt = require('./scoreboard/format');
 const { companySalesForWeek } = require('./group/company');
@@ -67,6 +69,12 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
 
   app.use(requireLogin);
 
+  // Inventory's out-of-stock count, shown as a red badge in the side menu.
+  app.use(async (req, res, next) => {
+    try { if (req.method === 'GET' && oosData.canAnswer(req.user)) res.locals.oosCount = await oosData.countToAnswer(db); } catch (err) { console.error('OOS count:', err.message); }
+    next();
+  });
+
   // Home: staff and managers go straight to their branch; HQ and admin pick a branch.
   app.get('/', async (req, res, next) => {
     try {
@@ -90,6 +98,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(hqRoutes(db, { now, trackerStart }));
   app.use(hqTeamRoutes(db, { now, trackerStart }));
   app.use(salesRoutes(db, { now, salesSheet }));
+  app.use(oosRoutes(db, { now, trackerStart }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).
