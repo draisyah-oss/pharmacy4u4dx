@@ -10,7 +10,7 @@ const { migrate } = require('../../src/db/migrate');
 const { readSeed, loadSeed, validateSeed } = require('../../src/db/seed');
 const { loadBranch } = require('../../src/daily/data');
 const { buildScoreboard } = require('../../src/scoreboard/data');
-const { syncBranchFromSeed } = require('../../src/db/setup');
+const { syncBranchFromSeed, renameBranchPersonOnce } = require('../../src/db/setup');
 
 const START = '2026-10-12';
 const near = (a, b, msg) => assert.ok(Math.abs(a - b) < 1e-6, `${msg || ''} expected ${b}, got ${a}`);
@@ -88,6 +88,15 @@ test('an already-loaded database gets JH’s update once; other branches untouch
   await old.query("UPDATE measures SET label = 'Changed in Admin' WHERE code = 'T5' AND branch_id = (SELECT id FROM branches WHERE code = 'JH')");
   await syncBranchFromSeed(old, readSeed(), 'JH', 'jh_update_v1', () => {});
   assert.equal((await q("SELECT label FROM measures WHERE code = 'T5' AND branch_id = (SELECT id FROM branches WHERE code = 'JH')"))[0].label, 'Changed in Admin');
+  // Ampang's Aisyah is Aishah: name, login, owned measures/fields, labels mentioning her
+  await old.query("DELETE FROM app_settings WHERE key = 'ampang_aishah_v1'");
+  await renameBranchPersonOnce(old, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', () => {});
+  const amp = "(SELECT id FROM branches WHERE code = 'Ampang')";
+  assert.equal((await old.query(`SELECT count(*)::int AS n FROM people WHERE branch_id = ${amp} AND name = 'Aishah'`)).rows[0].n, 1);
+  assert.equal((await old.query("SELECT display_name FROM users WHERE username = 'aishah'")).rows[0].display_name, 'Aishah');
+  assert.equal((await old.query(`SELECT count(*)::int AS n FROM measures WHERE branch_id = ${amp} AND (owner_name = 'Aisyah' OR label LIKE '%Aisyah%')`)).rows[0].n, 0);
+  assert.equal((await old.query(`SELECT count(*)::int AS n FROM daily_fields WHERE branch_id = ${amp} AND (owner_name = 'Aisyah' OR label LIKE '%Aisyah%')`)).rows[0].n, 0);
+  assert.equal((await old.query("SELECT count(*)::int AS n FROM people WHERE name = 'Dr Aisyah'")).rows[0].n, 1, 'the CEO is untouched');
   await old.close();
 });
 

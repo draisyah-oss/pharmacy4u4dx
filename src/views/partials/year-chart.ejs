@@ -1,0 +1,46 @@
+<%# Month sales per year, one line per year (from the sheet's "Total Sales" tab). Input: h (history).
+    Colours follow the year (fixed), every line is labelled at its end, and the table below has the numbers. %>
+<%
+  const COLORS = { 2023: '#eda100', 2024: '#1baf7a', 2025: '#eb6834', 2026: '#2a78d6', 2027: '#6250d6', 2028: '#e87ba4', 2029: '#008300', 2030: '#e34948' };
+  const W = 760, H = 300, L = 72, R = 64, T = 16, B = 34;
+  const all = Object.values(h.lines).flat().filter(function (v) { return v !== null; });
+  const step = 50000; const top = Math.max(step, Math.ceil(Math.max.apply(null, all) / step) * step);
+  const x = (m) => L + (m * (W - L - R)) / 11;
+  const y = (v) => T + (H - T - B) * (1 - v / top);
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const k = (v) => (v >= 1000 ? Math.round(v / 1000) + 'k' : String(Math.round(v)));
+  // End labels nudged apart so they don't overlap
+  const ends = h.years.map(function (yr) { const pts = h.lines[yr]; let i = 11; while (i >= 0 && pts[i] === null) i--; return { yr: yr, i: i, v: pts[i], ly: i >= 0 ? y(pts[i]) : 0 }; }).filter(function (e) { return e.i >= 0; }).sort(function (a, b) { return a.ly - b.ly; });
+  for (let j = 1; j < ends.length; j++) if (ends[j].ly - ends[j - 1].ly < 14) ends[j].ly = ends[j - 1].ly + 14;
+%>
+<figure class="year-chart">
+  <figcaption class="sr-only">Sales per month for <%= h.years.join(', ') %>. The table below has every number.</figcaption>
+  <div class="yc-legend" aria-hidden="true">
+    <% h.years.forEach(function (yr) { %><span><i style="background:<%= COLORS[yr] || '#52514e' %>"></i><%= yr %><%= yr === h.thisYear ? ' (so far)' : '' %></span><% }) %>
+    <span class="yc-note">- - - month not finished</span>
+  </div>
+  <svg viewBox="0 0 <%= W %> <%= H %>" role="img" aria-label="Monthly sales by year">
+    <% for (let v = 0; v <= top; v += step) { %>
+      <line x1="<%= L %>" x2="<%= W - R %>" y1="<%= y(v) %>" y2="<%= y(v) %>" class="yc-grid"/>
+      <text x="<%= L - 8 %>" y="<%= y(v) + 4 %>" class="yc-axis" text-anchor="end"><%= v ? 'RM ' + k(v) : '0' %></text>
+    <% } %>
+    <% MON.forEach(function (m, i) { %><text x="<%= x(i) %>" y="<%= H - 12 %>" class="yc-axis" text-anchor="middle"><%= m %></text><% }) %>
+    <% h.years.forEach(function (yr) {
+         const pts = h.lines[yr]; const c = COLORS[yr] || '#52514e';
+         // This year's unfinished month is drawn dashed, so the drop isn't read as a real fall.
+         const open = yr === h.thisYear ? h.currentMonth - 1 : -1;
+         let d = ''; let pen = false; let dash = '';
+         pts.forEach(function (v, i) {
+           if (v === null) { pen = false; return; }
+           if (i === open && i > 0 && pts[i - 1] !== null) { dash = 'M' + x(i - 1).toFixed(1) + ' ' + y(pts[i - 1]).toFixed(1) + ' L' + x(i).toFixed(1) + ' ' + y(v).toFixed(1); pen = false; return; }
+           d += (pen ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' '; pen = true;
+         }); %>
+      <path d="<%= d %>" fill="none" stroke="<%= c %>" stroke-width="<%= yr === h.thisYear ? 3 : 2 %>" stroke-linejoin="round" stroke-linecap="round"/>
+      <% if (dash) { %><path d="<%= dash %>" fill="none" stroke="<%= c %>" stroke-width="2" stroke-dasharray="5 5" stroke-linecap="round"/><% } %>
+      <% pts.forEach(function (v, i) { if (v === null) return; %>
+        <g class="yc-pt"><circle cx="<%= x(i) %>" cy="<%= y(v) %>" r="12" fill="transparent"/><circle cx="<%= x(i) %>" cy="<%= y(v) %>" r="4" fill="<%= c %>" stroke="#fff" stroke-width="2"/><title><%= MON[i] %> <%= yr %>: <%= fmt.money(v) %><%= yr === h.thisYear && i + 1 === h.currentMonth ? ' (month not finished)' : '' %></title></g>
+      <% }) %>
+    <% }) %>
+    <% ends.forEach(function (e) { %><text x="<%= x(e.i) + 9 %>" y="<%= e.ly + 4 %>" class="yc-end"><%= e.yr %></text><% }) %>
+  </svg>
+</figure>

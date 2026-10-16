@@ -127,3 +127,20 @@ test('HQ daily tasks: N/A counts towards a fully done day', () => {
   assert.equal(w.days[1].full, false);
   assert.equal(w.fullDays, 1);
 });
+
+test('progress since 2023: every year table in "Total Sales" is read; like-for-like growth', async () => {
+  const { parseTotalSalesYears } = require('../../src/sheets/summary');
+  const { yearOnYear } = require('../../src/sales/data');
+  const years = parseTotalSalesYears(tabs['Total Sales'], CODES);
+  assert.deepEqual(years.map((y) => y.year), [2026, 2025, 2024, 2023]);
+  const sum = (y) => years.find((x) => x.year === y).months.reduce((a, m) => a + (m.total || 0), 0);
+  near(sum(2025), 1299221.35); near(sum(2024), 710138.92);
+  const y2023 = years.find((x) => x.year === 2023);
+  assert.ok(y2023.months.every((m) => !m.branches.BR), '2023 Retail is WM only');
+  const h = await yearOnYear(db, TODAY);
+  assert.deepEqual(h.years, [2023, 2024, 2025, 2026]);
+  assert.equal(h.likeForLike.months, 9);
+  near(h.likeForLike.now, 1688952.21, 'Jan–Sep 2026 (the sheet shows 1,688,952)');
+  assert.ok(Math.abs(h.rows.find((r) => r.year === 2025).growth - (1299221.35 / 710138.92 - 1)) < 1e-6);
+  assert.equal(h.lines[2026][10], null, 'no November 2026 yet');
+});

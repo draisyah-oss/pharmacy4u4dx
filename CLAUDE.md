@@ -101,6 +101,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Each sync also reads the sheet's **"Overall Daily Sales"** (one row per day, till sales per branch + Total) and **"Total Sales"** (first "Bulan … TOTAL M" table: Retail per branch incl. zakat/Shopee/Alpine, B2B, TOTAL M) tabs into sheet_sales_summary (migration 011). Read separately, so a renamed summary tab never stops the daily numbers; problem shown on Setup as summaryError. Tab names can be overridden in app_settings sales_summary_daily_tab / sales_summary_monthly_tab.
 - **/sales** (managers, HQ, HQ staff, admin; not branch staff): company year so far incl. B2B, latest day per branch, month-by-month table with cumulative "year so far", day-by-day table for a chosen month. Numbers are mirrored exactly as the sheet shows them (YTD 1,815,396 at 14 Oct).
 - "Year so far" strip on the branch scoreboard (branch YTD vs YTD target to date) and the group scoreboard (company YTD incl. B2B, latest daily total).
+- **Progress since 2023** (16 Oct): the "Total Sales" tab's year tables (2026, 2025, 2024, 2023 – each a "Bulan … TOTAL M" header with the year just above; tables without a year, like the 2026 targets and "Pure walk in", are skipped) are all stored (parseTotalSalesYears). Columns between Bulan and TOTAL M: Retail <branch> → branch (2023's plain "Retail" = WM, the only branch then), B2B/Distribution → B2B, anything else (Shopee, TikTok, zakat, Alpine, e-commerce) → OTHER. The Sales page shows a like-for-like line (Jan–last full month this year vs the same months last year), a line chart of month totals per year (this year's unfinished month dashed; colours fixed per year, validated), and a year table with growth on the year before. Totals match the sheet (2025 1,299,221 · 2024 710,139 · 2023 329,490 – 2023 reads 329,492 from rounded cells).
 - YTD target to date = last month-end YTD target + this month's share by days; when last month has no row, last month-end = this month-end YTD target − this month's sales target.
 
 ## Side menu (16 Oct)
@@ -110,6 +111,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## 16 Oct changes
 - All branches: the add-on measure is now **3+ items** a transaction (field key stays `two`; target % unchanged). Older databases: labels renamed once (three_items_v1).
 - WM: Hazera's TikTok lives (Z6, ttlive) removed; TikTok shipping no longer has a 24-hour target – Z3 is now "TikTok orders shipped", track only (ttship24 removed). Zawiyah's zakat ordering (W6, zko/zko2w) and Grab online all hours (W2, grabon) removed. Older databases: syncBranchFromSeed WM (wm_update_16oct); history kept.
+- Ampang: staff Aisyah is spelled **Aishah** (login aishah); older databases renamed once like Admin → People (ampang_aishah_v1), incl. labels "with Aishah". Dr Aisyah (CEO) unchanged.
 - Alia: new daily task "Zakat orders from the branches placed today" (zakat ordering moved from WM to HQ); added once to older databases (alia_zakat_task_v1).
 
 ## Security (review 14 Oct)

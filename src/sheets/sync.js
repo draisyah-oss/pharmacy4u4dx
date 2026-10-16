@@ -23,9 +23,10 @@ async function syncSummaryTabs(db, { readRows, today }) {
   const data = await readRows([tabs.daily, tabs.monthly]);
   const codes = (await db.query('SELECT code FROM branches ORDER BY sort_order')).rows.map((r) => r.code);
   const daily = data[tabs.daily] ? summary.parseOverallDaily(data[tabs.daily], codes) : null;
-  const monthly = data[tabs.monthly] ? summary.parseTotalSales(data[tabs.monthly], codes, Number(today.slice(0, 4))) : null;
+  const monthly = data[tabs.monthly] ? { years: summary.parseTotalSalesYears(data[tabs.monthly], codes) } : null;
   await summary.storeSummary(db, { daily, monthly, today });
-  return { days: daily ? daily.length : 0, months: monthly ? monthly.months.length : 0 };
+  const thisYear = monthly && monthly.years.find((y) => y.year === Number(today.slice(0, 4)));
+  return { days: daily ? daily.length : 0, months: thisYear ? thisYear.months.length : 0, years: monthly ? monthly.years.map((y) => y.year) : [] };
 }
 
 async function sheetSettings(db) {

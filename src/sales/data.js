@@ -1,7 +1,7 @@
 // Year-to-date and daily sales as the Google sales sheet shows them ("Total Sales" and
 // "Overall Daily Sales" tabs), for the Sales page and the scoreboards.
 
-const { loadSummary } = require('../sheets/summary');
+const { loadSummary, loadYears } = require('../sheets/summary');
 
 const monthOf = (iso) => iso.slice(0, 7);
 const prevMonth = (m) => { const [y, mo] = m.split('-').map(Number); return mo === 1 ? `${y - 1}-12` : `${y}-${String(mo - 1).padStart(2, '0')}`; };
@@ -44,7 +44,8 @@ async function buildSalesView(db, { today, month }) {
   const ytdTargetBranches = Object.keys(ytdTarget).length ? Object.values(ytdTarget).reduce((a, n) => a + n, 0) : null;
 
   const syncedAt = (await db.query('SELECT max(synced_at) AS at FROM sheet_sales_summary')).rows[0].at;
-  return { ...sum, year, month, branches, ytdTarget, ytdTargetBranches, ytdAsOf, latest, syncedAt };
+  const history = await yearOnYear(db, today);
+  return { ...sum, year, month, branches, ytdTarget, ytdTargetBranches, ytdAsOf, latest, syncedAt, history };
 }
 
 // The newest day in the daily tab up to today: { date, WM: …, TOTAL: … } or null.
@@ -75,4 +76,39 @@ async function sheetYearCard(db, { today, code = null }) {
   };
 }
 
-module.exports = { buildSalesView, sheetYearCard, latestDay, ytdTargetsAt };
+// Progress since the first year in the sheet: year totals, growth on the year before, and a fair
+// like-for-like for this year (the same full months last year, e.g. Jan–Sep 2026 vs Jan–Sep 2025).
+async function yearOnYear(db, today) {
+  const { years, byYear } = await loadYears(db);
+  if (!years.length) return null;
+  const thisYear = Number(today.slice(0, 4));
+  const fullMonths = Number(today.slice(5, 7)) - 1; // months finished this year
+  const sumMonths = (y, upTo, code = 'TOTAL') => {
+    const Y = byYear[y]; if (!Y) return null;
+    let t = 0; let any = false;
+    for (let m = 1; m <= upTo; m++) { const v = Y.months[String(m).padStart(2, '0')]?.[code]; if (v !== null && v !== undefined) { t += v; any = true; } }
+    return any ? t : null;
+  };
+  const rows = years.map((y, i) => {
+    const total = byYear[y].total;
+    const prev = i ? byYear[years[i - 1]].total.TOTAL : null;
+    const partial = y === thisYear;
+    return {
+      year: y, total, partial, lastMonth: byYear[y].lastMonth,
+      growth: !partial && prev ? total.TOTAL / prev - 1 : null,
+    };
+  });
+  let likeForLike = null;
+  if (byYear[thisYear] && byYear[thisYear - 1] && fullMonths >= 1) {
+    const now = sumMonths(thisYear, fullMonths); const before = sumMonths(thisYear - 1, fullMonths);
+    if (now !== null && before) likeForLike = { months: fullMonths, year: thisYear, now, before, growth: now / before - 1 };
+  }
+  // Month totals per year for the chart: { 2025: [Jan…Dec or null] }
+  const lines = Object.fromEntries(years.map((y) => [y, Array.from({ length: 12 }, (_, m) => {
+    const v = byYear[y].months[String(m + 1).padStart(2, '0')]?.TOTAL;
+    return v === undefined || v === null || (y === thisYear && m + 1 > Number(today.slice(5, 7))) ? null : v;
+  })]));
+  return { years, rows, likeForLike, lines, thisYear, currentMonth: Number(today.slice(5, 7)) };
+}
+
+module.exports = { yearOnYear, buildSalesView, sheetYearCard, latestDay, ytdTargetsAt };

@@ -52,49 +52,66 @@ function parseOverallDaily(rows, branchCodes) {
   return [...out.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
-// → { year, months: [{ month: '2026-01', branches: { WM: …, … }, b2b, total }] }
-// The first "Bulan … TOTAL M" table is the current year's.
-function parseTotalSales(rows, branchCodes, fallbackYear) {
-  let header = -1;
+// Every year table in the "Total Sales" tab ("Bulan … TOTAL M" header with a year just above it):
+// 2026 (Retail per branch, B2B), 2025 (Retail WM/BR/JH, Shopee, Tiktok, Zakat, Distribution …),
+// 2024, 2023 ("Retail" = WM, the only branch then). Tables without a year above them (the 2026
+// targets table, "Pure walk in") are skipped.
+// → [{ year, months: [{ month: '2025-01', branches: { WM: … }, b2b, other, total }] }], newest first.
+function parseTotalSalesYears(rows, branchCodes) {
+  const out = [];
+  const seen = new Set();
   for (let i = 0; i < (rows || []).length; i++) {
     const cells = (rows[i] || []).map(norm);
-    if (cells.includes('bulan') && cells.includes('totalm')) { header = i; break; }
-  }
-  if (header < 0) return { year: fallbackYear, months: [] };
-  let year = fallbackYear;
-  for (let i = header - 1; i >= 0 && i >= header - 3; i--) {
-    const y = (rows[i] || []).map((c) => String(c ?? '').trim()).find((c) => /^20\d\d$/.test(c));
-    if (y) { year = Number(y); break; }
-  }
-  const h = rows[header].map(norm);
-  const bulan = h.indexOf('bulan');
-  const b2b = h.indexOf('b2b');
-  const total = h.indexOf('totalm');
-  const cols = {};
-  rows[header].forEach((c, i) => {
-    if (!/^retail/i.test(String(c ?? '').trim())) return;
-    const b = matchBranch(c, branchCodes);
-    if (b && cols[b] === undefined) cols[b] = i;
-  });
-  const months = [];
-  for (let i = header + 1; i < rows.length; i++) {
-    const row = rows[i] || [];
-    const m = MONTHS.indexOf(norm(row[bulan]).slice(0, 3));
-    if (m < 0) { if (months.length) break; continue; }
-    const branches = {};
-    for (const [code, idx] of Object.entries(cols)) {
-      const n = parseNumber(row[idx]);
-      if (n !== null) branches[code] = n;
+    const bulan = cells.indexOf('bulan');
+    const total = cells.indexOf('totalm');
+    if (bulan < 0 || total < bulan) continue;
+    let year = null;
+    for (let j = i - 1; j >= 0 && j >= i - 2; j--) {
+      const y = (rows[j] || []).map((c) => String(c ?? '').trim()).find((c) => /^20\d\d$/.test(c));
+      if (y) { year = Number(y); break; }
     }
-    const t = parseNumber(row[total]);
-    if (!Object.keys(branches).length && t === null) continue; // months not reached yet
-    months.push({
-      month: `${year}-${String(m + 1).padStart(2, '0')}`, branches,
-      b2b: b2b >= 0 ? parseNumber(row[b2b]) : null,
-      total: t,
-    });
+    if (!year || seen.has(year)) continue;
+    seen.add(year);
+    // Data columns sit between "Bulan" and "TOTAL M" (2026's header repeats branches further right).
+    const cols = [];
+    for (let c = bulan + 1; c < total; c++) {
+      const h = String(rows[i][c] ?? '').trim();
+      if (!h) continue;
+      const n = norm(h);
+      let code = null;
+      if (n === 'retail') code = branchCodes.includes('WM') ? 'WM' : null; // 2023: WM only
+      else if (/^retail/.test(n) || branchCodes.some((b) => norm(b) === n)) code = matchBranch(h, branchCodes);
+      if (code) cols.push([c, code]);
+      else if (n === 'b2b' || n === 'distribution') cols.push([c, 'B2B']);
+      else cols.push([c, 'OTHER']); // Shopee, TikTok, zakat, Alpine, e-commerce …
+    }
+    const months = [];
+    for (let r = i + 1; r < rows.length; r++) {
+      const row = rows[r] || [];
+      const m = MONTHS.indexOf(norm(row[bulan]).slice(0, 3));
+      if (m < 0) { if (months.length || norm(row[0]) === 'total') break; continue; }
+      const branches = {};
+      let b2b = null; let other = null;
+      for (const [c, code] of cols) {
+        const v = parseNumber(row[c]);
+        if (v === null) continue;
+        if (code === 'B2B') b2b = (b2b || 0) + v;
+        else if (code === 'OTHER') other = (other || 0) + v;
+        else branches[code] = (branches[code] || 0) + v;
+      }
+      const t = parseNumber(row[total]);
+      if (!Object.keys(branches).length && b2b === null && other === null && !t) continue; // months not reached
+      months.push({ month: `${year}-${String(m + 1).padStart(2, '0')}`, branches, b2b, other, total: t });
+    }
+    if (months.length) out.push({ year, months });
   }
-  return { year, months };
+  return out;
+}
+
+// → { year, months } – the first (current) year's table, as the Sales page has always read it.
+function parseTotalSales(rows, branchCodes, fallbackYear) {
+  const years = parseTotalSalesYears(rows, branchCodes);
+  return years[0] || { year: fallbackYear, months: [] };
 }
 
 // Replace the stored copy with what the sheet shows now. today: daily rows after it are ignored.
@@ -112,13 +129,15 @@ async function storeSummary(db, { daily, monthly, today }) {
     }
     if (monthly) {
       await tx.query("DELETE FROM sheet_sales_summary WHERE kind = 'monthly'");
-      for (const m of monthly.months) {
+      const all = monthly.years || [monthly];
+      for (const m of all.flatMap((y) => y.months)) {
         const put = (code, amount) => tx.query(
           "INSERT INTO sheet_sales_summary (kind, period, code, amount) VALUES ('monthly', $1, $2, $3)", [m.month, code, amount]);
         for (const [code, amount] of Object.entries(m.branches)) await put(code, amount);
         if (m.b2b !== null) await put('B2B', m.b2b);
+        if (m.other !== null && m.other !== undefined) await put('OTHER', m.other);
         const t = m.total !== null ? m.total
-          : Object.values(m.branches).reduce((a, n) => a + n, 0) + (m.b2b || 0);
+          : Object.values(m.branches).reduce((a, n) => a + n, 0) + (m.b2b || 0) + (m.other || 0);
         await put('TOTAL', t);
       }
     }
@@ -148,4 +167,20 @@ async function loadSummary(db, { year, month }) {
   return { months, ytd, days, monthTotals, hasData: months.length > 0 || days.length > 0 };
 }
 
-module.exports = { parseOverallDaily, parseTotalSales, storeSummary, loadSummary, matchBranch };
+// Year-on-year progress: every year in the sheet, month totals and year totals per code.
+// → { years: [2023, …], byYear: { 2025: { months: { '01': { TOTAL, WM, … } }, total: { TOTAL, WM, … }, lastMonth } } }
+async function loadYears(db) {
+  const rows = (await db.query("SELECT period, code, amount FROM sheet_sales_summary WHERE kind = 'monthly' ORDER BY period")).rows;
+  const byYear = {};
+  for (const r of rows) {
+    const [y, m] = r.period.split('-');
+    const Y = (byYear[y] ||= { months: {}, total: {}, lastMonth: null });
+    const v = r.amount === null ? null : Number(r.amount);
+    (Y.months[m] ||= {})[r.code] = v;
+    if (v !== null) Y.total[r.code] = (Y.total[r.code] || 0) + v;
+    if (r.code === 'TOTAL' && v) Y.lastMonth = m;
+  }
+  return { years: Object.keys(byYear).map(Number).sort(), byYear };
+}
+
+module.exports = { parseOverallDaily, parseTotalSales, parseTotalSalesYears, storeSummary, loadSummary, loadYears, matchBranch };

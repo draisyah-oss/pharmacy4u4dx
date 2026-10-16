@@ -688,3 +688,17 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
   html.nav-collapsed .sn-collapse { display: none; }
 }
 @media print { .sidenav, .menu-btn, .nav-backdrop { display: none !important; } body { padding-left: 0 !important; } }
+/* Year-on-year chart (Sales page) */
+.yoy-head { font-size: 1.05rem; margin: 0 0 8px; }
+.year-chart { margin: 0 0 12px; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px 12px 4px; }
+.year-chart svg { display: block; width: 100%; height: auto; }
+.yc-grid { stroke: #e3e8e5; stroke-width: 1; }
+.yc-axis { fill: var(--ink-soft); font-size: 12px; }
+.yc-end { fill: var(--ink); font-size: 12px; font-weight: 700; }
+.yc-pt { cursor: default; }
+.yc-pt:hover circle:last-of-type { r: 6; }
+.yc-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.9rem; color: var(--ink-soft); margin: 0 4px 6px; }
+.yc-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.yc-legend i { width: 18px; height: 3px; border-radius: 2px; display: inline-block; }
+.yc-note { margin-left: auto; font-size: 0.85rem; }
+@media (max-width: 640px) { .year-chart { overflow-x: auto; } .year-chart svg { min-width: 620px; } }

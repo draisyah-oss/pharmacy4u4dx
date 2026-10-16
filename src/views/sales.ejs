@@ -55,6 +55,32 @@
     </dl>
   </section>
 
+  <% if (v.history && v.history.years.length > 1) { const h = v.history; const cur = h.rows.find(function (r) { return r.partial; }); %>
+  <h2 id="progress">Progress since <%= h.years[0] %></h2>
+  <% if (h.likeForLike) { const lf = h.likeForLike; const span = 'Jan–' + mName(lf.year + '-' + String(lf.months).padStart(2, '0')); %>
+    <p class="yoy-head"><b class="<%= lf.growth >= 0 ? 's-on_track' : 's-off_track' %>"><%= lf.growth >= 0 ? '▲' : '▼' %> <%= (Math.abs(lf.growth) * 100).toFixed(1) %>%</b>
+      <%= span %> <%= lf.year %>: <b><%= fmt.money(lf.now) %></b> vs <%= fmt.money(lf.before) %> in <%= span %> <%= lf.year - 1 %>.</p>
+  <% } %>
+  <%- include('partials/year-chart', { h: h }) %>
+  <div class="table-wrap">
+    <table class="admin-table sales-table">
+      <thead><tr><th scope="col">Year</th><th scope="col" class="n">Total</th><th scope="col" class="n">vs year before</th>
+        <% codes.forEach(function (c) { %><th scope="col" class="n"><%= c %></th><% }) %>
+        <th scope="col" class="n">B2B</th><th scope="col" class="n">Online, zakat &amp; other</th></tr></thead>
+      <tbody>
+        <% h.rows.slice().reverse().forEach(function (r) { %>
+          <tr<%= r.partial ? ' class="is-current"' : '' %>><th scope="row"><%= r.year %><% if (r.partial) { %> <small class="muted">to <%= mName(r.year + '-' + r.lastMonth) %></small><% } %></th>
+            <td class="n"><b><%- cellMoney(r.total.TOTAL) %></b></td>
+            <td class="n"><%- r.growth === null ? '<span class="muted">' + (r.partial && h.likeForLike ? 'see above' : '–') + '</span>' : '<span class="' + (r.growth >= 0 ? 's-on_track' : 's-off_track') + '">' + (r.growth >= 0 ? '+' : '') + (r.growth * 100).toFixed(1) + '%</span>' %></td>
+            <% codes.forEach(function (c) { %><td class="n"><%- cellMoney(r.total[c]) %></td><% }) %>
+            <td class="n"><%- cellMoney(r.total.B2B) %></td><td class="n"><%- cellMoney(r.total.OTHER) %></td></tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted small">From the year tables in the sheet’s “Total Sales” tab. 2023 “Retail” is Wangsa Maju (the only branch then). B2B includes “Distribution”; online, zakat &amp; other is Shopee, TikTok, zakat, Alpine and e-commerce where the sheet lists them separately.</p>
+  <% } %>
+
   <h2 id="year">Month by month <small class="muted">(RM)</small></h2>
   <div class="table-wrap">
     <table class="admin-table sales-table">

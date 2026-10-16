@@ -48,6 +48,7 @@ async function backfillNewSettings(db, seed, log) {
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
   await threeItems(db, log);
+  await renameBranchPersonOnce(db, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', log);
   await addHqTaskOnce(db, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
@@ -176,6 +177,24 @@ async function threeItems(db, log) {
   log('Renamed "2+ items" to "3+ items".');
 }
 
+// A branch person's name corrected (16 Oct: Ampang's Aisyah is Aishah) – same as Admin → People:
+// name, login username, owned fields and measures, and labels that mention them. Once.
+async function renameBranchPersonOnce(db, code, from, to, flag, log) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const { updatePerson } = require('../admin/people');
+  const p = (await db.query('SELECT p.id, p.branch_id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = $1 AND p.name = $2', [code, from])).rows[0];
+  if (p) {
+    const r = await updatePerson(db, { personId: p.id, body: { name: to, username: to.toLowerCase() }, user: null });
+    if (r.error) log(`Could not rename ${from} to ${to}: ${r.error}`);
+    else {
+      await db.query('UPDATE daily_fields SET label = replace(label, $2, $3) WHERE branch_id = $1', [p.branch_id, from, to]);
+      await db.query('UPDATE measures SET label = replace(label, $2, $3) WHERE branch_id = $1', [p.branch_id, from, to]);
+      log(`Renamed ${code} ${from} to ${to}.`);
+    }
+  }
+  await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+}
+
 // Add one daily task to an HQ person's list (once, unless it's already there).
 async function addHqTaskOnce(db, name, label, flag, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -264,4 +283,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
