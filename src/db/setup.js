@@ -48,8 +48,7 @@ async function backfillNewSettings(db, seed, log) {
   await updateSalesSheetColumns(db, seed, log, 'sales_sheet_v3');
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
-  await syncBranchFromSeed(db, seed, 'JH', 'jh_poster_v1', log); // JH: daily educational poster (E1)
-  await ensureSetting(db, 'poster_targets', seed.company.poster_targets_per_day, log);
+  await retireJhPoster(db, log);
   await threeItems(db, log);
   await wigOnMonday(db, log);
   await renameBranchPersonOnce(db, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', log);
@@ -179,6 +178,15 @@ async function wigOnMonday(db, log) {
     await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_measures', 'All WIG sessions moved to Monday (16 Oct)', NULL)");
   });
   log('WIG sessions: wording changed to Monday.');
+}
+
+// 16 Oct: the wiki / Classroom (with JH's daily poster measure E1) was taken out again until the
+// framework is agreed. A database that already got E1 and the poster box has them retired (history kept).
+async function retireJhPoster(db, log) {
+  const r = await db.query(
+    `UPDATE measures SET active = false WHERE code = 'E1' AND active AND branch_id = (SELECT id FROM branches WHERE code = 'JH') RETURNING id`);
+  await db.query(`UPDATE daily_fields SET active = false WHERE key = 'poster' AND active AND branch_id = (SELECT id FROM branches WHERE code = 'JH')`);
+  if ((r.rows || []).length) log('Retired JH’s poster measure (wiki taken out for now).');
 }
 
 // A setting from seed.json copied in once (JSON), only when the database has none.

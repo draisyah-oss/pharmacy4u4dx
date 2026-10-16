@@ -13,7 +13,6 @@ const { hqRoutes } = require('./hq/routes');
 const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
-const { wikiRoutes } = require('./wiki/routes');
 const oosData = require('./oos/data');
 const calc = require('./calc');
 const fmt = require('./scoreboard/format');
@@ -65,11 +64,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   });
 
   app.use(loadUser(db));
-  // The wiki's upload forms (multipart) check their _csrf in the route, after the upload is
-  // parsed. Only those paths skip the check here; every other POST is checked as before.
-  const UPLOAD_PATH = /^\/wiki\/(new|poster|p\/\d{1,9}\/(edit|resend))$/;
-  const isUpload = (req) => UPLOAD_PATH.test(req.path) && String(req.headers['content-type'] || '').startsWith('multipart/form-data');
-  app.use((req, res, next) => (req.method === 'POST' && !isUpload(req) ? checkCsrf(req, res, next) : next()));
+  app.use((req, res, next) => (req.method === 'POST' ? checkCsrf(req, res, next) : next()));
   app.use(loginRoutes(db));
 
   app.use(requireLogin);
@@ -79,7 +74,6 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
     try {
       if (req.method === 'GET' && oosData.canAnswer(req.user)) {
         res.locals.oosCount = await oosData.countToAnswer(db);
-        res.locals.posterCount = (await db.query("SELECT count(*)::int AS n FROM wiki_pages WHERE active AND section = 'poster' AND status = 'pending'")).rows[0].n;
       }
     } catch (err) { console.error('Menu counts:', err.message); }
     next();
@@ -109,7 +103,6 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(hqTeamRoutes(db, { now, trackerStart }));
   app.use(salesRoutes(db, { now, salesSheet }));
   app.use(oosRoutes(db, { now, trackerStart }));
-  app.use(wikiRoutes(db, { now }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

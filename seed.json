@@ -7,7 +7,6 @@
     "sales_sheet_note": "2026 Sales Dashboard. Each branch's daily tab fills walk-in, transactions and the other mapped fields automatically (branch.sales_sheet).",
     "company_wig": "RM 360.5k a month in December = breakeven",
     "monthly_sales_target": {"2026-10": 266800, "2026-11": 313600, "2026-12": 360500},
-    "poster_targets_per_day": {"JH": 1},
     "oos_targets": {"answer_by_hour": 11, "answer_on_time": 0.9, "transfer_hours": 24, "transfer_on_time": 0.95, "restock_days": 3, "note": "Out-of-stock flow (16 Oct): Inventory answers by 11 am the next working day (Mon–Fri); transfers sent within 24 hours of the answer; back in stock within 3 days on average."},
     "monthly_sales_target_note": "Company sales = all branches + B2B (Q4 4DX HQ Tracker). B2B is entered weekly by Alia; a week counts in the month its Thursday falls in.",
     "meeting_rhythm": {
@@ -174,8 +173,7 @@
           {"key": "grabcx", "label": "Grab cancelled orders (#)", "owner": "Nabihah", "type": "count"},
           {"key": "grab", "label": "Grab sales (RM)", "owner": "Nabihah", "type": "money"},
           {"key": "waord", "label": "WhatsApp orders fulfilled today", "owner": "Nabihah", "type": "count"},
-          {"key": "wadays", "label": "…total days those orders took (add up)", "owner": "Nabihah", "type": "count"},
-          {"key": "poster", "label": "Educational posters sent to the Classroom", "owner": "Team", "type": "count"}
+          {"key": "wadays", "label": "…total days those orders took (add up)", "owner": "Nabihah", "type": "count"}
         ],
       "measures": [
           {"id": "T1", "owner": "Team", "label": "Walk-in sales (WIG 1)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1660, "2026-11": 1830, "2026-12": 2000}, "numerator_field": "walkin", "denominator_field": null, "note": "Set 13 Oct: RM 2,000/day by Dec (plan 2,100). Nov step 1,830. JH 15 Oct: track RM lost to out-of-stock (minimum price of OOS items) and walk-ins – JH needs 60 walk-ins a day; cut OOS losses first."},
@@ -204,8 +202,7 @@
           {"id": "N3", "owner": "Nabihah", "label": "Grab menu items added / fixed (photo, price, stock)", "kind": "Routine", "unit": "items", "target_per": "week", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 10, "2026-12": 5}, "numerator_field": "grabmenu", "denominator_field": null, "note": "NEW – proposed. JH 15 Oct: a daily task for Nabihah – doesn’t move the result."},
           {"id": "N0", "owner": "Nabihah", "label": "Grab sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2500, "2026-12": 4500}, "numerator_field": "grab", "denominator_field": null, "note": "NEW – PROPOSED, same ramp as WM. Baseline assumed RM 0 – edit if JH already sells on Grab. JH 15 Oct: to change to stock availability vs sales once there is a workable stock database."},
           {"id": "N4", "owner": "Nabihah", "label": "Grab cancelled orders", "kind": "Routine", "unit": "orders", "target_per": "week", "calc": "sum", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "grabcx", "denominator_field": null, "note": "JH 15 Oct: added. Track only."},
-          {"id": "N5", "owner": "Nabihah", "label": "WhatsApp orders – average days to fulfil", "kind": "Routine", "unit": "days", "target_per": "week", "calc": "ratio_per_day", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "wadays", "denominator_field": "waord", "note": "JH 15 Oct: tracks follow-up success to fulfilment and how many days. Track only – lower is better."},
-          {"id": "E1", "owner": "Team", "label": "Educational poster for the Pharmacy4U Classroom – 1 a day", "kind": "Lead", "unit": "posters", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "poster", "denominator_field": null, "note": "16 Oct: counted automatically when JH sends a poster in the Wiki (Classroom → Send a poster); Hanin approves it for the Classroom and Meta."}
+          {"id": "N5", "owner": "Nabihah", "label": "WhatsApp orders – average days to fulfil", "kind": "Routine", "unit": "days", "target_per": "week", "calc": "ratio_per_day", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "wadays", "denominator_field": "waord", "note": "JH 15 Oct: tracks follow-up success to fulfilment and how many days. Track only – lower is better."}
         ],
       "running_totals": [
           {"id": "GR", "label": "Google reviews total (162 → 294 by 31 Dec, 50 a month)", "field": "reviews", "start_value": 162, "end_target": 294},
