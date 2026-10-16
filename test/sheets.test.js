@@ -216,3 +216,20 @@ test('Google requests: read-only token, the five tabs in one call, and a clear m
     readTabs({ account, sheetId: 'SHEET', tabs: ['Daily sales WM'], fetchImpl: fakeGoogle(403) }),
     /Share it \(Viewer\) with p4u-dashboard@p4u\.iam\.gserviceaccount\.com/);
 });
+
+test('16 Oct: the Grab Pay column renamed "Grab sales (RM)" is still read; a missing column is reported', () => {
+  const { missingColumns } = require('../src/sheets/parse');
+  const cols = seed.branches.find((b) => b.code === 'WM').sales_sheet.columns;
+  const rows = [
+    ['OCTOBER'],
+    ['Day', 'Date', 'Zakat', 'GrabMart', 'Transaction', 'Cash', 'QR/Online', 'Card', 'Grab sales (RM)', 'Total'],
+    ['Thu', '1/10/2026', '', 3, 50, '320.00', '169.30', '486.55', '170.16', '1,146.01'],
+    ['Fri', '16/10/2026', '', 0, 55, '282.40', '657.60', '414.30', '0.00', '1,354.30'],
+  ];
+  const days = parseSalesTab(rows, cols);
+  assert.deepEqual(days[0].values, { walkin: 975.85, tx: 50, grab: 170.16, graord: 3 });
+  assert.equal(days[1].values.grab, 0);
+  assert.deepEqual(missingColumns(rows, cols), []);
+  const noGrab = rows.map((r, i) => (i === 1 ? r.map((c) => (c === 'Grab sales (RM)' ? 'Grab' : c)) : r));
+  assert.deepEqual(missingColumns(noGrab, cols), ['walkin: no column “GRAB PAY” to take off', 'grab: no column “GRAB PAY”']);
+});

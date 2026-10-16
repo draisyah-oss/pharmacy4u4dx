@@ -43,6 +43,8 @@ async function backfillNewSettings(db, seed, log) {
   await backfillHqAccess(db, seed, log);
   await backfillHqTasks(db, seed, log);
   await updateSalesSheetColumns(db, seed, log);
+  // 16 Oct: the sheet's Grab Pay column is now called "Grab sales (RM)" – accept either name.
+  await updateSalesSheetColumns(db, seed, log, 'sales_sheet_v3');
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
   await threeItems(db, log);
@@ -192,14 +194,14 @@ async function addHqTaskOnce(db, name, label, flag, log) {
 // 15 Oct: sheet columns corrected – Grab sales (RM) = Grab Pay, Grab orders = GrabMart, and
 // walk-in = Total minus Grab Pay (so Grab isn't counted twice). Applied once to older databases;
 // the next sync rewrites the numbers that came from the sheet.
-async function updateSalesSheetColumns(db, seed, log) {
-  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'sales_sheet_v2'")).rows.length) return;
+async function updateSalesSheetColumns(db, seed, log, flag = 'sales_sheet_v2') {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
   await db.transaction(async (tx) => {
     for (const b of seed.branches) {
       if (!b.sales_sheet) continue;
       await tx.query('UPDATE branches SET sales_sheet = $2 WHERE code = $1', [b.code, JSON.stringify(b.sales_sheet)]);
     }
-    await tx.query("INSERT INTO app_settings (key, value) VALUES ('sales_sheet_v2', $1)", [new Date().toISOString()]);
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
     await tx.query(
       `INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'branches', 'Sales sheet columns: Grab Pay = Grab sales, GrabMart = Grab orders', NULL)`);
   });

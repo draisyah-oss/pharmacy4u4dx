@@ -329,6 +329,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       sales_sheet_v2: new Date().toISOString(),
       jh_update_v1: new Date().toISOString(),
       wm_update_16oct: new Date().toISOString(),
+      sales_sheet_v3: new Date().toISOString(),
       three_items_v1: new Date().toISOString(),
       alia_zakat_task_v1: new Date().toISOString(),
     };

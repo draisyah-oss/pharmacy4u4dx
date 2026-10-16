@@ -29,8 +29,9 @@ function parseDate(v) {
   return new Date(`${iso}T00:00:00Z`).toISOString().slice(0, 10) === iso ? iso : null;
 }
 
-// Header text compared without case or spaces: "GRAB PAY" (WM) = "Grabpay" (BR), "Zakat " = "Zakat".
-const norm = (s) => String(s ?? '').toLowerCase().replace(/\s+/g, '');
+// Header text compared without case, spaces or punctuation: "GRAB PAY" (WM) = "Grabpay" (BR),
+// "Zakat " = "Zakat", "Grab sales (RM)" = "grab sales rm".
+const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
 function isHeaderRow(row) {
   const cells = row.map(norm);
@@ -40,12 +41,17 @@ function isHeaderRow(row) {
 // A column setting is a header ("Zakat") or a header minus others:
 // { "column": "Total", "minus": ["GRAB PAY"] } – walk-in = the till total without Grab Pay,
 // because Grab Pay is counted separately as Grab sales.
+// A header can also be a list of names the sheet may use (first one found wins), e.g.
+// ["GRAB PAY", "Grabpay", "Grab sales (RM)"] – so renaming a column in the sheet doesn't break it.
+const names = (h) => (Array.isArray(h) ? h : [h]).map(norm);
 function columnSpec(spec) {
-  if (spec && typeof spec === 'object') {
-    return { column: norm(spec.column), minus: (spec.minus || []).map(norm) };
+  if (spec && typeof spec === 'object' && !Array.isArray(spec)) {
+    return { column: names(spec.column), minus: (spec.minus || []).map(names) };
   }
-  return { column: norm(spec), minus: [] };
+  return { column: names(spec), minus: [] };
 }
+const findCol = (cells, alts) => { for (const a of alts) { const i = cells.indexOf(a); if (i >= 0) return i; } return -1; };
+const label = (h) => (Array.isArray(h) ? h[0] : h);
 
 // rows: the tab as an array of rows (arrays of cells).
 // columns: { appFieldKey: 'Header text in the sheet' or { column, minus }, ... }
@@ -67,8 +73,8 @@ function parseSalesTab(rows, columns) {
       dateCol = cells.indexOf('date');
       colOf = {};
       for (const [field, spec] of wanted) {
-        const idx = cells.indexOf(spec.column);
-        if (idx >= 0) colOf[field] = { idx, minus: spec.minus.map((h) => cells.indexOf(h)).filter((j) => j >= 0) };
+        const idx = findCol(cells, spec.column);
+        if (idx >= 0) colOf[field] = { idx, minus: spec.minus.map((alts) => findCol(cells, alts)).filter((j) => j >= 0) };
       }
       return;
     }
@@ -94,4 +100,22 @@ function parseSalesTab(rows, columns) {
   return [...byDate.values()].sort((a, b) => (a.date < b.date ? -1 : 1));
 }
 
-module.exports = { parseNumber, parseDate, parseSalesTab, isHeaderRow };
+// Columns the newest month block of a tab doesn't have: ["Grab sales (RM) – column “GRAB PAY”", …].
+// Shown on the Setup page so a renamed column in the sheet is spotted at once.
+function missingColumns(rows, columns) {
+  const header = [...(rows || [])].reverse().find((r) => Array.isArray(r) && isHeaderRow(r));
+  if (!header) return ['no header row with “Date” and “Transaction”'];
+  const cells = header.map(norm);
+  const out = [];
+  for (const [field, raw] of Object.entries(columns)) {
+    const spec = columnSpec(raw);
+    const h = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw.column : raw;
+    if (findCol(cells, spec.column) < 0) out.push(`${field}: no column “${label(h)}”`);
+    spec.minus.forEach((alts, i) => {
+      if (findCol(cells, alts) < 0) out.push(`${field}: no column “${label(raw.minus[i])}” to take off`);
+    });
+  }
+  return out;
+}
+
+module.exports = { parseNumber, parseDate, parseSalesTab, isHeaderRow, missingColumns };

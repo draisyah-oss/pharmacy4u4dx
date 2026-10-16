@@ -8,7 +8,7 @@
 // the link is on; the sheet is the one place to fix them.
 
 const calc = require('../calc');
-const { parseSalesTab } = require('./parse');
+const { parseSalesTab, missingColumns } = require('./parse');
 const { loadServiceAccount, readTabs } = require('./google');
 const { mentionsSalary } = require('../privacy');
 const summary = require('./summary');
@@ -63,13 +63,14 @@ async function syncSalesSheet(db, { readRows, today, trackerStart }) {
   const branches = await linkedBranches(db);
   const tabs = [...new Set(branches.map((b) => b.sales_sheet.tab))];
   const data = await readRows(tabs);
-  const summary = { changed: 0, unchanged: 0, removed: 0, days: 0, branches: {} };
+  const summary = { changed: 0, unchanged: 0, removed: 0, days: 0, branches: {}, missing: [] };
 
   await db.transaction(async (tx) => {
     for (const b of branches) {
       const rows = data[b.sales_sheet.tab];
       if (!rows) throw new Error(`The sales sheet has no tab called “${b.sales_sheet.tab}”.`);
       const fields = Object.keys(b.sales_sheet.columns);
+      for (const m of missingColumns(rows, b.sales_sheet.columns)) summary.missing.push(`${b.code} (${b.sales_sheet.tab}) – ${m}`);
       const parsed = parseSalesTab(rows, b.sales_sheet.columns).filter((d) => d.date >= trackerStart && d.date <= today);
       const stats = { changed: 0, days: parsed.length };
 
@@ -151,6 +152,8 @@ function createSalesSheetLink(db, { env = process.env, now = () => new Date(), f
         });
         await setSetting(db, 'sales_sheet_last_sync', new Date().toISOString());
         await setSetting(db, 'sales_sheet_last_error', '');
+        await setSetting(db, 'sales_sheet_missing', summary.missing.join('\n'));
+        if (summary.missing.length) log(`Sales sheet columns not found: ${summary.missing.join('; ')}`);
         // Summary tabs separately: a renamed summary tab mustn't stop the daily numbers.
         try {
           await syncSummaryTabs(db, { readRows: (tabs) => readTabs({ account, sheetId: id, tabs, fetchImpl }), today });
@@ -179,6 +182,7 @@ function createSalesSheetLink(db, { env = process.env, now = () => new Date(), f
       lastSync: s.sales_sheet_last_sync || null,
       lastError: s.sales_sheet_last_error || null,
       summaryError: s.sales_summary_last_error || null,
+      missing: s.sales_sheet_missing ? s.sales_sheet_missing.split('\n') : [],
     };
   }
 

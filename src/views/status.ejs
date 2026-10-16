@@ -34,6 +34,11 @@
       <p>Linked as <b><%= sheet.serviceAccountEmail %></b>.
         <%= sheet.lastSync ? 'Last checked ' + new Date(sheet.lastSync).toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' }) + '.' : 'Not checked yet.' %>
         <% if (sheet.lastError) { %><span class="s-off_track">Last problem: <%= sheet.lastError %></span><% } %></p>
+      <% if (sheet.missing && sheet.missing.length) { %>
+        <div class="alert alert-bad"><p>These columns weren’t found in the sheet’s newest month, so those numbers stay empty – check the header names:</p>
+          <ul><% sheet.missing.forEach(function (m) { %><li><%= m %></li><% }) %></ul></div>
+      <% } %>
+      <% if (sheet.summaryError) { %><p class="s-off_track">Summary tabs: <%= sheet.summaryError %></p><% } %>
       <form method="post" action="/sales-sheet/sync"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/status"><button class="button small-button" type="submit">Check the sheet now</button></form>
     <% } %>
 
