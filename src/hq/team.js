@@ -328,8 +328,9 @@ async function teamSummary(db, { week, today }) {
   }
   const projects = await loadProjects(db);
   const states = projects.map((p) => projectState(p, today));
+  const wiki = require('./wikilist').summarise(await require('./wikilist').load(db, { today }));
   return {
-    rows, kept: keptSummary(last),
+    rows, kept: keptSummary(last), wiki,
     projects: {
       total: projects.length, done: states.filter((s) => s === 'done').length,
       overdue: states.filter((s) => s === 'overdue').length, inProgress: projects.filter((p) => p.status === 'In progress').length,

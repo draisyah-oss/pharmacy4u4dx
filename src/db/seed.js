@@ -299,6 +299,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
         await tx.query('INSERT INTO hq_daily_tasks (person_id, label, sort_order) VALUES ($1,$2,$3)', [hqPeople[name], label, i + 1]);
       }
     }
+    await require('../hq/wikilist').insertChecklist(tx, seed);
     for (const [i, pr] of (seed.hq.projects || []).entries()) {
       await tx.query(
         'INSERT INTO hq_projects (project, milestone, owner, start_date, due_date, sort_order) VALUES ($1,$2,$3,$4,$5,$6)',
@@ -334,6 +335,9 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       three_items_v1: new Date().toISOString(),
       alia_zakat_task_v1: new Date().toISOString(),
       wig_monday_v1: new Date().toISOString(),
+      wiki_checklist_v1: new Date().toISOString(),
+      wiki_tasks_v1: new Date().toISOString(),
+      wiki_tasks_hanin_v1: new Date().toISOString(),
       oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
     };
     for (const [key, value] of Object.entries(settings)) {

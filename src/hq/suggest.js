@@ -5,10 +5,12 @@
 //    out) – e.g. Alia's "B2B quotes sent within 24 hours", "POs … approved against 30-day sales".
 //  - From the out-of-stock flow: inter-store transfers sent within 48 hours of Inventory's answer.
 //  - Iman's "HR daily checks fully done": her days fully done ÷ working days.
+//  - Iman's and Hanin's wiki measures: checklist pages they own approved that week (/hq/wiki).
 // Every suggestion says where it came from; nothing is saved until they press Save.
 
 const calc = require('../calc');
 const team = require('./team');
+const wikilist = require('./wikilist');
 
 // measure code → which of the owner's daily tasks it is counted from
 const FROM_TASKS = {
@@ -46,6 +48,11 @@ async function suggestions(db, { week, rows, today, at = new Date() }) {
       if (!yes && !no) continue;
       if (rule.kind === 'pair' && m.input === 'done_and_total') out.set(m.id, { value: yes, total: yes + no, from: rule.what });
       else if (rule.kind === 'count') out.set(m.id, { value: yes, from: rule.what });
+      continue;
+    }
+    if (m.code === 'wiki' || m.code === 'wikisop') {
+      const n = await wikilist.approvedInWeek(db, { week, personId: m.person_id });
+      out.set(m.id, { value: n, from: 'the company wiki checklist: your pages marked Approved this week' });
       continue;
     }
     if (m.code === 'hrdaily') {

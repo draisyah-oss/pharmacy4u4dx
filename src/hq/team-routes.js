@@ -4,6 +4,7 @@ const express = require('express');
 const calc = require('../calc');
 const fmt = require('../scoreboard/format');
 const team = require('./team');
+const wikilist = require('./wikilist');
 const { dateStrip } = require('../daily/rules');
 const { isRealDate } = require('../lib/dates');
 const { weekChoices, pickWeek } = require('../lib/weeks');
@@ -132,6 +133,33 @@ function hqTeamRoutes(db, { now, trackerStart }) {
   });
 
   // ─────────────── Projects ───────────────
+
+  // ─────────────── Company wiki checklist ───────────────
+  router.get('/hq/wiki', async (req, res, next) => {
+    try {
+      if (req.user.role !== 'hq' && req.user.role !== 'admin') return deny(res);
+      const today = calc.todayInMalaysia(now());
+      const items = await wikilist.load(db, { today });
+      const show = ['mine', 'open', 'all'].includes(req.query.show) ? req.query.show : 'all';
+      const visible = items.filter((it) => show === 'all' || (show === 'mine' ? it.person_id === req.user.person_id : it.status !== 'Approved'));
+      for (const it of visible) it.canChange = wikilist.canChange(req.user, it);
+      res.render('hq-wiki', {
+        title: 'Company wiki checklist', summary: wikilist.summarise(items), sum2: wikilist.summarise(visible), items: visible, show,
+        statuses: wikilist.STATUSES, today, fmt, ...flash(req),
+      });
+    } catch (err) { next(err); }
+  });
+
+  router.post('/hq/wiki/:id', async (req, res, next) => {
+    try {
+      if (req.user.role !== 'hq' && req.user.role !== 'admin') return deny(res);
+      if (!/^\d{1,9}$/.test(req.params.id)) return deny(res);
+      const r = await wikilist.update(db, req.user, Number(req.params.id), req.body);
+      const back = `/hq/wiki${req.body.show ? `?show=${encodeURIComponent(req.body.show)}&` : '?'}`;
+      if (r.error) return res.redirect(`${back}err=${encodeURIComponent(r.error)}`);
+      res.redirect(`${back}ok=${encodeURIComponent(r.saved ? `${r.item.title}: ${r.status}.` : 'No change.')}#w-${req.params.id}`);
+    } catch (err) { next(err); }
+  });
 
   router.get('/hq/projects', async (req, res, next) => {
     try {

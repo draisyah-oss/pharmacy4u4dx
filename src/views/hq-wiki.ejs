@@ -1,0 +1,55 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'hqwiki' }) %>
+<%
+  const bar = (a, t) => (t ? Math.round(a / t * 100) : 0);
+  const due = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+  const chip = { 'Not started': 'oc-grey', Drafting: 'oc-info', Checking: 'oc-warn', Approved: 'oc-good' };
+%>
+<main class="page wk-wide hw-page">
+  <header class="oo-head"><h1>Company wiki checklist</h1>
+    <p class="muted">The pages the company wiki must hold before it goes live (framework doc, phase 1). P1 by 15 Nov, P2 by 31 Dec, P3 in Q1 2027. Approved pages count towards Iman’s and Hanin’s weekly wiki measures.</p></header>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <div class="oo-kpis">
+    <div class="oo-kpi"><span>Must-have pages (P1) approved</span><b><%= summary.p1.approved %> of <%= summary.p1.total %></b>
+      <div class="bar" aria-hidden="true"><span class="s-<%= summary.p1.approved >= summary.p1.total ? 'on_track' : 'watch' %>" style="width:<%= bar(summary.p1.approved, summary.p1.total) %>%"></span></div><small>by 15 Nov</small></div>
+    <div class="oo-kpi"><span>All pages approved</span><b><%= summary.all.approved %> of <%= summary.all.total %></b>
+      <div class="bar" aria-hidden="true"><span class="s-watch" style="width:<%= bar(summary.all.approved, summary.all.total) %>%"></span></div><small>P2 by 31 Dec</small></div>
+    <% summary.owners.forEach(function (o) { %>
+      <div class="oo-kpi"><span><%= o.owner %></span><b><%= o.approved %> of <%= o.total %></b><small>P1: <%= o.p1.approved %> of <%= o.p1.total %></small></div>
+    <% }) %>
+    <div class="oo-kpi"><span>Past their date</span><b class="<%= summary.overdue ? 's-off_track' : '' %>"><%= summary.overdue %></b><small>not approved by the due date</small></div>
+  </div>
+
+  <nav class="strip oo-tabs" aria-label="Show">
+    <a href="/hq/wiki" class="strip-pill<%= show === 'all' ? ' is-current' : '' %>">All pages</a>
+    <a href="/hq/wiki?show=mine" class="strip-pill<%= show === 'mine' ? ' is-current' : '' %>">Mine</a>
+    <a href="/hq/wiki?show=open" class="strip-pill<%= show === 'open' ? ' is-current' : '' %>">Not approved yet</a>
+  </nav>
+
+  <% sum2.areas.forEach(function (a, n) { %>
+    <section class="oo-card hw-area" aria-labelledby="hw-a<%= n %>">
+      <header class="hw-area-head"><h2 id="hw-a<%= n %>"><%= a.area %></h2><span class="muted small"><%= a.owner %> · <%= a.approved %> of <%= a.total %> approved</span></header>
+      <% a.items.forEach(function (it) { %>
+        <form method="post" action="/hq/wiki/<%= it.id %>" class="hw-row<%= it.overdue ? ' is-late' : '' %>" id="w-<%= it.id %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="show" value="<%= show %>">
+          <span class="hw-title"><span><span class="hw-pri hw-<%= it.priority %>"><%= it.priority %></span> <%= it.title %></span>
+            <small class="muted"><%= it.writer ? 'writing: ' + it.writer + ' · ' : '' %>due <%= it.due_date ? due(it.due_date) : '–' %><%= it.overdue ? ' · late' : '' %></small></span>
+          <% if (it.canChange) { %>
+            <label class="sr-only" for="ws-<%= it.id %>">Status</label>
+            <select id="ws-<%= it.id %>" name="status" class="hw-select">
+              <% statuses.forEach(function (s) { %><option<%= s === it.status ? ' selected' : '' %>><%= s %></option><% }) %>
+            </select>
+            <label class="sr-only" for="ww-<%= it.id %>">Who is writing it</label>
+            <input id="ww-<%= it.id %>" name="writer" class="hw-writer" maxlength="80" value="<%= it.writer || '' %>" placeholder="Who writes it">
+            <button class="button small-button" type="submit">Save</button>
+          <% } else { %><span class="oo-chip <%= chip[it.status] %>"><%= it.status.toUpperCase() %></span><% } %>
+        </form>
+      <% }) %>
+    </section>
+  <% }) %>
+</main>
+</body>
+</html>

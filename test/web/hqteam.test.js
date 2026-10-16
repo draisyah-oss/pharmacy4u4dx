@@ -153,11 +153,11 @@ test('Iman ticks her HR daily checks; HQ staff only their own; changes are audit
   const page = (await im.get('/hq/today')).html;
   assert.match(page, /Attendance &amp; roster checked by 10 am/);
   const tasks = (await db.query('SELECT id FROM hq_daily_tasks WHERE person_id = $1 AND active ORDER BY sort_order', [ids.Iman])).rows;
-  assert.equal(tasks.length, 6);
+  assert.equal(tasks.length, 7); // six HR checks + the company wiki task (16 Oct)
   const body = { person: String(ids.Iman), date: THIS };
   tasks.forEach((t) => { body[`t[k${t.id}]`] = 'yes'; });
   assert.equal((await im.post('/hq/today', body)).status, 302);
-  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND done', [THIS])).rows[0].n, 6);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND done', [THIS])).rows[0].n, 7);
   assert.equal((await lastAudit('hq_daily_ticks')).username, 'iman');
   assert.match((await im.get(`/hq/today?date=${THIS}`)).html, /1 of 2/, 'Mon fully done, Tue not yet');
   // N/A: a task that doesn't apply that day still lets the day count

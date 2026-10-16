@@ -10,6 +10,7 @@ const { migrate } = require('../../src/db/migrate');
 const { readSeed, loadSeed } = require('../../src/db/seed');
 const { createApp } = require('../../src/app');
 const oos = require('../../src/oos/data');
+const calc = require('../../src/calc');
 
 let db; let server; let base;
 // A clock the tests move: Thu 15 Oct 2026, 9:40 pm Malaysia time.
@@ -176,4 +177,39 @@ test('HQ input for Alia: only her own numbers, filled in from her daily ticks an
   const e = (await db.query('SELECT value, total FROM hq_entries WHERE hq_measure_id = $1 AND week_start = $2', [quotes, '2026-10-12'])).rows[0];
   assert.deepEqual([Number(e.value), Number(e.total)], [2, 3]);
   assert.match((await b.get('/hq?week=2026-10-19')).html, /Last week: 2 of 3/);
+});
+
+test('company wiki checklist: 64 pages, owners change their own, approvals feed the weekly wiki measures', async () => {
+  const pw = (u, v) => db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [bcrypt.hashSync(v, 4), u]);
+  await pw('iman', 'iman-pass-1'); await pw('hanin', 'hanin-pass-1');
+  const n = (await db.query("SELECT count(*)::int AS n, count(*) FILTER (WHERE priority = 'P1')::int AS p1 FROM hq_wiki_items")).rows[0];
+  assert.deepEqual([n.n, n.p1], [64, 28]);
+  clock = new Date('2026-10-20T10:00:00+08:00');
+  const hanin = await login('password', 'hanin', 'hanin-pass-1');
+  const page = (await hanin.get('/hq/wiki')).html;
+  assert.match(page, /0 of 28/);
+  const own = (await db.query("SELECT id FROM hq_wiki_items WHERE title = 'Opening the branch'")).rows[0].id;
+  const notOwn = (await db.query("SELECT id FROM hq_wiki_items WHERE title = 'Vision, mission and values'")).rows[0].id;
+  assert.match((await hanin.post(`/hq/wiki/${notOwn}`, { status: 'Approved' })).location, /err=/, 'Hanin can’t change Iman’s pages');
+  await hanin.post(`/hq/wiki/${own}`, { status: 'Drafting', writer: 'Hafizah' });
+  await hanin.post(`/hq/wiki/${own}`, { status: 'Approved', writer: 'Hafizah' });
+  const iman = await login('password', 'iman', 'iman-pass-1');
+  await iman.post(`/hq/wiki/${notOwn}`, { status: 'Approved' });
+  // Weekly measures are filled in from the checklist (real time: approved this calendar week)
+  const week = calc.weekStart(calc.todayInMalaysia(new Date()));
+  const { suggestions } = require('../../src/hq/suggest');
+  const hq = require('../../src/hq/data');
+  const user = (await db.query("SELECT * FROM users WHERE username = 'hanin'")).rows[0];
+  const rows = (await hq.loadHqWeek(db, { week, user })).filter((r) => r.canEdit);
+  const s = await suggestions(db, { week, rows, today: calc.todayInMalaysia(new Date()) });
+  const m = rows.find((r) => r.code === 'wikisop');
+  assert.equal(s.get(m.id).value, 1, 'Hanin approved 1 page this week');
+  assert.match((await hanin.get('/hq/wiki')).html, /2 of 28/);
+  // Daily tasks include the wiki task; the HQ scoreboard shows progress
+  const tasks = (await db.query("SELECT label FROM hq_daily_tasks t JOIN people p ON p.id = t.person_id WHERE p.name IN ('Iman', 'Hanin') AND t.label LIKE 'Company wiki%'")).rows;
+  assert.equal(tasks.length, 2);
+  assert.match((await hanin.get('/hq/scoreboard')).html, /Company wiki: <a href="\/hq\/wiki">2 of 28 must-have pages approved/);
+  // Branch staff can't open it
+  const staff = await login('pin', 'hazera', '1111');
+  assert.equal((await staff.get('/hq/wiki')).status, 403);
 });

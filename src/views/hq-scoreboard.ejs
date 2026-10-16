@@ -38,7 +38,8 @@
     </table>
   </div>
   <p class="muted small">Last week’s commitments kept: <a href="/hq/commitments?week=<%= board.week %>"><%= tw.kept.made ? tw.kept.kept + ' of ' + tw.kept.made + (tw.kept.pct === null ? '' : ' (' + fmt.pct(tw.kept.pct) + ')') : 'none made' %></a> · target 80%.
-    Projects: <a href="/hq/projects"><%= tw.projects.done %> of <%= tw.projects.total %> milestones done, <%= tw.projects.inProgress %> in progress<%= tw.projects.overdue ? ', ' + tw.projects.overdue + ' overdue' : '' %></a>.</p>
+    Projects: <a href="/hq/projects"><%= tw.projects.done %> of <%= tw.projects.total %> milestones done, <%= tw.projects.inProgress %> in progress<%= tw.projects.overdue ? ', ' + tw.projects.overdue + ' overdue' : '' %></a>.
+    <% if (tw.wiki && tw.wiki.all.total) { %>Company wiki: <a href="/hq/wiki"><%= tw.wiki.p1.approved %> of <%= tw.wiki.p1.total %> must-have pages approved (15 Nov), <%= tw.wiki.all.approved %> of <%= tw.wiki.all.total %> in all<%= tw.wiki.overdue ? ', ' + tw.wiki.overdue + ' late' : '' %></a>.<% } %></p>
 
   <% board.groups.forEach(function (g) { %>
     <h2 class="g-h"><%= g.owner %></h2>

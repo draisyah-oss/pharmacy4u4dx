@@ -49,6 +49,9 @@ async function backfillNewSettings(db, seed, log) {
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
   await retireJhPoster(db, log);
+  await wikiChecklistOnce(db, seed, log);
+  await addHqTaskOnce(db, 'Iman', 'Company wiki: one checklist page moved forward today', 'wiki_tasks_v1', log);
+  await addHqTaskOnce(db, 'Hanin', 'Company wiki: SOPs waiting for my check answered today', 'wiki_tasks_hanin_v1', log);
   await threeItems(db, log);
   await wigOnMonday(db, log);
   await renameBranchPersonOnce(db, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', log);
@@ -178,6 +181,17 @@ async function wigOnMonday(db, log) {
     await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_measures', 'All WIG sessions moved to Monday (16 Oct)', NULL)");
   });
   log('WIG sessions: wording changed to Monday.');
+}
+
+// 16 Oct: the company wiki checklist (64 pages) for Iman and Hanin, added once.
+async function wikiChecklistOnce(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'wiki_checklist_v1'")).rows.length) return;
+  await db.transaction(async (tx) => {
+    let n = 0;
+    if (!(await tx.query('SELECT 1 FROM hq_wiki_items LIMIT 1')).rows.length) n = await require('../hq/wikilist').insertChecklist(tx, seed);
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('wiki_checklist_v1', $1)", [new Date().toISOString()]);
+    if (n) log(`Added the company wiki checklist (${n} pages).`);
+  });
 }
 
 // 16 Oct: the wiki / Classroom (with JH's daily poster measure E1) was taken out again until the

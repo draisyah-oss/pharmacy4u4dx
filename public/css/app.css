@@ -816,3 +816,17 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .sn-logo { display: flex !important; align-items: center; gap: 8px; text-decoration: none; }
 .sn-app { font-weight: 700; font-size: 0.85rem; letter-spacing: 0.06em; color: var(--brand); border: 1.5px solid var(--brand); border-radius: 6px; padding: 1px 6px; }
 @media (max-width: 380px) { .brand-app { display: none; } }
+/* Company wiki checklist */
+.page.hw-page { max-width: 1000px; }
+.hw-area-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.hw-area-head h2 { margin: 0; font-size: 1.1rem; }
+.hw-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px 0; border-top: 1px solid var(--page); margin: 0; }
+.hw-row.is-late .hw-title small { color: var(--short); }
+.hw-title { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; }
+.hw-title small { font-size: 0.82rem; }
+.hw-pri { display: inline-block; font-size: 0.72rem; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-right: 4px; background: #eceff0; color: var(--ink-soft); }
+.hw-pri.hw-P1 { background: var(--brand); color: #fff; }
+.hw-pri.hw-P2 { background: var(--brand-tint); color: var(--brand-deep); }
+.hw-select, .hw-writer { height: 44px; border: 2px solid var(--line); border-radius: 10px; padding: 0 10px; font: inherit; background: #fff; color: var(--ink); }
+.hw-writer { width: 150px; }
+.oo-kpi .bar { margin: 4px 0; }

@@ -133,6 +133,11 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## Wiki & Classroom – on hold (16 Oct)
 - A first version was built and then taken out at the CEO's request: the framework (structure, owners, approval rules, what goes in first) is to be agreed before it goes into the app. Migration 014_wiki.sql stays (its tables are unused; never edit an applied migration). Older databases that got JH's poster measure E1 have it retired (retireJhPoster).
 
+## Company wiki checklist in 4DX (17 Oct)
+- The framework doc's checklist (64 pages, 8 areas; 28 P1 by 15 Nov, P2 by 31 Dec, P3 Q1 2027) is a tracker in the app: seed hq.wiki_checklist + wiki_checklist_due, migration 015 hq_wiki_items, src/hq/wikilist.js, /hq/wiki (HQ + admin; statuses Not started → Drafting → Checking → Approved, "who writes it"; owners change their own, Iman and admin any; audited). Menu: HQ → Wiki checklist. The wiki itself stays on hold.
+- Daily check-in: Iman "Company wiki: one checklist page moved forward today", Hanin "Company wiki: SOPs waiting for my check answered today" (seed daily_tasks; older databases once via addHqTaskOnce).
+- Weekly check-in / 4DX: HQ measures `wiki` (Iman: 4/4/2 pages a week Oct/Nov/Dec) and `wikisop` (Hanin: 3/3/4) – pages approved that week, pre-filled on /hq from the checklist; they can be chosen as "to move" in HQ commitments. HQ scoreboard shows "Company wiki: x of 28 must-have pages approved, y of 64 in all, z late".
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 
