@@ -1,4 +1,4 @@
-# Pharmacy4U 4DX Dashboard – build spec
+# Pharmacy4U 4DX – build spec
 
 This project is a small web app that replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; managers and the CEO see scoreboards. All targets, people and measures are in `seed.json` – read it before building anything, and load it into the database on first run. Never hard-code a target in the code.
 
@@ -129,6 +129,13 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## Look (16 Oct)
 - Brand blue from the Pharmacy4U logo: --brand #004aad, --brand-light #308eff, --brand-deep #003a88; cool greys for page/lines/ink. Green and red stay only for on-track / off-track. Logo files in public/img (logo, logo-white, wordmark, wordmark-white, mark-white, icon-192 favicon), made from the logo the CEO sent: white mark + wordmark in the top bar (wordmark hidden on narrow phones with the Menu button), blue wordmark in the side menu, white full logo on the login page.
 - Sales progress chart: tap / hover / Tab to a dot shows the month, amount and change on the same month last year (public/js/chart.js).
+
+## Wiki & Classroom (16 Oct)
+- Inside the app (CEO's choice): src/wiki (data.js, routes.js), migration 014 (wiki_files – uploads stored in Postgres, 15 MB max; wiki_pages – section company / jd / sop / classroom / poster, status published / pending / needs_fix, meta_posted_at; wiki_reads; wiki_visits). multer parses uploads; those few paths (/wiki/new, /wiki/poster, /wiki/p/:id/edit|resend) check _csrf in the route, every other POST keeps the app-wide check.
+- Everyone logged in reads everything (branch staff now get a short side menu: Daily entry, Out of stock, Wiki & Classroom). HQ + admin add/change/remove pages; text with paragraphs, "- " lists and "# " headings (all escaped); files: pictures, PDF, PowerPoint, Word, Excel, short MP4 – type checked from the file's bytes (SVG/HTML refused); files served only to logged-in users with a sandbox CSP. Search over titles, text, tags, file names. Live org chart from the people list. HQ sees "staff who have opened the wiki", read counts per page, JDs and SOPs counts.
+- Educational posters: branch staff/managers send (topic, picture or PDF, caption for Meta) → pending → Hanin (HQ) approves or "needs a fix" with a note → the branch fixes and resends → approved posters show in the Classroom gallery and an "Approved, not yet on Facebook / Instagram" queue with Download and "Posted ✔". Red badge on the menu for posters to approve.
+- JH: one poster a day – new daily field `poster` and measure E1 (Lead, 1/day), filled in automatically from posters sent that day (not counting ones sent back for a fix). Targets per day per branch: app_settings poster_targets (seed company.poster_targets_per_day: JH 1). Older databases: syncBranchFromSeed JH (jh_poster_v1).
+- The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 
 ## Security (review 14 Oct)
 - Redirects only to same-site paths (src/lib/safe-path.js; blocks //, /\, spaces).

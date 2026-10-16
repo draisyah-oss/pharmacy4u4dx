@@ -1,14 +1,17 @@
-<%# Side menu (managers, HQ, HQ staff, admin). Wide screens: fixed on the left, can be hidden
+<%# Side menu (everyone logged in; branch staff get a short one). Wide screens: fixed on the left, can be hidden
     with «. Phones: slides in from the left via the Menu button in the top bar (works without
     JavaScript – a checkbox drives it). navActive: the current item's key. %>
-<% if (user && user.role !== 'branch_staff') {
+<% if (user) {
      const here = typeof navActive !== 'undefined' ? navActive : '';
      const role = user.role;
      const many = role === 'admin' || role === 'hq';
      const bq = many && typeof branch !== 'undefined' && branch ? '?branch=' + encodeURIComponent(branch.code) : '';
      // [key, href, label, search words]
      let quick = []; let groups = [];
-     if (role === 'hq_staff') {
+     if (role === 'branch_staff') {
+       quick = [['daily', '/daily', 'Daily entry'], ['oos', '/oos', 'Out of stock']];
+       groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['oos', '/oos', 'Out of stock', 'oos report restock']]]];
+     } else if (role === 'hq_staff') {
        quick = [['hqtoday', '/hq/today', 'My day'], ['hq', '/hq', 'My KPIs']];
        groups = [
          ['My work', [['hqtoday', '/hq/today', 'My day', 'tasks daily'], ['hq', '/hq', 'My KPIs', 'input lead measures'],
@@ -40,14 +43,20 @@
            ['/admin/audit', '/admin/audit', 'Audit log', 'history changes'], ['status', '/status', 'Setup check', 'google sheet database']]]);
        }
      }
-     const badge = (key) => key === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount ? '<span class="sn-badge" aria-label="' + oosCount + ' to answer">' + oosCount + '</span>' : '';
+     // Wiki & Classroom for everyone.
+     groups.push(['Wiki & Classroom', [['wiki', '/wiki', 'Wiki home', 'search help'], ['wiki-org', '/wiki/org', 'Org chart', 'people who'],
+       ['wiki-classroom', '/wiki/s/classroom', 'Classroom', 'training slides module'], ['wiki-poster', '/wiki/s/poster', 'Educational posters', 'poster daily meta'],
+       ['wiki-sop', '/wiki/s/sop', 'SOPs', 'procedure how to'], ['wiki-jd', '/wiki/s/jd', 'Job descriptions', 'role jd'], ['wiki-company', '/wiki/s/company', 'Company', 'policy about']]]);
+     const count = (n, what) => '<span class="sn-badge" aria-label="' + n + ' ' + what + '">' + n + '</span>';
+     const badge = (key) => (key === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount ? count(oosCount, 'to answer')
+       : key === 'wiki-poster' && typeof posterCount !== 'undefined' && posterCount ? count(posterCount, 'to approve') : '');
      const sub = role === 'admin' ? 'Admin' : role === 'hq' || role === 'hq_staff' ? 'HQ' : (user.branch_name || user.branch_code || '');
 %>
 <input type="checkbox" id="nav-open" class="nav-check" aria-hidden="true" tabindex="-1">
 <label for="nav-open" class="nav-backdrop" aria-hidden="true"></label>
 <aside class="sidenav" id="sidenav" aria-label="Menu">
   <div class="sn-head">
-    <div class="sn-title"><a href="/" class="sn-logo"><img src="/img/wordmark.png" alt="Pharmacy4U" width="168" height="20"></a><span><%= sub %></span></div>
+    <div class="sn-title"><a href="/" class="sn-logo"><img src="/img/wordmark.png" alt="Pharmacy4U" width="134" height="16"><span class="sn-app">4DX</span></a><span><%= sub %></span></div>
     <button type="button" class="sn-collapse" data-nav-collapse aria-label="Hide menu" title="Hide menu">«</button>
     <label for="nav-open" class="sn-close" aria-label="Close menu">✕</label>
   </div>

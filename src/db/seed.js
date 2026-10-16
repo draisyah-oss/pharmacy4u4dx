@@ -334,6 +334,8 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       three_items_v1: new Date().toISOString(),
       alia_zakat_task_v1: new Date().toISOString(),
       wig_monday_v1: new Date().toISOString(),
+      jh_poster_v1: new Date().toISOString(),
+      poster_targets: seed.company.poster_targets_per_day ? JSON.stringify(seed.company.poster_targets_per_day) : null,
       oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
     };
     for (const [key, value] of Object.entries(settings)) {

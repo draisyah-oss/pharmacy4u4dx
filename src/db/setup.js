@@ -48,6 +48,8 @@ async function backfillNewSettings(db, seed, log) {
   await updateSalesSheetColumns(db, seed, log, 'sales_sheet_v3');
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
+  await syncBranchFromSeed(db, seed, 'JH', 'jh_poster_v1', log); // JH: daily educational poster (E1)
+  await ensureSetting(db, 'poster_targets', seed.company.poster_targets_per_day, log);
   await threeItems(db, log);
   await wigOnMonday(db, log);
   await renameBranchPersonOnce(db, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', log);

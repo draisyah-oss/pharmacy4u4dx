@@ -1,4 +1,4 @@
-# Pharmacy4U 4DX Dashboard
+# Pharmacy4U 4DX
 
 Replaces the Excel 4DX trackers. Branch staff enter numbers on their phones; managers and the
 CEO see scoreboards. The build spec is in `CLAUDE.md`; all targets, people and measures are in
@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 183, fail 0
+npm test                    # should end with: pass 186, fail 0
 npm start
 ```
 

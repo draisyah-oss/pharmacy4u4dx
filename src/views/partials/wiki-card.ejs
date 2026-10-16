@@ -1,0 +1,6 @@
+<%# One page as a card in a list. Input: p %>
+<a class="wi-card" href="/wiki/p/<%= p.id %>">
+  <% if (p.kind === 'image') { %><img class="wi-thumb" src="/wiki/f/<%= p.file_id %>" alt="" loading="lazy"><% } else if (p.kind) { %><span class="wi-fileicon wi-<%= p.kind %>" aria-hidden="true"><%= p.kind === 'pdf' ? 'PDF' : p.kind === 'video' ? 'VIDEO' : (p.filename || '').split('.').pop().toUpperCase() %></span><% } %>
+  <span class="wi-card-text"><b><%= p.title %></b>
+    <span class="muted small"><%= [p.section === 'poster' ? p.branch_code : null, p.tags].filter(Boolean).join(' · ') %></span></span>
+</a>

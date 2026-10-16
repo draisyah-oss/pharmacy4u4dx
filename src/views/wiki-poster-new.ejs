@@ -1,0 +1,23 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'wiki-poster' }) %>
+<main class="page wi-page">
+  <p><a href="/wiki/s/poster">‹ Posters</a></p>
+  <form method="post" action="/wiki/poster" enctype="multipart/form-data" class="oo-card oo-form" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <h1>Send today’s poster</h1>
+    <p class="muted">Hanin checks it, then it goes into the Pharmacy4U Classroom and onto Facebook / Instagram.</p>
+    <label class="oo-label">Topic<input name="title" maxlength="160" value="<%= typed.title || '' %>" required placeholder="e.g. Gout: foods to avoid"<%= errors.title ? ' aria-invalid="true"' : '' %>>
+      <% if (errors.title) { %><span class="wk-error"><%= errors.title %></span><% } %></label>
+    <label class="oo-label">Poster <small class="muted">(picture or PDF, up to 15 MB)</small>
+      <input type="file" name="file" accept="image/*,application/pdf" required>
+      <% if (errors.file) { %><span class="wk-error"><%= errors.file %></span><% } %></label>
+    <label class="oo-label">Caption for Facebook / Instagram <small class="muted">(optional)</small>
+      <textarea name="body" rows="5" maxlength="2200" placeholder="2–3 lines and a question to the reader"><%= typed.body || '' %></textarea>
+      <% if (errors.body) { %><span class="wk-error"><%= errors.body %></span><% } %></label>
+    <label class="oo-label">Tags <small class="muted">(optional)</small><input name="tags" maxlength="200" value="<%= typed.tags || '' %>" placeholder="e.g. gout, diet"></label>
+    <button class="button wide" type="submit">Send to Hanin</button>
+  </form>
+</main>
+</body>
+</html>

@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'wiki' }) %>
+<main class="page wi-page wi-wide">
+  <p><a href="/wiki">‹ Wiki</a></p>
+  <header class="oo-head"><h1>Org chart</h1><p class="muted">Live from the people list (Admin → People), so it’s always up to date.</p></header>
+  <section class="wi-org-hq">
+    <h2 class="oo-sub">HQ</h2>
+    <div class="wi-org-row">
+      <% org.hq.forEach(function (p) { %><div class="wi-person"><b><%= p.name %></b><span><%= p.role || '' %></span></div><% }) %>
+    </div>
+  </section>
+  <h2 class="oo-sub">Branches</h2>
+  <div class="wi-org-branches">
+    <% org.branches.forEach(function (b) { %>
+      <section class="wi-branch">
+        <h3><%= b.name %> <small class="muted"><%= b.code %></small></h3>
+        <% b.managers.forEach(function (p) { %><div class="wi-person is-lead"><b><%= p.name %></b><span><%= p.role %></span></div><% }) %>
+        <% b.staff.forEach(function (p) { %><div class="wi-person"><b><%= p.name %></b><span><%= p.role || '' %></span></div><% }) %>
+      </section>
+    <% }) %>
+  </div>
+</main>
+</body>
+</html>
