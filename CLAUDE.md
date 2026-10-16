@@ -4,7 +4,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 
 ## Who uses it
 - **Branch staff** (5 branches: WM, JH, BR, Bangi, Ampang): enter the daily log at closing, mostly on a phone.
-- **Branch managers**: weekly check-in, OOS list and commitments every Monday; run the Tuesday WIG session from the branch scoreboard.
+- **Branch managers**: weekly check-in, OOS list and commitments every Monday, and run the branch WIG session from the branch scoreboard – also on Monday (all WIG sessions moved to Monday on 16 Oct; branch sessions used to be Tuesday).
 - **HQ – full access (Alia, Hanin, Iman)**: read every branch, HQ input, answer OOS items; Iman fills in for everyone. Password login.
 - **HQ staff (Syarafana, Fariz, Azwani)**: group scoreboard, HQ scoreboard, their own KPIs, daily tasks, commitments and project milestones only. PIN login.
 - Dr Aisyah (CEO) has her own HQ measure but logs in as admin.

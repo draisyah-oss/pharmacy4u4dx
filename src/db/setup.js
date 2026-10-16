@@ -49,6 +49,7 @@ async function backfillNewSettings(db, seed, log) {
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
   await threeItems(db, log);
+  await wigOnMonday(db, log);
   await renameBranchPersonOnce(db, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', log);
   await addHqTaskOnce(db, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
@@ -162,6 +163,20 @@ async function backfillHqTasks(db, seed, log) {
     }
   });
   if (added.length) log(`Added starting daily tasks for ${added.join(', ')}.`);
+}
+
+// 16 Oct: every WIG session is on Monday now (branch sessions were Tuesday). Wording only, once.
+async function wigOnMonday(db, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'wig_monday_v1'")).rows.length) return;
+  await db.transaction(async (tx) => {
+    await tx.query("UPDATE hq_measures SET label = 'Both WIG sessions held (HQ and branch, both on Monday)' WHERE label = 'Both WIG sessions held (Monday HQ, Tuesday branch)'");
+    await tx.query("UPDATE hq_measures SET note = replace(note, 'after the Tuesday session', 'after the Monday sessions') WHERE note LIKE '%Tuesday session%'");
+    await tx.query("UPDATE hq_measures SET label = replace(label, 'at Tuesday sessions', 'at the Monday WIG sessions') WHERE label LIKE '%Tuesday sessions%'");
+    await tx.query("UPDATE hq_projects SET milestone = replace(milestone, 'every Tuesday', 'every Monday') WHERE milestone LIKE '%every Tuesday%'");
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('wig_monday_v1', $1)", [new Date().toISOString()]);
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_measures', 'All WIG sessions moved to Monday (16 Oct)', NULL)");
+  });
+  log('WIG sessions: wording changed to Monday.');
 }
 
 // A setting from seed.json copied in once (JSON), only when the database has none.
@@ -291,4 +306,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { wigOnMonday, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

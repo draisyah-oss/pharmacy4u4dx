@@ -122,3 +122,18 @@ test('16 Oct: an older database gets the WM changes, 3+ items everywhere and Ali
   assert.equal((await old.query("SELECT count(*)::int AS n FROM hq_daily_tasks t JOIN people p ON p.id = t.person_id WHERE p.name = 'Alia' AND t.label LIKE 'Zakat orders%'")).rows[0].n, 1);
   await old.close();
 });
+
+test('16 Oct: WIG sessions all on Monday – older databases get the new wording once', async () => {
+  const { wigOnMonday } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  await old.query("DELETE FROM app_settings WHERE key = 'wig_monday_v1'");
+  await wigOnMonday(old, () => {});
+  const txt = (await old.query("SELECT string_agg(label || ' ' || COALESCE(note, ''), ' | ') AS t FROM hq_measures")).rows[0].t
+    + (await old.query("SELECT string_agg(milestone, ' | ') AS t FROM hq_projects")).rows[0].t;
+  assert.doesNotMatch(txt, /Tuesday/);
+  assert.match(txt, /Both WIG sessions held \(HQ and branch, both on Monday\)/);
+  assert.doesNotMatch(JSON.stringify(readSeed()), /Branch WIG session 9:30|Tuesday branch/);
+  await old.close();
+});

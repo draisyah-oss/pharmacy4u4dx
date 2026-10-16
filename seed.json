@@ -11,8 +11,7 @@
     "monthly_sales_target_note": "Company sales = all branches + B2B (Q4 4DX HQ Tracker). B2B is entered weekly by Alia; a week counts in the month its Thursday falls in.",
     "meeting_rhythm": {
       "daily": "Each branch logs its numbers at closing",
-      "monday": "Weekly check-in, OOS list and commitments in by the managers' WIG session; HQ updates its scoreboard",
-      "tuesday": "Branch WIG session 9:30, 60 min (15 min training + 45 min WIG)"
+      "monday": "All WIG sessions on Monday (changed 16 Oct; branch sessions were on Tuesday): weekly check-in, OOS list and commitments in before the session; HQ updates its scoreboard; HQ WIG session and branch WIG session (60 min: 15 min training + 45 min WIG)"
     },
     "status_rules": {"on_track": ">= 100% of target", "watch": "90–99%", "off_track": "< 90% (needs a commitment)"},
     "weekly_checkin_fields": [
@@ -489,13 +488,13 @@
       {
         "id": "sessions",
         "owner": "Dr Aisyah",
-        "label": "Both WIG sessions held (Monday HQ, Tuesday branch)",
+        "label": "Both WIG sessions held (HQ and branch, both on Monday)",
         "unit": "sessions",
         "input": "single_value",
         "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2},
         "better": "high",
         "kind": "Lead",
-        "note": "Iman records it after the Tuesday session."
+        "note": "Iman records it after the Monday sessions."
       },
       {
         "id": "turn",
@@ -753,7 +752,7 @@
       {
         "id": "mgr",
         "owner": "Hanin",
-        "label": "Manager 15-min training run at Tuesday sessions",
+        "label": "Manager 15-min training run at the Monday WIG sessions",
         "unit": "branches",
         "input": "single_value",
         "targets": {"2026-10": 5, "2026-11": 5, "2026-12": 5},
@@ -809,7 +808,7 @@
       {"project": "Central ordering", "milestone": "All branch orders placed by HQ; invoices go to Accounts", "owner": "Syarafana, Azwani", "due": "2026-11-30"},
       {"project": "Company wiki", "milestone": "Wiki live with org chart and JDs; all staff have access", "owner": "Iman, with Hanin", "due": "2026-11-15"},
       {"project": "Company wiki", "milestone": "SOPs and blueprints filed", "owner": "Iman", "due": "2026-12-31"},
-      {"project": "Staff training", "milestone": "Training calendar published: staff 2 product + 2 self-development a month; managers 15 min every Tuesday", "owner": "Hanin", "due": "2026-10-31"},
+      {"project": "Staff training", "milestone": "Training calendar published: staff 2 product + 2 self-development a month; managers 15 min every Monday", "owner": "Hanin", "due": "2026-10-31"},
       {"project": "Staff training", "milestone": "Competency checklist for every role", "owner": "Hanin, with Alia", "due": "2026-11-30"},
       {"project": "AI dispensary (Rx4U)", "milestone": "Pilot workflow and success measures agreed", "owner": "CEO + pilot PIC", "due": "2026-10-31"},
       {"project": "AI dispensary (Rx4U)", "milestone": "Pilot running in one branch", "owner": "CEO + pilot PIC", "due": "2026-11-30"},
