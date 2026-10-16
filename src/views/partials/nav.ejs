@@ -1,30 +1,68 @@
+<%# Side menu (managers, HQ, HQ staff, admin). Wide screens: fixed on the left, can be hidden
+    with «. Phones: slides in from the left via the Menu button in the top bar (works without
+    JavaScript – a checkbox drives it). navActive: the current item's key. %>
 <% if (user && user.role !== 'branch_staff') {
      const here = typeof navActive !== 'undefined' ? navActive : '';
-     const many = user.role === 'admin' || user.role === 'hq';
+     const role = user.role;
+     const many = role === 'admin' || role === 'hq';
      const bq = many && typeof branch !== 'undefined' && branch ? '?branch=' + encodeURIComponent(branch.code) : '';
-     let tabs = [];
-     if (user.role === 'hq_staff') {
-       // HQ staff: their own KPIs, tasks, commitments, projects + the two scoreboards.
-       tabs = [
-         ['hq', '/hq', 'My KPIs'], ['hqtoday', '/hq/today', 'My day'], ['hqcommit', '/hq/commitments', 'Commitments'],
-         ['projects', '/hq/projects', 'Projects'], ['hqboard', '/hq/scoreboard', 'HQ scoreboard'], ['group', '/group', 'Group'],
-         ['sales', '/sales', 'Sales'],
+     // [key, href, label, search words]
+     let quick = []; let groups = [];
+     if (role === 'hq_staff') {
+       quick = [['hqtoday', '/hq/today', 'My day'], ['hq', '/hq', 'My KPIs']];
+       groups = [
+         ['My work', [['hqtoday', '/hq/today', 'My day', 'tasks daily'], ['hq', '/hq', 'My KPIs', 'input lead measures'],
+           ['hqcommit', '/hq/commitments', 'Commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones']]],
+         ['Scoreboards', [['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi'], ['group', '/group', 'Group scoreboard', 'branches company'],
+           ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat']]],
        ];
      } else {
-       tabs = [
-         ['daily', '/daily' + bq, 'Daily entry'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard'],
-         ['weekly', '/weekly' + bq, 'Check-in'], ['commitments', '/commitments' + bq, 'Commitments'], ['group', '/group', 'Group'],
-         ['sales', '/sales', 'Sales'],
+       quick = role === 'hq' ? [['group', '/group', 'Group'], ['sales', '/sales', 'Sales']]
+         : [['daily', '/daily' + bq, 'Daily entry'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard']];
+       groups = [
+         ['Branch', [['daily', '/daily' + bq, 'Daily entry', 'log today walk-in'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard', 'week lead'],
+           ['weekly', '/weekly' + bq, 'Weekly check-in', 'monday oos'], ['commitments', '/commitments' + bq, 'Commitments', 'weekly']]],
+         ['Company', [['group', '/group', 'Group scoreboard', 'branches'], ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat']]],
        ];
        if (many) {
-         tabs.push(['hq', '/hq', 'HQ input'], ['hqtoday', '/hq/today', 'HQ day'], ['hqcommit', '/hq/commitments', 'HQ commitments'],
-           ['projects', '/hq/projects', 'Projects'], ['hqboard', '/hq/scoreboard', 'HQ scoreboard']);
+         groups.push(['HQ', [['hq', '/hq', 'HQ input', 'kpi b2b'], ['hqtoday', '/hq/today', 'HQ day', 'tasks daily'],
+           ['hqcommit', '/hq/commitments', 'HQ commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones'],
+           ['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi']]]);
        }
-       if (user.role === 'admin') tabs.push(['admin', '/admin', 'Admin']);
-     } %>
-  <nav class="tabs" aria-label="Sections">
-    <% tabs.forEach(function (t) { %>
-      <a href="<%= t[1] %>" class="tab<%= here === t[0] ? ' is-current' : '' %>"<%= here === t[0] ? ' aria-current="page"' : '' %>><%= t[2] %></a>
+       if (role === 'admin') {
+         quick.push(['/admin', '/admin', 'Admin']);
+         groups.push(['Admin', [['/admin', '/admin', 'Overview', 'admin'], ['/admin/targets', '/admin/targets', 'Targets', 'sales month ytd'],
+           ['/admin/people', '/admin/people', 'People & logins', 'pin password staff'], ['/admin/measures', '/admin/measures', 'Measures', 'lead'],
+           ['/admin/audit', '/admin/audit', 'Audit log', 'history changes'], ['status', '/status', 'Setup check', 'google sheet database']]]);
+       }
+     }
+     const sub = role === 'admin' ? 'Admin' : role === 'hq' || role === 'hq_staff' ? 'HQ' : (user.branch_name || user.branch_code || '');
+%>
+<input type="checkbox" id="nav-open" class="nav-check" aria-hidden="true" tabindex="-1">
+<label for="nav-open" class="nav-backdrop" aria-hidden="true"></label>
+<aside class="sidenav" id="sidenav" aria-label="Menu">
+  <div class="sn-head">
+    <div class="sn-title"><a href="/">Pharmacy4U</a><span><%= sub %></span></div>
+    <button type="button" class="sn-collapse" data-nav-collapse aria-label="Hide menu" title="Hide menu">«</button>
+    <label for="nav-open" class="sn-close" aria-label="Close menu">✕</label>
+  </div>
+  <div class="sn-quick">
+    <% quick.forEach(function (q, i) { %>
+      <a href="<%= q[1] %>" class="sn-tile<%= here === q[0] ? ' is-current' : '' %><%= quick.length % 2 && i === quick.length - 1 ? ' sn-wide' : '' %>"><%= q[2] %></a>
     <% }) %>
+  </div>
+  <input type="search" class="sn-search" data-nav-search placeholder="Search… e.g. sales, OOS" aria-label="Search the menu" hidden>
+  <nav>
+    <% groups.forEach(function (g) { %>
+      <details class="sn-group" open>
+        <summary><%= g[0] %></summary>
+        <% g[1].forEach(function (l) { %>
+          <a href="<%= l[1] %>" class="sn-link<%= here === l[0] ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- here === l[0] ? ' aria-current="page"' : '' %>><%= l[2] %></a>
+        <% }) %>
+      </details>
+    <% }) %>
+    <p class="sn-none muted" hidden>Nothing matches.</p>
   </nav>
+</aside>
+<script src="/js/nav.js?v=1" defer></script>
 <% } %>

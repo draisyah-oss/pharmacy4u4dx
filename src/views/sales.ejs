@@ -13,7 +13,7 @@
 <div class="daybar">
   <nav class="strip week-strip" aria-label="Choose a month">
     <% months.forEach(function (m) { %>
-      <a href="/sales?month=<%= m %>" class="strip-pill<%= m === month ? ' is-current' : '' %>"<%= m === month ? ' aria-current="true"' : '' %>><%= mName(m) %></a>
+      <a href="/sales?month=<%= m %>" class="strip-pill<%= m === month ? ' is-current' : '' %>"<%- m === month ? ' aria-current="true"' : '' %>><%= mName(m) %></a>
     <% }) %>
   </nav>
 </div>

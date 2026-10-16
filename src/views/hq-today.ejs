@@ -14,7 +14,7 @@
   <% } %>
   <nav class="strip" aria-label="Choose a day">
     <% strip.forEach(function (d) { %>
-      <a href="/hq/today?<%= pq %>&date=<%= d.date %>" class="strip-day<%= d.date === date ? ' is-current' : '' %><%= d.filled ? ' has-data' : '' %>"<%= d.date === date ? ' aria-current="date"' : '' %>>
+      <a href="/hq/today?<%= pq %>&date=<%= d.date %>" class="strip-day<%= d.date === date ? ' is-current' : '' %><%= d.filled ? ' has-data' : '' %>"<%- d.date === date ? ' aria-current="date"' : '' %>>
         <span class="strip-dow"><%= d.date === today ? 'Today' : fmtDate(d.date, { day: undefined, month: undefined }) %></span>
         <span class="strip-num"><%= Number(d.date.slice(8)) %></span>
       </a>
@@ -32,13 +32,13 @@
 
   <section class="wk-facts" aria-label="This week">
     <div class="wk-fact">
-      <span class="wk-k">Days fully done this week</span>
+      <span class="wk-k">Days fully done this week (N/A counts as done)</span>
       <span class="wk-v<%= w.pct === null ? '' : w.pct >= 0.95 ? ' s-on_track' : w.pct >= 0.855 ? ' s-watch' : ' s-off_track' %>"><%= w.workingDays ? w.fullDays + ' of ' + w.workingDays : '–' %></span>
       <span class="wk-sub"><%= w.pct === null ? 'No working days yet this week' : fmt.pct(w.pct) + ' · target 95%' %></span>
     </div>
     <div class="wk-fact">
       <span class="wk-k">This week, Mon–Fri</span>
-      <span class="wk-days"><% w.days.forEach(function (d) { %><span class="wk-day<%= d.full ? ' s-on_track' : d.ticked ? ' s-off_track' : '' %>" title="<%= fmtDate(d.date) %>: <%= d.done %> of <%= d.total %>"><%= fmtDate(d.date, { day: undefined, month: undefined }) %> <%= d.full ? '✔' : d.ticked ? '✕' : '–' %></span><% }) %></span>
+      <span class="wk-days"><% w.days.forEach(function (d) { %><span class="wk-day<%= d.full ? ' s-on_track' : d.ticked ? ' s-off_track' : '' %>" title="<%= fmtDate(d.date) %>: <%= d.done %> of <%= d.total %><%= d.na ? ' (' + d.na + ' N/A)' : '' %>"><%= fmtDate(d.date, { day: undefined, month: undefined }) %> <%= d.full ? '✔' : d.ticked ? '✕' : '–' %></span><% }) %></span>
     </div>
   </section>
 
@@ -49,12 +49,13 @@
       <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="person" value="<%= person.id %>"><input type="hidden" name="date" value="<%= date %>">
       <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
       <section class="wk-card" aria-label="Daily tasks">
-        <% tasks.forEach(function (t) { const v = t.tick ? (t.tick.done ? 'yes' : 'no') : ''; %>
+        <% tasks.forEach(function (t) { const v = !t.tick ? '' : t.tick.na ? 'na' : t.tick.done ? 'yes' : 'no'; %>
           <fieldset class="commit-done">
             <legend><b><%= t.label %></b><% if (t.tick && t.tick.entered_by) { %> <span class="muted small">– <%= t.tick.entered_by %></span><% } %></legend>
-            <div class="yesno">
+            <div class="yesno yesno-3">
               <label class="yn yn-yes"><input type="radio" name="t[k<%= t.id %>]" value="yes"<%= v === 'yes' ? ' checked' : '' %><%= off %>><span>Done</span></label>
               <label class="yn yn-no"><input type="radio" name="t[k<%= t.id %>]" value="no"<%= v === 'no' ? ' checked' : '' %><%= off %>><span>Not done</span></label>
+              <label class="yn yn-na"><input type="radio" name="t[k<%= t.id %>]" value="na"<%= v === 'na' ? ' checked' : '' %><%= off %>><span>N/A</span></label>
             </div>
           </fieldset>
         <% }) %>

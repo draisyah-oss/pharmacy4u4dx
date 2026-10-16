@@ -616,3 +616,75 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .sy-v { font-size: 1.3rem; }
 .sy-n { font-size: 0.85rem; }
 .sy-more { margin-left: auto; font-size: 0.85rem; color: var(--brand); align-self: center; }
+.yn-na input:checked + span { background: var(--ink-soft); border-color: var(--ink-soft); color: #fff; }
+
+/* ─── Side menu ─── */
+:root { --side-w: 280px; }
+.nav-check { position: fixed; opacity: 0; pointer-events: none; width: 1px; height: 1px; left: -10px; }
+.menu-btn {
+  display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; cursor: pointer;
+  padding: 6px 12px; margin-right: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.45);
+  font-weight: 700; color: #fff; user-select: none;
+}
+.menu-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.topbar .brand { margin-right: auto; }
+.nav-backdrop { display: none; position: fixed; inset: 0; background: rgba(10, 30, 22, 0.4); z-index: 49; }
+.nav-check:checked ~ .nav-backdrop { display: block; }
+.sidenav {
+  position: fixed; top: 0; left: 0; bottom: 0; width: min(var(--side-w), 86vw); z-index: 50;
+  background: #f7f9f8; border-right: 1px solid var(--line); overflow-y: auto; overscroll-behavior: contain;
+  padding: 18px 14px calc(24px + var(--safe-bottom));
+  transform: translateX(-102%); transition: transform 0.2s ease; visibility: hidden;
+}
+.nav-check:checked ~ .sidenav { transform: none; visibility: visible; box-shadow: 0 0 40px rgba(0,0,0,0.2); }
+.sn-head { display: flex; align-items: flex-start; gap: 8px; padding: 0 4px 14px; margin-bottom: 14px; border-bottom: 1px solid var(--line); }
+.sn-title { flex: 1; min-width: 0; }
+.sn-title a { display: block; font-size: 1.6rem; font-weight: 700; color: var(--brand-deep); text-decoration: none; line-height: 1.15; }
+.sn-title span { display: block; color: var(--ink-soft); margin-top: 2px; }
+.sn-collapse, .sn-close {
+  flex-shrink: 0; width: 40px; height: 40px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 10px; background: transparent; color: var(--ink-soft); font: inherit; font-size: 1.4rem; cursor: pointer;
+}
+.sn-collapse:hover, .sn-close:hover { background: var(--page); }
+.sn-collapse { display: none; }
+.sn-quick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.sn-tile {
+  display: flex; align-items: center; justify-content: center; text-align: center; min-height: 60px; padding: 8px;
+  border-radius: 12px; background: #e9eeeb; border: 2px solid transparent; color: var(--ink); font-weight: 700; text-decoration: none;
+}
+.sn-tile:hover { background: #dfe7e2; }
+.sn-tile.is-current { background: var(--good-tint); border-color: var(--brand-deep); }
+.sn-wide { grid-column: 1 / -1; }
+.sn-search {
+  width: 100%; height: 48px; padding: 0 14px; margin-bottom: 10px; font: inherit;
+  border: 2px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink);
+}
+.sn-search:focus { outline: none; border-color: var(--brand); }
+.sn-group { margin: 6px 0 4px; }
+.sn-group summary {
+  list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 6px 6px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-soft);
+}
+.sn-group summary::-webkit-details-marker { display: none; }
+.sn-group summary::after { content: "▾"; font-size: 0.75rem; transition: transform 0.15s; }
+.sn-group:not([open]) summary::after { transform: rotate(-90deg); }
+.sn-link {
+  display: block; padding: 11px 14px; margin: 2px 0; border-radius: 10px; border-left: 4px solid transparent;
+  color: var(--ink); text-decoration: none; font-size: 1.05rem;
+}
+.sn-link:hover { background: #e9eeeb; }
+.sn-link.is-current { background: #e2ebe5; border-left-color: #e8c547; font-weight: 700; }
+.sn-link[hidden], .sn-group[hidden] { display: none; }
+.sn-none { padding: 8px 6px; }
+
+/* Wide screens: the menu sits on the left all the time (« hides it, Menu brings it back). */
+@media (min-width: 960px) {
+  html:not(.nav-collapsed) .sidenav { transform: none; visibility: visible; box-shadow: none; }
+  html:not(.nav-collapsed) body:has(.sidenav) { padding-left: var(--side-w); }
+  html:not(.nav-collapsed) .menu-btn { display: none; }
+  html:not(.nav-collapsed) .nav-backdrop { display: none; }
+  html:not(.nav-collapsed) .sn-close { display: none; }
+  html.js .sn-collapse { display: inline-flex; }
+  html.nav-collapsed .sn-collapse { display: none; }
+}
+@media print { .sidenav, .menu-btn, .nav-backdrop { display: none !important; } body { padding-left: 0 !important; } }

@@ -160,6 +160,16 @@ test('Iman ticks her HR daily checks; HQ staff only their own; changes are audit
   assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND done', [THIS])).rows[0].n, 6);
   assert.equal((await lastAudit('hq_daily_ticks')).username, 'iman');
   assert.match((await im.get(`/hq/today?date=${THIS}`)).html, /1 of 2/, 'Mon fully done, Tue not yet');
+  // N/A: a task that doesn't apply that day still lets the day count
+  assert.match((await im.get('/hq/today')).html, /value="na"/);
+  const tue = { person: String(ids.Iman), date: TODAY };
+  tasks.forEach((t, i) => { tue[`t[k${t.id}]`] = i === 0 ? 'na' : 'yes'; });
+  assert.equal((await im.post('/hq/today', tue)).status, 302);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND na', [TODAY])).rows[0].n, 1);
+  assert.match((await im.get('/hq/today')).html, /2 of 2/, 'N/A counts as done');
+  assert.match((await im.get('/hq/today')).html, /value="na" checked/);
+  tue[`t[k${tasks[0].id}]`] = 'no';
+  await im.post('/hq/today', tue);
 
   // Syarafana can't tick Iman's tasks, but can build her own list
   const s = await syarafana();

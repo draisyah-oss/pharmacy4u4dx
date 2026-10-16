@@ -47,7 +47,7 @@ async function loadTasks(db, personId, { includeRetired = false } = {}) {
 async function loadTicks(db, taskIds, from, to) {
   if (!taskIds.length) return new Map();
   const { rows } = await db.query(
-    `SELECT t.task_id, t.entry_date, t.done, u.display_name AS entered_by FROM hq_daily_ticks t
+    `SELECT t.task_id, t.entry_date, t.done, t.na, u.display_name AS entered_by FROM hq_daily_ticks t
      LEFT JOIN users u ON u.id = t.entered_by WHERE t.task_id = ANY($1) AND t.entry_date BETWEEN $2 AND $3`,
     [taskIds, from, to]);
   return new Map(rows.map((r) => [`${r.task_id}|${r.entry_date}`, r]));
@@ -55,16 +55,21 @@ async function loadTicks(db, taskIds, from, to) {
 
 const isWeekday = (date) => !calc.isWeekend(date);
 
+// A tick as 'yes' | 'no' | 'na' (null when not ticked).
+const tickState = (r) => (!r ? null : r.na ? 'na' : r.done ? 'yes' : 'no');
+
 // Working days (Mon–Fri) of a week up to `through`; a day counts as fully done when every
-// task is ticked Yes. Pure.
+// task is ticked Yes or N/A (doesn't apply that day). Pure.
 function dailyWeekSummary({ tasks, ticks, weekStart, through }) {
   const days = [];
   for (let i = 0; i < 7; i++) {
     const d = calc.addDays(weekStart, i);
     if (d > through || !isWeekday(d)) continue;
-    const done = tasks.filter((t) => ticks.get(`${t.id}|${d}`)?.done === true).length;
-    const ticked = tasks.filter((t) => ticks.has(`${t.id}|${d}`)).length;
-    days.push({ date: d, done, ticked, total: tasks.length, full: tasks.length > 0 && done === tasks.length });
+    const states = tasks.map((t) => tickState(ticks.get(`${t.id}|${d}`)));
+    const done = states.filter((x) => x === 'yes').length;
+    const na = states.filter((x) => x === 'na').length;
+    const ticked = states.filter((x) => x !== null).length;
+    days.push({ date: d, done, na, ticked, total: tasks.length, full: tasks.length > 0 && done + na === tasks.length });
   }
   const full = days.filter((d) => d.full).length;
   return { days, fullDays: full, workingDays: days.length, pct: days.length && tasks.length ? full / days.length : null };
@@ -87,16 +92,15 @@ async function saveTicks(db, user, { person, date, body }) {
     for (const t of tasks) {
       const v = typed[`k${t.id}`];
       if (v === undefined) continue;
-      const next = v === 'yes' ? true : v === 'no' ? false : null;
-      const old = before.get(`${t.id}|${date}`);
-      const oldV = old ? old.done : null;
+      const next = ['yes', 'no', 'na'].includes(v) ? v : null;
+      const oldV = tickState(before.get(`${t.id}|${date}`));
       if (next === oldV) continue;
       if (next === null) await tx.query('DELETE FROM hq_daily_ticks WHERE task_id = $1 AND entry_date = $2', [t.id, date]);
       else {
         await tx.query(
-          `INSERT INTO hq_daily_ticks (task_id, entry_date, done, entered_by) VALUES ($1, $2, $3, $4)
-           ON CONFLICT (task_id, entry_date) DO UPDATE SET done = EXCLUDED.done, entered_by = EXCLUDED.entered_by, updated_at = now()`,
-          [t.id, date, next, user.id]);
+          `INSERT INTO hq_daily_ticks (task_id, entry_date, done, na, entered_by) VALUES ($1, $2, $3, $4, $5)
+           ON CONFLICT (task_id, entry_date) DO UPDATE SET done = EXCLUDED.done, na = EXCLUDED.na, entered_by = EXCLUDED.entered_by, updated_at = now()`,
+          [t.id, date, next === 'yes', next === 'na', user.id]);
       }
       await audit(tx, user, oldV === null ? 'insert' : next === null ? 'delete' : 'update', 'hq_daily_ticks', `${person.name} ${date} ${t.label}`, oldV, next);
       saved++;
@@ -334,6 +338,7 @@ async function teamSummary(db, { week, today }) {
 }
 
 module.exports = {
+  tickState,
   PROJECT_STATUSES, DONE_VALUES, actsForAll, canActFor, seesEveryone, hqPeople, visiblePeople,
   loadTasks, loadTicks, dailyWeekSummary, dayEditDenied, saveTicks, addTask, retireTask, loadDayPage,
   loadCommitmentWeek, movesFor, keptSummary, saveCommitments,

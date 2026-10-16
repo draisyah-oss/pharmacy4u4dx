@@ -61,12 +61,12 @@
       "lead_measures": [
         {"name": "Lead 1", "measure": "Follow-up messages to existing customers – 10 a day", "owner": "Hafizah"},
         {"name": "Lead 2", "measure": "New chronic-care customers registered – 3 a day, database 200 by 31 Dec", "owner": "Hazera (whole team registers)"},
-        {"name": "Lead 3", "measure": "Transactions with 2+ items – 45% (PWP & add-on scripts)", "owner": "Whole team, Hafizah checks"}
+        {"name": "Lead 3", "measure": "Transactions with 3+ items – 45% (PWP & add-on scripts)", "owner": "Whole team, Hafizah checks"}
       ],
       "daily_fields": [
         {"key": "walkin", "label": "Walk-in sales (RM)", "owner": "Team", "type": "money"},
         {"key": "tx", "label": "Transactions (POS)", "owner": "Team", "type": "count"},
-        {"key": "two", "label": "Transactions with 2+ items", "owner": "Team", "type": "count"},
+        {"key": "two", "label": "Transactions with 3+ items", "owner": "Team", "type": "count"},
         {"key": "pwp", "label": "PWP units", "owner": "Team", "type": "count"},
         {"key": "p1", "label": "Proponeem units sold", "owner": "Team", "type": "count"},
         {"key": "p2", "label": "Biorelief units sold", "owner": "Team", "type": "count"},
@@ -80,23 +80,18 @@
         {"key": "wanum", "label": "New WA numbers saved", "owner": "Hazera", "type": "count"},
         {"key": "waord", "label": "WA orders (#)", "owner": "Hazera", "type": "count"},
         {"key": "wa", "label": "WA sales (RM)", "owner": "Hazera", "type": "money"},
-        {"key": "ttlive", "label": "TikTok lives done (#)", "owner": "Hazera", "type": "count"},
         {"key": "ttship", "label": "TikTok orders shipped", "owner": "Hazera", "type": "count"},
-        {"key": "ttship24", "label": "…of which within 24h", "owner": "Hazera", "type": "count"},
         {"key": "tt", "label": "TikTok sales (RM)", "owner": "Hazera", "type": "money"},
         {"key": "zakat", "label": "Zakat sales (RM)", "owner": "Zawiyah", "type": "money"},
-        {"key": "zko", "label": "Zakat orders completed", "owner": "Zawiyah", "type": "count"},
-        {"key": "zko2w", "label": "…of which within 2 weeks", "owner": "Zawiyah", "type": "count"},
         {"key": "zkc", "label": "Zakat claims submitted", "owner": "Zawiyah", "type": "count"},
         {"key": "zkc7d", "label": "…of which within 7 days", "owner": "Zawiyah", "type": "count"},
-        {"key": "grabon", "label": "Grab online all hours? (1/0)", "owner": "Zawiyah", "type": "yes_no"},
         {"key": "grabmenu", "label": "Grab menu items added/fixed", "owner": "Zawiyah", "type": "count"},
         {"key": "graord", "label": "Grab orders (#)", "owner": "Zawiyah", "type": "count"},
         {"key": "grab", "label": "Grab sales (RM)", "owner": "Zawiyah", "type": "money"}
       ],
       "measures": [
         {"id": "T1", "owner": "Team", "label": "Walk-in sales (branch WIG)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1730, "2026-11": 1910, "2026-12": 2100}, "numerator_field": "walkin", "denominator_field": null, "note": "4DX plan: RM 1,542 → 2,100/day by 31 Dec."},
-        {"id": "L3", "owner": "Team", "label": "Transactions with 2+ items (LEAD 3 – add-on, Hafizah checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "Added 12 Oct. 45% = the JH/Bangi add-on standard – edit if WM needs another number."},
+        {"id": "L3", "owner": "Team", "label": "Transactions with 3+ items (LEAD 3 – add-on, Hafizah checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "Added 12 Oct. 45% = the JH/Bangi add-on standard – edit if WM needs another number."},
         {"id": "T2", "owner": "Team", "label": "PWP units sold", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 5, "2026-11": 5, "2026-12": 5}, "numerator_field": "pwp", "denominator_field": null, "note": "4DX plan: 5 PWP units/day per branch."},
         {"id": "P1", "owner": "Team", "label": "Target product: Proponeem", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p1", "denominator_field": null, "note": "Oct list set 12 Oct. Units PROPOSED 2/day – confirm with Mr Mohamed."},
         {"id": "P2", "owner": "Team", "label": "Target product: Biorelief", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p2", "denominator_field": null, "note": "Oct list set 12 Oct. Units PROPOSED 2/day – confirm with Mr Mohamed."},
@@ -109,13 +104,10 @@
         {"id": "Z5", "owner": "Hazera", "label": "Health education message to WM customer WhatsApp group", "kind": "Routine", "unit": "messages", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "wagrp", "denominator_field": null, "note": "4DX plan: 1 a day. Owner Hazera from 12 Oct."},
         {"id": "Z4", "owner": "Hazera", "label": "New customer numbers saved for WhatsApp ordering", "kind": "Lead", "unit": "contacts", "target_per": "day", "calc": "sum", "targets": {"2026-10": 10, "2026-11": 10, "2026-12": 10}, "numerator_field": "wanum", "denominator_field": null, "note": "NEW – proposed. With customer permission."},
         {"id": "Z0", "owner": "Hazera", "label": "WhatsApp order sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2000, "2026-12": 3000}, "numerator_field": "wa", "denominator_field": null, "note": "NEW – proposed. Baseline assumed RM 0."},
-        {"id": "Z6", "owner": "Hazera", "label": "TikTok lives (BN + month's focus products)", "kind": "Lead", "unit": "lives", "target_per": "week", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "ttlive", "denominator_field": null, "note": "4DX plan: 2 a week. Owner Hazera from 12 Oct."},
-        {"id": "Z3", "owner": "Hazera", "label": "TikTok orders shipped within 24 hours", "kind": "Lead", "unit": "% on time", "target_per": "week", "calc": "ratio_percent", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "ttship24", "denominator_field": "ttship", "note": "4DX plan: 100%."},
+        {"id": "Z3", "owner": "Hazera", "label": "TikTok orders shipped", "kind": "Stream", "unit": "orders", "target_per": "week", "calc": "sum", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "ttship", "denominator_field": null, "note": "16 Oct: the 24-hour shipping target was removed – orders shipped are tracked only."},
         {"id": "Z7", "owner": "Hazera", "label": "TikTok sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 2000, "2026-11": 2000, "2026-12": 2000}, "numerator_field": "tt", "denominator_field": null, "note": "4DX plan: RM 2,000/month."},
         {"id": "W5", "owner": "Zawiyah", "label": "Zakat sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 20000, "2026-11": 20000, "2026-12": 20000}, "numerator_field": "zakat", "denominator_field": null, "note": "4DX plan: RM 20,000/month. Owner Zawiyah from 12 Oct."},
-        {"id": "W6", "owner": "Zawiyah", "label": "Zakat orders fulfilled within 2 weeks (stock checked first)", "kind": "Lead", "unit": "% on time", "target_per": "week", "calc": "ratio_percent", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "zko2w", "denominator_field": "zko", "note": "4DX plan: 100%."},
         {"id": "W7", "owner": "Zawiyah", "label": "Zakat claims submitted within 7 days of customer receiving medicine", "kind": "Lead", "unit": "% on time", "target_per": "week", "calc": "ratio_percent", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "zkc7d", "denominator_field": "zkc", "note": "4DX plan: 100%."},
-        {"id": "W2", "owner": "Zawiyah", "label": "Grab store online for all opening hours", "kind": "Lead", "unit": "days", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "grabon", "denominator_field": null, "note": "NEW – proposed."},
         {"id": "W3", "owner": "Zawiyah", "label": "Grab menu items added / fixed (photo, price, stock)", "kind": "Lead", "unit": "items", "target_per": "week", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 10, "2026-12": 5}, "numerator_field": "grabmenu", "denominator_field": null, "note": "NEW – proposed."},
         {"id": "W0", "owner": "Zawiyah", "label": "Grab sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2500, "2026-12": 4500}, "numerator_field": "grab", "denominator_field": null, "note": "NEW – proposed. Baseline assumed RM 0."}
       ],
@@ -145,14 +137,14 @@
       "lead1_field": "two",
       "lead2_field": "fu",
       "lead_measures": [
-          {"name": "Lead 1", "measure": "Add-on: 45% of transactions with 2+ items (PWP matched to the customer) · 60 walk-ins a day", "owner": "Whole team, Yaya checks"},
+          {"name": "Lead 1", "measure": "Add-on: 45% of transactions with 3+ items (PWP matched to the customer) · 60 walk-ins a day", "owner": "Whole team, Yaya checks"},
           {"name": "Lead 2", "measure": "WhatsApp blasting & follow-up: 15 LH customers a day, needs recorded", "owner": "Nabihah"},
           {"name": "WIG 2 leads", "measure": "4 product-tagged TikTok contents a week (2 per staff) · 2 lives a week with a pharmacist on camera · 50 new followers a month", "owner": "Yaya"}
         ],
       "daily_fields": [
           {"key": "walkin", "label": "Walk-in sales (RM)", "owner": "Team", "type": "money"},
           {"key": "tx", "label": "Walk-in customers (POS transactions)", "owner": "Team", "type": "count"},
-          {"key": "two", "label": "Transactions with 2+ items", "owner": "Team", "type": "count"},
+          {"key": "two", "label": "Transactions with 3+ items", "owner": "Team", "type": "count"},
           {"key": "pwp", "label": "PWP units", "owner": "Team", "type": "count"},
           {"key": "p1", "label": "Cough & cold PWP units (Androchi / Digezmune)", "owner": "Team", "type": "count"},
           {"key": "p2", "label": "Gout PWP units (Loyuric / Stella / RM2-off uric acid test)", "owner": "Team", "type": "count"},
@@ -186,7 +178,7 @@
       "measures": [
           {"id": "T1", "owner": "Team", "label": "Walk-in sales (WIG 1)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1660, "2026-11": 1830, "2026-12": 2000}, "numerator_field": "walkin", "denominator_field": null, "note": "Set 13 Oct: RM 2,000/day by Dec (plan 2,100). Nov step 1,830. JH 15 Oct: track RM lost to out-of-stock (minimum price of OOS items) and walk-ins – JH needs 60 walk-ins a day; cut OOS losses first."},
           {"id": "T5", "owner": "Team", "label": "Walk-in customers a day", "kind": "Lead", "unit": "customers", "target_per": "day", "calc": "sum", "targets": {"2026-10": 60, "2026-11": 60, "2026-12": 60}, "numerator_field": "tx", "denominator_field": null, "note": "JH 15 Oct: JH needs 60 walk-ins a day (POS transactions)."},
-          {"id": "L1", "owner": "Team", "label": "Transactions with 2+ items (LEAD 1 – add-on, Yaya checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "4DX plan JH lead 1: 45%. JH 15 Oct: get to 60 walk-ins a day and cut OOS losses first."},
+          {"id": "L1", "owner": "Team", "label": "Transactions with 3+ items (LEAD 1 – add-on, Yaya checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "4DX plan JH lead 1: 45%. JH 15 Oct: get to 60 walk-ins a day and cut OOS losses first."},
           {"id": "T2", "owner": "Team", "label": "PWP units sold", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 5, "2026-11": 5, "2026-12": 5}, "numerator_field": "pwp", "denominator_field": null, "note": "4DX plan: 5 PWP units/day per branch. JH 15 Oct: PWP matched to customer purchasing power and trends."},
           {"id": "P1", "owner": "Team", "label": "PWP: cough & cold – Androchi / Digezmune", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p1", "denominator_field": null, "note": "JH 15 Oct: measured PWP for cough & cold. Target kept at 2 a day each – confirm."},
           {"id": "P2", "owner": "Team", "label": "PWP: gout – Loyuric / Stella / RM2-off uric acid test voucher", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p2", "denominator_field": null, "note": "JH 15 Oct: measured PWP for gout patients. Target kept at 2 a day each – confirm."},
@@ -256,7 +248,7 @@
       "daily_fields": [
         {"key": "walkin", "label": "Walk-in sales (RM)", "owner": "Team", "type": "money"},
         {"key": "tx", "label": "Transactions (POS)", "owner": "Team", "type": "count"},
-        {"key": "two", "label": "Transactions with 2+ items", "owner": "Team", "type": "count"},
+        {"key": "two", "label": "Transactions with 3+ items", "owner": "Team", "type": "count"},
         {"key": "pwp", "label": "PWP units", "owner": "Team", "type": "count"},
         {"key": "p1", "label": "Beecrobes sachets sold", "owner": "Team", "type": "count"},
         {"key": "p2", "label": "Sulphur/salicylic soap bar + Proponeem units sold", "owner": "Team", "type": "count"},
@@ -338,7 +330,7 @@
       "lead1_field": "two",
       "lead2_field": "outreach",
       "lead_measures": [
-        {"name": "Lead 1", "measure": "Transactions with 2+ items – 45% of transactions (PWP & add-on scripts)", "owner": "Whole team, Salasilah checks"},
+        {"name": "Lead 1", "measure": "Transactions with 3+ items – 45% of transactions (PWP & add-on scripts)", "owner": "Whole team, Salasilah checks"},
         {
           "name": "Lead 2",
           "measure": "New-customer outreach – OFFLINE: 1 programme a week incl. booths (flyers, first-visit vouchers) · ONLINE: 6 posts a day to Facebook groups & WhatsApp updates",
@@ -348,7 +340,7 @@
       "daily_fields": [
         {"key": "walkin", "label": "Walk-in sales (RM)", "owner": "Team", "type": "money"},
         {"key": "tx", "label": "Transactions (POS)", "owner": "Team", "type": "count"},
-        {"key": "two", "label": "Transactions with 2+ items", "owner": "Team", "type": "count"},
+        {"key": "two", "label": "Transactions with 3+ items", "owner": "Team", "type": "count"},
         {"key": "pwp", "label": "PWP units", "owner": "Team", "type": "count"},
         {"key": "p1", "label": "Proponeem units sold", "owner": "Team", "type": "count"},
         {"key": "p2", "label": "Biorelief units sold", "owner": "Team", "type": "count"},
@@ -373,7 +365,7 @@
       ],
       "measures": [
         {"id": "T1", "owner": "Team", "label": "Walk-in sales (branch WIG)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1770, "2026-11": 1980, "2026-12": 2200}, "numerator_field": "walkin", "denominator_field": null, "note": "4DX plan: RM 1,551 → 2,200/day by 31 Dec."},
-        {"id": "L1", "owner": "Team", "label": "Transactions with 2+ items (LEAD 1 – add-on, Salasilah checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "4DX plan Bangi lead 1: 45%, whole team, checked by Sal."},
+        {"id": "L1", "owner": "Team", "label": "Transactions with 3+ items (LEAD 1 – add-on, Salasilah checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "4DX plan Bangi lead 1: 45%, whole team, checked by Sal."},
         {"id": "T2", "owner": "Team", "label": "PWP units sold", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 5, "2026-11": 5, "2026-12": 5}, "numerator_field": "pwp", "denominator_field": null, "note": "4DX plan: 5 PWP units/day per branch."},
         {"id": "P1", "owner": "Team", "label": "Target product: Proponeem", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p1", "denominator_field": null, "note": "PROPOSED: same Oct list as WM, 2/day each – Aimi sets Bangi's list and units (4DX plan)."},
         {"id": "P2", "owner": "Team", "label": "Target product: Biorelief", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p2", "denominator_field": null, "note": "PROPOSED: same Oct list as WM, 2/day each – Aimi sets Bangi's list and units (4DX plan)."},
@@ -428,7 +420,7 @@
       "daily_fields": [
         {"key": "walkin", "label": "Walk-in sales (RM)", "owner": "Team", "type": "money"},
         {"key": "tx", "label": "Walk-in customers (POS transactions)", "owner": "Team", "type": "count"},
-        {"key": "two", "label": "Transactions with 2+ items", "owner": "Team", "type": "count"},
+        {"key": "two", "label": "Transactions with 3+ items", "owner": "Team", "type": "count"},
         {"key": "pwp", "label": "PWP units", "owner": "Team", "type": "count"},
         {"key": "p1", "label": "Proponeem units sold", "owner": "Team", "type": "count"},
         {"key": "p2", "label": "Biorelief units sold", "owner": "Team", "type": "count"},
@@ -807,7 +799,7 @@
       "Syarafana": ["Branch requests received and checked by 11 am", "POs placed for today's branch requests", "Every PO checked against the last 30 days' sales before placing", "5 slow movers reviewed today (25 a week)", "Min/max levels set or updated for the items ordered today"],
       "Azwani": ["Bank balance checked and cash position updated", "Supplier invoices from HQ orders entered in the accounts", "Payments due in the next 14 days checked", "Customers with AR over 30 days followed up today", "Unpaid zakat claims over 30 days followed up today"],
       "Fariz": ["Each branch PO picked and packed within 1 hour", "Every delivery received today checked against its PO", "Transfers dispatched within 24 hours", "Receiving and transfer log updated before going home"],
-      "Alia": ["POs over RM 5,000 approved against 30-day sales", "Top 100 items checked – any gap ordered today", "At least 1 B2B call or visit", "B2B quotes sent within 24 hours", "Transfers from slow-mover reviews arranged within 48 hours"],
+      "Alia": ["POs over RM 5,000 approved against 30-day sales", "Top 100 items checked – any gap ordered today", "At least 1 B2B call or visit", "B2B quotes sent within 24 hours", "Zakat orders from the branches placed today", "Transfers from slow-mover reviews arranged within 48 hours"],
       "Hanin": ["Today's roster checked – every shift fully staffed", "Any gap covered or swapped before opening", "Branch managers' issues answered the same day", "Training or SOP work moved forward today"]
     },
     "projects": [

@@ -174,15 +174,15 @@ test('save today: numbers stored, who/when recorded, audit log written', async (
   const b = await pinLogin('hazera', '1111');
   const csrf = await b.csrf();
   const r = await b.post('/daily', {
-    _csrf: csrf, date: '2026-10-20', 'f[walkin]': '1,880', 'f[tx]': '62', 'f[two]': '25', 'f[wagrp]': '1', 'f[ttship]': '5', 'f[ttship24]': '5',
+    _csrf: csrf, date: '2026-10-20', 'f[walkin]': '1,880', 'f[tx]': '62', 'f[two]': '25', 'f[wagrp]': '1', 'f[ttship]': '5', 'f[zkc]': '5', 'f[zkc7d]': '5',
   });
   assert.equal(r.status, 302);
-  assert.equal(r.location, '/daily?date=2026-10-20&saved=6');
+  assert.equal(r.location, '/daily?date=2026-10-20&saved=7');
   assert.equal(await entry('WM', '2026-10-20', 'walkin'), 1880); // comma removed
   assert.equal(await entry('WM', '2026-10-20', 'wagrp'), 1);
 
   const page = (await b.get(r.location)).html;
-  assert.match(page, /Saved 6 numbers/);
+  assert.match(page, /Saved 7 numbers/);
   assert.match(page, /Last updated by Hazera/);
 
   const audit = (await db.query("SELECT action, old_value, new_value FROM audit_log WHERE record_key = 'WM 2026-10-20 walkin'")).rows;
@@ -203,13 +203,13 @@ test('saving again without changes saves nothing; a cleared box deletes the numb
   assert.deepEqual(del, { action: 'delete', old_value: 4 });
 });
 
-test('"…within 24h" bigger than its total is refused, and nothing on the page is saved', async () => {
+test('"…within 7 days" bigger than its total is refused, and nothing on the page is saved', async () => {
   const b = await pinLogin('hazera', '1111');
   const csrf = await b.csrf();
-  const r = await b.post('/daily', { _csrf: csrf, date: '2026-10-18', 'f[walkin]': '999', 'f[ttship]': '5', 'f[ttship24]': '6' });
+  const r = await b.post('/daily', { _csrf: csrf, date: '2026-10-18', 'f[walkin]': '999', 'f[zkc]': '5', 'f[zkc7d]': '6' });
   assert.equal(r.status, 422);
   assert.match(r.html, /1 number needs fixing/);
-  assert.match(r.html, /Can’t be more than “TikTok orders shipped” \(5\)/);
+  assert.match(r.html, /Can’t be more than “Zakat claims submitted” \(5\)/);
   assert.match(r.html, /value="999"/);                    // what was typed stays on screen
   assert.equal(await entry('WM', '2026-10-18', 'walkin'), null);
 });

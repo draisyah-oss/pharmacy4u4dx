@@ -24,7 +24,7 @@
 <div class="daybar">
   <nav class="strip" aria-label="Choose a day">
     <% strip.forEach(function (d) { %>
-      <a href="/daily?date=<%= d.date %><%= branchQs %>" class="strip-day<%= d.date === date ? ' is-current' : '' %><%= d.filled ? ' has-data' : '' %>"<%= d.date === date ? ' aria-current="date"' : '' %>>
+      <a href="/daily?date=<%= d.date %><%= branchQs %>" class="strip-day<%= d.date === date ? ' is-current' : '' %><%= d.filled ? ' has-data' : '' %>"<%- d.date === date ? ' aria-current="date"' : '' %>>
         <span class="strip-dow"><%= d.date === today ? 'Today' : fmtDate(d.date, { day: undefined, month: undefined }) %></span>
         <span class="strip-num"><%= Number(d.date.slice(8)) %></span>
       </a>

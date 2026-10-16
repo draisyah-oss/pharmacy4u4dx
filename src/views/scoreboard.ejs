@@ -17,7 +17,7 @@
   <% } %>
   <nav class="strip week-strip" aria-label="Choose a week">
     <% weeks.forEach(function (w) { %>
-      <a href="/scoreboard?week=<%= w.week %><%= branchQs %>" class="strip-pill<%= w.current ? ' is-current' : '' %>"<%= w.current ? ' aria-current="true"' : '' %>><%= w.label %></a>
+      <a href="/scoreboard?week=<%= w.week %><%= branchQs %>" class="strip-pill<%= w.current ? ' is-current' : '' %>"<%- w.current ? ' aria-current="true"' : '' %>><%= w.label %></a>
     <% }) %>
   </nav>
 </div>

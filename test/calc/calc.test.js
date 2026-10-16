@@ -12,6 +12,8 @@ const seed = readSeed();
 const START = seed.company.tracker_start_date; // 2026-10-12
 const branch = (code) => seed.branches.find((b) => b.code === code);
 const measure = (code, id) => branch(code).measures.find((m) => m.id === id);
+// WM's Grab-online and TikTok-24h measures were dropped on 16 Oct; their rules are still tested.
+const oldMeasure = (code, id) => require('../fixtures/seed-before-wm-16oct.json').branches.find((b) => b.code === code).measures.find((m) => m.id === id);
 const entriesFor = (week) => calc.indexEntries(calc.rowsFromDays(toDays(week)));
 const NO_ENTRIES = calc.indexEntries([]);
 
@@ -97,7 +99,7 @@ test('WM zakat sales (RM 20,000/month): 3,500 vs 4,516.13 = 77.5% ✕', () => {
 });
 
 test('WM Grab online all hours (yes/no, every day): 6 of 7 days = 85.7% ✕', () => {
-  const r = wmWeek('W2');
+  const r = calc.evaluateMeasure({ measure: oldMeasure('WM', 'W2'), entries: wm, ...WEEK });
   assert.equal(r.actual, 6);
   near(r.target, 7);
   assert.equal(r.status, 'off_track');
@@ -105,7 +107,7 @@ test('WM Grab online all hours (yes/no, every day): 6 of 7 days = 85.7% ✕', ()
 
 // ───────────── Ratio measures ─────────────
 
-test('WM transactions with 2+ items (45%): 179 ÷ 408 = 43.9% → 97.5% of target ▲', () => {
+test('WM transactions with 3+ items (45%): 179 ÷ 408 = 43.9% → 97.5% of target ▲', () => {
   const r = wmWeek('L3');
   assert.equal(r.numerator, 179);
   assert.equal(r.denominator, 408);
@@ -116,14 +118,14 @@ test('WM transactions with 2+ items (45%): 179 ÷ 408 = 43.9% → 97.5% of targe
 });
 
 test('WM TikTok shipped within 24h (100%): 26 ÷ 27 = 96.3% ▲', () => {
-  const r = wmWeek('Z3');
+  const r = calc.evaluateMeasure({ measure: oldMeasure('WM', 'Z3'), entries: wm, ...WEEK });
   near(r.actual, 26 / 27);
   near(r.target, 1);
   assert.equal(r.status, 'watch');
 });
 
 test('ratio with nothing to divide by (0 orders) shows no data, not 0%', () => {
-  const r = calc.evaluateMeasure({ measure: measure('WM', 'Z3'), entries: NO_ENTRIES, ...WEEK });
+  const r = calc.evaluateMeasure({ measure: oldMeasure('WM', 'Z3'), entries: NO_ENTRIES, ...WEEK });
   assert.equal(r.actual, null);
   assert.equal(r.status, 'no_data');
 });

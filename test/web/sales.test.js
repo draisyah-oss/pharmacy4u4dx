@@ -99,3 +99,31 @@ test('YTD target to date: last month-end target plus this month by days', async 
   assert.equal((await ytdTargetsAt(db, '2026-10-14')).WM, Math.round(end - month + month * 14 / 31));
   assert.equal((await ytdTargetsAt(db, '2026-10-31')).WM, end);
 });
+
+test('side menu: managers get branch + company items, not HQ or admin; staff get none', async () => {
+  const mgr = await as('/login/password', { username: 'hafizah', password: 'manager-pass-1' });
+  const html = (await mgr('/sales')).html;
+  assert.match(html, /<aside class="sidenav"/);
+  assert.match(html, /class="sn-link is-current"[^>]*aria-current="page">Sales</);
+  assert.match(html, /href="\/weekly"/);
+  assert.doesNotMatch(html, /href="\/hq\/projects"|href="\/admin\/targets"/);
+  assert.match(html, /class="menu-btn"/);
+  const hqs = await as('/login/pin', { username: 'syarafana', pin: '2468' });
+  const h2 = (await hqs('/sales')).html;
+  assert.match(h2, />My day</);
+  assert.doesNotMatch(h2, /href="\/daily"/);
+});
+
+test('HQ daily tasks: N/A counts towards a fully done day', () => {
+  const { dailyWeekSummary } = require('../../src/hq/team');
+  const tasks = [{ id: 1 }, { id: 2 }];
+  const ticks = new Map([
+    ['1|2026-10-12', { done: true, na: false }], ['2|2026-10-12', { done: false, na: true }],
+    ['1|2026-10-13', { done: true, na: false }], ['2|2026-10-13', { done: false, na: false }],
+  ]);
+  const w = dailyWeekSummary({ tasks, ticks, weekStart: '2026-10-12', through: '2026-10-13' });
+  assert.equal(w.days[0].full, true);
+  assert.equal(w.days[0].na, 1);
+  assert.equal(w.days[1].full, false);
+  assert.equal(w.fullDays, 1);
+});

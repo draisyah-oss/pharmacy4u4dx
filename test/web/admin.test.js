@@ -148,7 +148,7 @@ test('renaming someone carries over to the measures and daily fields they own', 
   const pid = await id("SELECT p.id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = 'WM' AND p.name = 'Zawiyah'");
   await a.post(`/admin/people/${pid}`, { branch: 'WM', name: 'Zawiyah R', job: 'Senior Sales Assistant', username: 'zawiyah' });
   const owned = (await db.query("SELECT count(*)::int AS n FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND owner_name = 'Zawiyah R'")).rows[0].n;
-  assert.equal(owned, 6); // W5, W6, W7, W2, W3, W0
+  assert.equal(owned, 4); // W5, W7, W3, W0 (W6 zakat ordering and W2 Grab online removed 16 Oct)
   const fields = (await db.query("SELECT count(*)::int AS n FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'WM' AND owner_name = 'Zawiyah'")).rows[0].n;
   assert.equal(fields, 0);
   assert.equal((await lastAudit('WM Zawiyah name')).new_value, 'Zawiyah R');

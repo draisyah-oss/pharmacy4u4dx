@@ -90,3 +90,26 @@ test('an already-loaded database gets JH’s update once; other branches untouch
   assert.equal((await q("SELECT label FROM measures WHERE code = 'T5' AND branch_id = (SELECT id FROM branches WHERE code = 'JH')"))[0].label, 'Changed in Admin');
   await old.close();
 });
+
+test('16 Oct: an older database gets the WM changes, 3+ items everywhere and Alia\'s zakat task once', async () => {
+  const { threeItems, addHqTaskOnce } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  for (const k of ['wm_update_16oct', 'three_items_v1', 'alia_zakat_task_v1']) await old.query('DELETE FROM app_settings WHERE key = $1', [k]);
+  await syncBranchFromSeed(old, readSeed(), 'WM', 'wm_update_16oct', () => {});
+  await threeItems(old, () => {});
+  await addHqTaskOnce(old, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', () => {});
+  await addHqTaskOnce(old, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', () => {});
+  const active = async (sql) => (await old.query(sql)).rows.map((r) => r.k);
+  const wmMeasures = await active("SELECT m.code AS k FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.active");
+  for (const c of ['Z6', 'W6', 'W2']) assert.ok(!wmMeasures.includes(c), `${c} retired`);
+  const wmFields = await active("SELECT f.key AS k FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'WM' AND f.active");
+  for (const k of ['ttlive', 'ttship24', 'zko', 'zko2w', 'grabon']) assert.ok(!wmFields.includes(k), `${k} retired`);
+  assert.ok(wmFields.includes('ttship'));
+  assert.equal((await old.query("SELECT count(*)::int AS n FROM measures WHERE label LIKE '%2+ items%'")).rows[0].n, 0);
+  assert.equal((await old.query("SELECT count(*)::int AS n FROM daily_fields WHERE active AND label LIKE '%3+ items%'")).rows[0].n, 5);
+  assert.equal((await old.query("SELECT count(*)::int AS n FROM branches WHERE lead_measures::text LIKE '%2+ items%'")).rows[0].n, 0);
+  assert.equal((await old.query("SELECT count(*)::int AS n FROM hq_daily_tasks t JOIN people p ON p.id = t.person_id WHERE p.name = 'Alia' AND t.label LIKE 'Zakat orders%'")).rows[0].n, 1);
+  await old.close();
+});

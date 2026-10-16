@@ -44,6 +44,9 @@ async function backfillNewSettings(db, seed, log) {
   await backfillHqTasks(db, seed, log);
   await updateSalesSheetColumns(db, seed, log);
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
+  await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
+  await threeItems(db, log);
+  await addHqTaskOnce(db, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -157,6 +160,35 @@ async function backfillHqTasks(db, seed, log) {
   if (added.length) log(`Added starting daily tasks for ${added.join(', ')}.`);
 }
 
+// 16 Oct: the add-on measure is now 3+ items a transaction (was 2+), every branch. Labels only;
+// the numbers already typed stay as they are.
+async function threeItems(db, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'three_items_v1'")).rows.length) return;
+  await db.transaction(async (tx) => {
+    await tx.query("UPDATE daily_fields SET label = replace(label, '2+ items', '3+ items') WHERE label LIKE '%2+ items%'");
+    await tx.query("UPDATE measures SET label = replace(label, '2+ items', '3+ items') WHERE label LIKE '%2+ items%'");
+    await tx.query("UPDATE branches SET lead_measures = replace(lead_measures::text, '2+ items', '3+ items')::jsonb WHERE lead_measures::text LIKE '%2+ items%'");
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('three_items_v1', $1)", [new Date().toISOString()]);
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Transactions with 2+ items renamed 3+ items (16 Oct)', NULL)");
+  });
+  log('Renamed "2+ items" to "3+ items".');
+}
+
+// Add one daily task to an HQ person's list (once, unless it's already there).
+async function addHqTaskOnce(db, name, label, flag, log) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const p = (await tx.query('SELECT id FROM people WHERE branch_id IS NULL AND name = $1', [name])).rows[0];
+    if (p && !(await tx.query('SELECT 1 FROM hq_daily_tasks WHERE person_id = $1 AND active AND label = $2', [p.id, label])).rows.length) {
+      const next = (await tx.query('SELECT coalesce(max(sort_order), 0) + 1 AS n FROM hq_daily_tasks WHERE person_id = $1', [p.id])).rows[0].n;
+      await tx.query('INSERT INTO hq_daily_tasks (person_id, label, sort_order) VALUES ($1,$2,$3)', [p.id, label, next]);
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_daily_tasks', $1, $2)", [name, JSON.stringify(label)]);
+      log(`Added "${label}" to ${name}'s daily tasks.`);
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+}
+
 // 15 Oct: sheet columns corrected – Grab sales (RM) = Grab Pay, Grab orders = GrabMart, and
 // walk-in = Total minus Grab Pay (so Grab isn't counted twice). Applied once to older databases;
 // the next sync rewrites the numbers that came from the sheet.
@@ -230,4 +262,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

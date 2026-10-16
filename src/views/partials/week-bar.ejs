@@ -8,7 +8,7 @@
   <% } %>
   <nav class="strip week-strip" aria-label="Choose a week">
     <% pills.forEach(function (p) { %>
-      <a href="<%= p.href %>" class="strip-pill<%= p.current ? ' is-current' : '' %>"<%= p.current ? ' aria-current="true"' : '' %>><%= p.label %></a>
+      <a href="<%= p.href %>" class="strip-pill<%= p.current ? ' is-current' : '' %>"<%- p.current ? ' aria-current="true"' : '' %>><%= p.label %></a>
     <% }) %>
   </nav>
 </div>
