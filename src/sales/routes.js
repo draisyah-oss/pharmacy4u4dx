@@ -20,7 +20,8 @@ function salesRoutes(db, { now, salesSheet = null }) {
       const year = today.slice(0, 4);
       const month = /^\d{4}-(0[1-9]|1[0-2])$/.test(req.query.month || '') && req.query.month <= thisMonth && req.query.month.startsWith(year)
         ? req.query.month : thisMonth;
-      const view = await buildSalesView(db, { today, month });
+      const chart = typeof req.query.chart === 'string' ? req.query.chart : 'TOTAL';
+      const view = await buildSalesView(db, { today, month, chart });
       const sheet = salesSheet ? await salesSheet.status() : null;
       const months = [];
       for (let m = 1; m <= Number(thisMonth.slice(5)); m++) months.push(`${year}-${String(m).padStart(2, '0')}`);

@@ -32,7 +32,7 @@ async function ytdTargetsAt(db, asOf) {
 }
 
 // Everything the Sales page needs for one year and one chosen month.
-async function buildSalesView(db, { today, month }) {
+async function buildSalesView(db, { today, month, chart = 'TOTAL' }) {
   const year = month.slice(0, 4);
   const branches = (await db.query('SELECT id, code, name FROM branches WHERE active ORDER BY sort_order')).rows;
   const sum = await loadSummary(db, { year, month });
@@ -44,7 +44,8 @@ async function buildSalesView(db, { today, month }) {
   const ytdTargetBranches = Object.keys(ytdTarget).length ? Object.values(ytdTarget).reduce((a, n) => a + n, 0) : null;
 
   const syncedAt = (await db.query('SELECT max(synced_at) AS at FROM sheet_sales_summary')).rows[0].at;
-  const history = await yearOnYear(db, today);
+  const codes = branches.map((b) => b.code);
+  const history = await yearOnYear(db, today, codes.includes(chart) ? chart : 'TOTAL');
   return { ...sum, year, month, branches, ytdTarget, ytdTargetBranches, ytdAsOf, latest, syncedAt, history };
 }
 
@@ -78,15 +79,17 @@ async function sheetYearCard(db, { today, code = null }) {
 
 // Progress since the first year in the sheet: year totals, growth on the year before, and a fair
 // like-for-like for this year (the same full months last year, e.g. Jan–Sep 2026 vs Jan–Sep 2025).
-async function yearOnYear(db, today) {
+// code: 'TOTAL' (company) or a branch code – the chart and like-for-like follow it; the year table
+// stays company-wide. Years where that branch has no sales (not open yet) are left out of its chart.
+async function yearOnYear(db, today, code = 'TOTAL') {
   const { years, byYear } = await loadYears(db);
   if (!years.length) return null;
   const thisYear = Number(today.slice(0, 4));
   const fullMonths = Number(today.slice(5, 7)) - 1; // months finished this year
-  const sumMonths = (y, upTo, code = 'TOTAL') => {
+  const sumMonths = (y, upTo, code = 'TOTAL', from = 1) => {
     const Y = byYear[y]; if (!Y) return null;
     let t = 0; let any = false;
-    for (let m = 1; m <= upTo; m++) { const v = Y.months[String(m).padStart(2, '0')]?.[code]; if (v !== null && v !== undefined) { t += v; any = true; } }
+    for (let m = from; m <= upTo; m++) { const v = Y.months[String(m).padStart(2, '0')]?.[code]; if (v !== null && v !== undefined) { t += v; any = true; } }
     return any ? t : null;
   };
   const rows = years.map((y, i) => {
@@ -100,15 +103,22 @@ async function yearOnYear(db, today) {
   });
   let likeForLike = null;
   if (byYear[thisYear] && byYear[thisYear - 1] && fullMonths >= 1) {
-    const now = sumMonths(thisYear, fullMonths); const before = sumMonths(thisYear - 1, fullMonths);
-    if (now !== null && before) likeForLike = { months: fullMonths, year: thisYear, now, before, growth: now / before - 1 };
+    // Start from the first month last year had sales (a branch that opened mid-year, e.g. JH in May 2025).
+    let from = 1;
+    while (from <= fullMonths && !(byYear[thisYear - 1].months[String(from).padStart(2, '0')]?.[code] > 0)) from++;
+    const now = sumMonths(thisYear, fullMonths, code, from); const before = sumMonths(thisYear - 1, fullMonths, code, from);
+    if (from <= fullMonths && now !== null && before) likeForLike = { from, months: fullMonths, year: thisYear, now, before, growth: now / before - 1 };
   }
-  // Month totals per year for the chart: { 2025: [Jan…Dec or null] }
-  const lines = Object.fromEntries(years.map((y) => [y, Array.from({ length: 12 }, (_, m) => {
-    const v = byYear[y].months[String(m + 1).padStart(2, '0')]?.TOTAL;
+  // Month sales per year for the chart: { 2025: [Jan…Dec or null] }
+  const all = Object.fromEntries(years.map((y) => [y, Array.from({ length: 12 }, (_, m) => {
+    const v = byYear[y].months[String(m + 1).padStart(2, '0')]?.[code];
     return v === undefined || v === null || (y === thisYear && m + 1 > Number(today.slice(5, 7))) ? null : v;
   })]));
-  return { years, rows, likeForLike, lines, thisYear, currentMonth: Number(today.slice(5, 7)) };
+  // Months before a branch opened show as 0 in the sheet – leave them off the line.
+  for (const y of years) { for (let m = 0; m < 12 && !all[y][m]; m++) all[y][m] = null; }
+  const chartYears = years.filter((y) => all[y].some((v) => v));
+  const lines = Object.fromEntries(chartYears.map((y) => [y, all[y]]));
+  return { years, chartYears, code, rows, likeForLike, lines, thisYear, currentMonth: Number(today.slice(5, 7)) };
 }
 
 module.exports = { yearOnYear, buildSalesView, sheetYearCard, latestDay, ytdTargetsAt };

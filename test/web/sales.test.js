@@ -144,3 +144,18 @@ test('progress since 2023: every year table in "Total Sales" is read; like-for-l
   assert.ok(Math.abs(h.rows.find((r) => r.year === 2025).growth - (1299221.35 / 710138.92 - 1)) < 1e-6);
   assert.equal(h.lines[2026][10], null, 'no November 2026 yet');
 });
+
+test('progress chart per branch: WM since 2023, Bangi only from 2026; like-for-like follows the branch', async () => {
+  const { yearOnYear } = require('../../src/sales/data');
+  const wm = await yearOnYear(db, TODAY, 'WM');
+  assert.deepEqual(wm.chartYears, [2023, 2024, 2025, 2026]);
+  assert.ok(wm.likeForLike && wm.likeForLike.now < 1688952 && wm.likeForLike.now > 400000);
+  const bangi = await yearOnYear(db, TODAY, 'Bangi');
+  assert.deepEqual(bangi.chartYears, [2026]);
+  assert.equal(bangi.likeForLike, null);
+  const mgr = await as('/login/password', { username: 'hafizah', password: 'manager-pass-1' });
+  const page = (await mgr('/sales?chart=JH')).html;
+  assert.match(page, /class="strip-pill is-current" aria-current="true">JH</);
+  assert.match(page, /JH May–Sept 2026/, 'JH opened in May 2025 – compared from May');
+  assert.equal((await mgr('/sales?chart=nope')).status, 200);
+});

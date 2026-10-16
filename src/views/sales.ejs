@@ -13,7 +13,7 @@
 <div class="daybar">
   <nav class="strip week-strip" aria-label="Choose a month">
     <% months.forEach(function (m) { %>
-      <a href="/sales?month=<%= m %>" class="strip-pill<%= m === month ? ' is-current' : '' %>"<%- m === month ? ' aria-current="true"' : '' %>><%= mName(m) %></a>
+      <a href="/sales?month=<%= m %><%= v.history && v.history.code !== 'TOTAL' ? '&chart=' + encodeURIComponent(v.history.code) : '' %>" class="strip-pill<%= m === month ? ' is-current' : '' %>"<%- m === month ? ' aria-current="true"' : '' %>><%= mName(m) %></a>
     <% }) %>
   </nav>
 </div>
@@ -57,10 +57,16 @@
 
   <% if (v.history && v.history.years.length > 1) { const h = v.history; const cur = h.rows.find(function (r) { return r.partial; }); %>
   <h2 id="progress">Progress since <%= h.years[0] %></h2>
-  <% if (h.likeForLike) { const lf = h.likeForLike; const span = 'Jan–' + mName(lf.year + '-' + String(lf.months).padStart(2, '0')); %>
+  <nav class="strip chart-strip" aria-label="Show the chart for">
+    <% [['TOTAL', 'Company']].concat(codes.map(function (c) { return [c, c]; })).forEach(function (o) { %>
+      <a href="/sales?month=<%= month %>&chart=<%= encodeURIComponent(o[0]) %>#progress" class="strip-pill<%= h.code === o[0] ? ' is-current' : '' %>"<%- h.code === o[0] ? ' aria-current="true"' : '' %>><%= o[1] %></a>
+    <% }) %>
+  </nav>
+  <% if (h.likeForLike) { const lf = h.likeForLike; const span = mName(lf.year + '-' + String(lf.from).padStart(2, '0')) + '–' + mName(lf.year + '-' + String(lf.months).padStart(2, '0')); %>
     <p class="yoy-head"><b class="<%= lf.growth >= 0 ? 's-on_track' : 's-off_track' %>"><%= lf.growth >= 0 ? '▲' : '▼' %> <%= (Math.abs(lf.growth) * 100).toFixed(1) %>%</b>
-      <%= span %> <%= lf.year %>: <b><%= fmt.money(lf.now) %></b> vs <%= fmt.money(lf.before) %> in <%= span %> <%= lf.year - 1 %>.</p>
+      <%= h.code === 'TOTAL' ? '' : h.code + ' ' %><%= span %> <%= lf.year %>: <b><%= fmt.money(lf.now) %></b> vs <%= fmt.money(lf.before) %> in <%= span %> <%= lf.year - 1 %>.</p>
   <% } %>
+  <% if (!h.likeForLike && h.code !== 'TOTAL') { %><p class="muted"><%= h.code %> has no sales in <%= h.thisYear - 1 %> to compare with (not open yet).</p><% } %>
   <%- include('partials/year-chart', { h: h }) %>
   <div class="table-wrap">
     <table class="admin-table sales-table">
@@ -92,7 +98,7 @@
       <tbody>
         <% v.months.forEach(function (m) { %>
           <tr<%= m.month === month ? ' class="is-current"' : '' %>>
-            <th scope="row"><a href="/sales?month=<%= m.month %>#days"><%= mName(m.month) %></a></th>
+            <th scope="row"><a href="/sales?month=<%= m.month %><%= v.history && v.history.code !== 'TOTAL' ? '&chart=' + encodeURIComponent(v.history.code) : '' %>#days"><%= mName(m.month) %></a></th>
             <% codes.forEach(function (c) { %><td class="n"><%- cellMoney(m[c]) %></td><% }) %>
             <td class="n"><%- cellMoney(m.B2B) %></td><td class="n"><b><%- cellMoney(m.TOTAL) %></b></td><td class="n"><%- cellMoney(m.cumulative) %></td>
           </tr>
