@@ -134,6 +134,7 @@ test('16 Oct: WIG sessions all on Monday – older databases get the new wording
     + (await old.query("SELECT string_agg(milestone, ' | ') AS t FROM hq_projects")).rows[0].t;
   assert.doesNotMatch(txt, /Tuesday/);
   assert.match(txt, /Both WIG sessions held \(HQ and branch, both on Monday\)/);
-  assert.doesNotMatch(JSON.stringify(readSeed()), /Branch WIG session 9:30|Tuesday branch/);
+  // 18 Oct: the branch WIG moved back to Tuesday (HQ WIG and the managers' update stay on Monday) – see wig.test.js.
+  assert.match(JSON.stringify(readSeed()), /branch Tuesday/);
   await old.close();
 });

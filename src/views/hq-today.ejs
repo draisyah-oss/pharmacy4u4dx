@@ -30,6 +30,32 @@
     <p class="muted"><%= person.role || '' %> · tick each task by 11 am on working days. A day counts when every task is done.</p>
   </header>
 
+  <section class="focus-card<%= focus ? '' : ' is-empty' %>" aria-label="This week’s focus">
+    <span class="wk-k">This week’s focus</span>
+    <% if (focus) { %>
+      <b><%= focus.focus %></b>
+      <span class="small <%= focus.status === 'approved' ? 's-on_track' : 'muted' %>"><%= focus.status === 'approved' ? 'Approved by the CEO ✔' : 'Proposed – waiting for the CEO' %></span>
+    <% } else { %>
+      <span class="muted small">Not set yet – set at the Monday 10 am HQ WIG (<a href="/hq/commitments">HQ WIG session</a>).</span>
+    <% } %>
+  </section>
+
+  <% if (actions.length) { %>
+  <section class="wk-card" aria-labelledby="act-h">
+    <h2 id="act-h">HQ actions for branches <span class="muted small">agreed at the Monday update</span></h2>
+    <% actions.forEach(function (a) { %>
+      <form method="post" action="/hq/actions/<%= a.id %>" class="act-last">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/hq/today">
+        <span><b><%= a.branch_code || 'HQ' %></b>: <%= a.issue %><%= a.due_date ? ' – by ' + fmtDate(a.due_date) : '' %><% if (a.due_date && a.due_date < today) { %> <b class="s-off_track">late</b><% } %></span>
+        <% if (a.canClose) { %><span class="act-btns">
+          <button class="yn-btn" name="status" value="Done" type="submit">Done</button>
+          <button class="yn-btn" name="status" value="Not done" type="submit">Not done</button>
+        </span><% } %>
+      </form>
+    <% }) %>
+  </section>
+  <% } %>
+
   <section class="wk-facts" aria-label="This week">
     <div class="wk-fact">
       <span class="wk-k">Days fully done this week (N/A counts as done)</span>

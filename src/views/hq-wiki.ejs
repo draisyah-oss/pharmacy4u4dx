@@ -8,7 +8,7 @@
 %>
 <main class="page wk-wide hw-page">
   <header class="oo-head"><h1>Company wiki checklist</h1>
-    <p class="muted">The pages the company wiki must hold before it goes live (framework doc, phase 1). P1 by 15 Nov, P2 by 31 Dec, P3 in Q1 2027. Approved pages count towards Iman’s and Hanin’s weekly wiki measures.</p></header>
+    <p class="muted">The pages the company wiki must hold before it goes live (framework doc, phase 1). P1 by 15 Nov, P2 by 31 Dec, P3 in Q1 2027. <b>Iman writes every page</b> and marks it Checking when it’s ready; <b>Hanin approves</b> it. Pages sent count towards Iman’s weekly wiki measure, pages approved towards Hanin’s.</p></header>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
@@ -20,6 +20,8 @@
     <% summary.owners.forEach(function (o) { %>
       <div class="oo-kpi"><span><%= o.owner %></span><b><%= o.approved %> of <%= o.total %></b><small>P1: <%= o.p1.approved %> of <%= o.p1.total %></small></div>
     <% }) %>
+    <% const waiting = sum2.areas.reduce(function (n, a) { return n + a.items.filter(function (i) { return i.status === 'Checking'; }).length; }, 0); %>
+    <div class="oo-kpi"><span>Waiting for Hanin</span><b><%= waiting %></b><small>marked Checking<%= show === 'all' ? '' : ' (this view)' %></small></div>
     <div class="oo-kpi"><span>Past their date</span><b class="<%= summary.overdue ? 's-off_track' : '' %>"><%= summary.overdue %></b><small>not approved by the due date</small></div>
   </div>
 
@@ -37,10 +39,10 @@
           <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="show" value="<%= show %>">
           <span class="hw-title"><span><span class="hw-pri hw-<%= it.priority %>"><%= it.priority %></span> <%= it.title %></span>
             <small class="muted"><%= it.writer ? 'writing: ' + it.writer + ' · ' : '' %>due <%= it.due_date ? due(it.due_date) : '–' %><%= it.overdue ? ' · late' : '' %></small></span>
-          <% if (it.canChange) { %>
+          <% if (it.canChange && (canApprove || it.status !== 'Approved')) { %>
             <label class="sr-only" for="ws-<%= it.id %>">Status</label>
             <select id="ws-<%= it.id %>" name="status" class="hw-select">
-              <% statuses.forEach(function (s) { %><option<%= s === it.status ? ' selected' : '' %>><%= s %></option><% }) %>
+              <% statuses.filter(function (s) { return canApprove || s !== 'Approved'; }).forEach(function (s) { %><option value="<%= s %>"<%= s === it.status ? ' selected' : '' %>><%= s === 'Checking' && !canApprove ? 'Checking (send to Hanin)' : s %></option><% }) %>
             </select>
             <label class="sr-only" for="ww-<%= it.id %>">Who is writing it</label>
             <input id="ww-<%= it.id %>" name="writer" class="hw-writer" maxlength="80" value="<%= it.writer || '' %>" placeholder="Who writes it">

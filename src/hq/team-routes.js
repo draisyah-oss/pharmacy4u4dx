@@ -5,6 +5,7 @@ const calc = require('../calc');
 const fmt = require('../scoreboard/format');
 const team = require('./team');
 const wikilist = require('./wikilist');
+const wig = require('../wig/data');
 const { dateStrip } = require('../daily/rules');
 const { isRealDate } = require('../lib/dates');
 const { weekChoices, pickWeek } = require('../lib/weeks');
@@ -40,8 +41,10 @@ function hqTeamRoutes(db, { now, trackerStart }) {
 
   async function renderDay(req, res, ctx) {
     const page = await team.loadDayPage(db, { person: ctx.person, date: ctx.date, today: ctx.today });
+    const focus = await wig.loadFocus(db, calc.weekStart(ctx.date), ctx.person.id);
+    const actions = (await wig.openActionsFor(db, ctx.person.id)).map((a) => ({ ...a, canClose: wig.canCloseAction(req.user, a) }));
     res.render('hq-today', {
-      title: ctx.person.id === req.user.person_id ? 'My day' : `${ctx.person.name} – daily tasks`, ...ctx, ...page, fmt,
+      title: ctx.person.id === req.user.person_id ? 'My day' : `${ctx.person.name} – daily tasks`, ...ctx, ...page, fmt, focus, actions,
       strip: dateStrip(ctx.today, ctx.start).map((d) => ({ date: d, filled: page.filled.has(d) })),
       blocked: team.dayEditDenied(req.user, ctx.person.id, ctx.date, ctx.today, ctx.start),
       canManage: team.canActFor(req.user, ctx.person.id), ...flash(req),
@@ -101,8 +104,14 @@ function hqTeamRoutes(db, { now, trackerStart }) {
     for (const p of people) moves.set(p.id, await team.movesFor(db, p));
     const thisWeek = calc.weekStart(ctx.today);
     const tooOld = req.user.role !== 'admin' && ctx.week < calc.addDays(thisWeek, -7);
+    const [focus, lastFocus, branchActions] = await Promise.all([
+      wig.loadFocusWeek(db, ctx.week), wig.loadFocusWeek(db, prev), wig.loadActions(db, { week: calc.addDays(ctx.week, -14) }),
+    ]);
+    const openActions = new Map();
+    for (const p of people) openActions.set(p.id, await wig.openActionsFor(db, p.id));
     res.status(extra.status || 200).render('hq-commitments', {
-      title: 'HQ commitments', ...ctx, prev, people, last, current, moves, fmt, kept: team.keptSummary(last),
+      title: 'HQ WIG session', ...ctx, prev, people, last, current, moves, fmt, kept: team.keptSummary(last),
+      focus, lastFocus, openActions, branchActionSummary: wig.actionSummary(branchActions), ceo: wig.canApproveFocus(req.user),
       canActFor: (id) => !tooOld && team.canActFor(req.user, id), tooOld,
       pills: ctx.weeks.map((w) => ({ href: `/hq/commitments?week=${w}`, current: w === ctx.week, label: w === thisWeek ? 'This week' : fmt.weekLabel(w, calc.addDays(w, 6)) })),
       weekEnd: calc.addDays(ctx.week, 6), typed: extra.typed || null, errors: extra.errors || {},
@@ -126,9 +135,14 @@ function hqTeamRoutes(db, { now, trackerStart }) {
         return res.status(403).render('message', { title: 'Can’t save', message: 'Only this week and last week can be changed. Ask admin to fix older weeks.' });
       }
       const people = await team.visiblePeople(db, req.user);
+      const f = await wig.saveFocus(db, req.user, { week: ctx.week, body: req.body, people, canActFor: (id) => team.canActFor(req.user, id) });
+      if (f.errors) {
+        const errors = Object.fromEntries(Object.entries(f.errors).map(([k, v]) => [`f${k}`, v]));
+        return renderCommitments(req, res, ctx, { status: 400, errors, typed: req.body, err: 'Nothing saved – fix the boxes in red.' });
+      }
       const r = await team.saveCommitments(db, req.user, { week: ctx.week, body: req.body, people });
-      if (r.errors) return renderCommitments(req, res, ctx, { status: 400, errors: r.errors, typed: req.body, err: 'Nothing saved – fix the boxes in red.' });
-      res.redirect(`/hq/commitments?week=${ctx.week}&ok=${encodeURIComponent(r.saved ? 'Commitments saved.' : 'No changes to save.')}`);
+      if (r.errors) return renderCommitments(req, res, ctx, { status: 400, errors: r.errors, typed: req.body, err: 'Focus saved – fix the commitments in red.' });
+      res.redirect(`/hq/commitments?week=${ctx.week}&ok=${encodeURIComponent(r.saved || f.saved ? 'Saved.' : 'No changes to save.')}`);
     } catch (err) { next(err); }
   });
 
@@ -142,10 +156,12 @@ function hqTeamRoutes(db, { now, trackerStart }) {
       const items = await wikilist.load(db, { today });
       const show = ['mine', 'open', 'all'].includes(req.query.show) ? req.query.show : 'all';
       const visible = items.filter((it) => show === 'all' || (show === 'mine' ? it.person_id === req.user.person_id : it.status !== 'Approved'));
-      for (const it of visible) it.canChange = wikilist.canChange(req.user, it);
+      const approver = await wikilist.approverId(db);
+      for (const it of visible) it.canChange = wikilist.canChange(req.user, it, approver);
       res.render('hq-wiki', {
         title: 'Company wiki checklist', summary: wikilist.summarise(items), sum2: wikilist.summarise(visible), items: visible, show,
         statuses: wikilist.STATUSES, today, fmt, ...flash(req),
+        canApprove: req.user.role === 'admin' || wikilist.isApprover(req.user, approver),
       });
     } catch (err) { next(err); }
   });
@@ -154,7 +170,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
     try {
       if (req.user.role !== 'hq' && req.user.role !== 'admin') return deny(res);
       if (!/^\d{1,9}$/.test(req.params.id)) return deny(res);
-      const r = await wikilist.update(db, req.user, Number(req.params.id), req.body);
+      const r = await wikilist.update(db, req.user, Number(req.params.id), req.body, { at: now() });
       const back = `/hq/wiki${req.body.show ? `?show=${encodeURIComponent(req.body.show)}&` : '?'}`;
       if (r.error) return res.redirect(`${back}err=${encodeURIComponent(r.error)}`);
       res.redirect(`${back}ok=${encodeURIComponent(r.saved ? `${r.item.title}: ${r.status}.` : 'No change.')}#w-${req.params.id}`);

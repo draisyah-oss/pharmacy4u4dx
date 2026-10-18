@@ -4,7 +4,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 
 ## Who uses it
 - **Branch staff** (5 branches: WM, JH, BR, Bangi, Ampang): enter the daily log at closing, mostly on a phone.
-- **Branch managers**: weekly check-in, OOS list and commitments every Monday, and run the branch WIG session from the branch scoreboard – also on Monday (all WIG sessions moved to Monday on 16 Oct; branch sessions used to be Tuesday).
+- **Branch managers**: weekly update to HQ (Monday 4 pm meeting) and the branch WIG session with their team on **Tuesday** (18 Oct: HQ WIG Monday 10 am → managers' update Monday 4 pm → branch WIG Tuesday; see "Weekly WIG rhythm").
 - **HQ – full access (Alia, Hanin, Iman)**: read every branch, HQ input, answer OOS items; Iman fills in for everyone. Password login.
 - **HQ staff (Syarafana, Fariz, Azwani)**: group scoreboard, HQ scoreboard, their own KPIs, daily tasks, commitments and project milestones only. PIN login.
 - Dr Aisyah (CEO) has her own HQ measure but logs in as admin.
@@ -137,6 +137,20 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - The framework doc's checklist (64 pages, 8 areas; 28 P1 by 15 Nov, P2 by 31 Dec, P3 Q1 2027) is a tracker in the app: seed hq.wiki_checklist + wiki_checklist_due, migration 015 hq_wiki_items, src/hq/wikilist.js, /hq/wiki (HQ + admin; statuses Not started → Drafting → Checking → Approved, "who writes it"; owners change their own, Iman and admin any; audited). Menu: HQ → Wiki checklist. The wiki itself stays on hold.
 - Daily check-in: Iman "Company wiki: one checklist page moved forward today", Hanin "Company wiki: SOPs waiting for my check answered today" (seed daily_tasks; older databases once via addHqTaskOnce).
 - Weekly check-in / 4DX: HQ measures `wiki` (Iman: 4/4/2 pages a week Oct/Nov/Dec) and `wikisop` (Hanin: 3/3/4) – pages approved that week, pre-filled on /hq from the checklist; they can be chosen as "to move" in HQ commitments. HQ scoreboard shows "Company wiki: x of 28 must-have pages approved, y of 64 in all, z late".
+
+## Weekly WIG rhythm (18 Oct, from the approved mockup)
+- Order: **HQ WIG Monday 10 am** → **managers' weekly update with CEO, Alia, Hanin Monday 4 pm** → **branch WIG Tuesday**. Code: src/wig (data.js, routes.js), migration 016_wig_week.sql, seed company.meeting_rhythm (monday/tuesday).
+- **HQ WIG** (/hq/commitments, menu "HQ WIG session"): per person a weekly **focus** (hq_focus) – the CEO (admin login) sets it, or the person (Iman for anyone) proposes it and the CEO approves (Approve tick); changing an approved focus sends it back to "proposed". Then the HQ commitment as before. Shows open branch actions per person and last Monday's actions done. The focus sits at the top of /hq/today ("My day").
+- **Managers' update** (/weekly, menu "Weekly update to HQ"; was the weekly check-in): "From the app" – branch WIG held, commitments kept, lead measures on track, and an **automatic out-of-stock week** (src/oos/data.js branchWeekSummary: reported, back in stock, avg days to fix, still open, late items) – no OOS list to type any more (/weekly/oos still works, not on the page). The manager types stock, SKUs, zakat, one win and **up to 3 "what I need from HQ"**, each for an HQ person → hq_actions (issue_needing_hq_help mirrors them). Shows last week's HQ actions for the branch.
+- **Update meeting** (/hq/update, HQ + admin, menu "Weekly update meeting"): branch table (sales vs pace, WIG held, commitments kept, leads on track, days of stock, OOS open/late, zakat pending, update sent), wins, late OOS items; the branches' needs → owner + due date + status (owner and date = agreed → on the owner's /hq/today and the branch's WIG); add an action; last week's actions Done / Not done. Owners tick their actions on /hq/today (POST /hq/actions/:id: owner, full HQ, admin).
+- **Branch WIG** (/commitments, /wig redirects; menu "Branch WIG session"; Tuesday): 1 scoreboard (top measures, off-track list, month sales, commitments kept) + "what HQ will do for us" (actions raised at the update before this week); 2 account – Done / Partly / Not done + why (commitments.result, why; done kept = result 'yes'); 3 plan – one commitment each, tagged "typed on their phone" or "typed by <manager>"; 4 finish – who was there + session held (branch_wig_sessions).
+- **My week** (/my-week, branch staff and managers, phone): write this week's commitment, tap Done; last week's result; team this week. Daily entry shows a "My week" strip.
+- Wording: CEO measure "Both WIG sessions held (HQ Monday 10 am, branch Tuesday)", Hanin's training measure at the Tuesday branch sessions. Older databases once via wigWeekOnce (flag wig_week_v1).
+
+## Wiki: Iman writes, Hanin approves (18 Oct)
+- All 64 checklist pages owned by Iman (seed + older databases via wigWeekOnce). Iman marks a page Checking ("send to Hanin", hq_wiki_items.checking_at); only the approver (app_settings wiki_approver = seed hq.wiki_approver "Hanin") or admin can mark Approved or take a page out of Approved. Wiki timestamps use the app clock.
+- Measures: `wiki` (Iman) = pages sent to Hanin that week; `wikisop` (Hanin) = pages approved that week (all pages). Targets 7 / 6 / 5 a week Oct / Nov / Dec (28 P1 by 15 Nov, 30 P2 by 31 Dec) – applied to older databases only where the old 4/4/2 and 3/3/4 were unchanged. Hanin's daily task: "Company wiki: pages waiting for my approval checked today".
+- **Classroom** starts in November: HQ measure `classroom` (Iman, lessons published a week, 1 from Nov, Oct none). The Classroom content itself is still to be built.
 
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").

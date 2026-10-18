@@ -12,8 +12,9 @@
 %>
 <main class="page wk">
   <header class="board-head">
-    <h1>Weekly check-in <span class="board-week"><%= branch.name %> · week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
-    <p class="muted">Fill in on Monday for the week that just ended (Monday to Sunday).
+    <h1>Weekly update to HQ <span class="board-week"><%= branch.name %> · week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">For the Monday 4 pm meeting with CEO, Alia and Hanin – about the week that just ended (Monday to Sunday).
+      Sales, the WIG session, commitments and out of stock come from the app; you add the stock numbers, zakat, one win and what you need from HQ.
       <% if (checkin && checkin.submitted_by_name) { %>Last saved by <%= checkin.submitted_by_name %>.<% } %></p>
   </header>
 
@@ -36,6 +37,32 @@
     </div>
   </section>
 
+  <section class="wk-card" aria-labelledby="auto-h">
+    <h2 id="auto-h">From the app <span class="muted small">automatic – nothing to type</span></h2>
+    <div class="wig-facts">
+      <div><span class="wk-k">Branch WIG session</span>
+        <b class="<%= session && session.held_on ? 's-on_track' : 's-off_track' %>"><%= session && session.held_on ? 'Held ' + fmtDate(session.held_on) + ' ✔' : 'Not marked held ✕' %></b>
+        <span class="small muted"><%= session && session.attended.length ? session.attended.length + ' there' : '' %></span></div>
+      <div><span class="wk-k">Commitments kept</span><b><%= commitSummary.made ? commitSummary.yes + ' of ' + commitSummary.made : '–' %></b>
+        <span class="small muted"><%= commitSummary.partly ? commitSummary.partly + ' partly · ' : '' %><%= commitSummary.unmarked ? commitSummary.unmarked + ' marked at the next session' : '' %></span></div>
+      <div><span class="wk-k">Lead measures on track</span><b><%= leadsOnTrack.total ? leadsOnTrack.on + ' of ' + leadsOnTrack.total : '–' %></b>
+        <a class="small" href="/scoreboard?week=<%= week %><%= branchQs %>">scoreboard</a></div>
+    </div>
+    <div class="oos-week" id="oos">
+      <b>Out of stock this week</b> <span class="muted small">– summed from the daily reports</span>
+      <div class="oos-week-grid">
+        <div><span>Reported</span><b><%= oosWeek.reported %></b></div>
+        <div><span>Back in stock</span><b class="s-on_track"><%= oosWeek.back %></b></div>
+        <div><span>Avg days to fix</span><b><%= oosWeek.avgDays === null ? '–' : fmt.number(oosWeek.avgDays, 1) %></b></div>
+        <div class="<%= oosWeek.late.length ? 'is-late' : '' %>"><span>Still open</span><b><%= oosWeek.open %><%= oosWeek.late.length ? ' · ' + oosWeek.late.length + ' late' : '' %></b></div>
+      </div>
+      <% if (oosWeek.late.length) { %>
+        <p class="small">Late (HQ sees these too): <% oosWeek.late.forEach(function (l, i) { %><%= i ? ' · ' : '' %><b><%= l.item %></b> – <%= l.days %> days<%= l.customers ? ', ' + l.customers + ' customers asking' : '' %> (<%= l.why || 'was due ' + fmtDate(l.due) %>)<% }) %></p>
+      <% } %>
+      <p class="small"><a href="/oos?<%= branchQs.slice(1) %>">Out-of-stock items →</a></p>
+    </div>
+  </section>
+
   <form method="post" action="/weekly" class="wk-form" novalidate>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <input type="hidden" name="week" value="<%= week %>">
@@ -43,7 +70,7 @@
     <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
 
     <section class="wk-card" aria-labelledby="wk-numbers">
-      <h2 id="wk-numbers">Numbers</h2>
+      <h2 id="wk-numbers">You fill in – numbers</h2>
       <% numbers.forEach(function (n) { %>
         <label class="wk-field<%= errors[n.key] ? ' has-error' : '' %>">
           <span class="wk-label"><%= n.label %><small><%= n.hint %><% if (n.key === 'skus_sold_mtd' && skuTarget) { %> · target <%= fmt.number(skuTarget, 0) %> a month<% } %></small></span>
@@ -55,71 +82,61 @@
     </section>
 
     <section class="wk-card" aria-labelledby="wk-words">
-      <h2 id="wk-words">Win and issue</h2>
-      <% texts.forEach(function (x) { %>
-        <label class="wk-field<%= errors[x.key] ? ' has-error' : '' %>">
-          <span class="wk-label"><%= x.label %></span>
-          <textarea name="<%= x.key %>" rows="3" maxlength="500"<%= off %>><%= show(x.key) %></textarea>
-          <% if (errors[x.key]) { %><span class="wk-error"><%= errors[x.key] %></span><% } %>
-        </label>
-      <% }) %>
+      <h2 id="wk-words">One win this week</h2>
+      <label class="wk-field<%= errors.win_this_week ? ' has-error' : '' %>">
+        <span class="sr-only">One win this week</span>
+        <textarea name="win_this_week" rows="2" maxlength="500"<%= off %>><%= show('win_this_week') %></textarea>
+        <% if (errors.win_this_week) { %><span class="wk-error"><%= errors.win_this_week %></span><% } %>
+      </label>
     </section>
-    <% if (!blocked) { %><button class="button wide" type="submit">Save check-in</button><% } %>
+
+    <section class="wk-card wk-asks" aria-labelledby="wk-asks">
+      <h2 id="wk-asks">What I need from HQ</h2>
+      <% if ((values.issue_needing_hq_help && !asks.length) || errors.issue_needing_hq_help) { %>
+        <p class="small<%= errors.issue_needing_hq_help ? ' has-error' : '' %>"><b>Issue for HQ:</b> <%= values.issue_needing_hq_help %>
+          <% if (errors.issue_needing_hq_help) { %><span class="wk-error"><%= errors.issue_needing_hq_help %></span><% } %></p>
+      <% } %>
+      <p class="muted small">Up to <%= maxAsks %>, each for one HQ person. In the meeting HQ agrees a date – then it goes on that person’s week and you’ll see it at your branch WIG.</p>
+      <%
+        const typedA = (k) => (values.a && values.a[k]) || null;
+        const ownerSelect = function (name, selected, disabled) {
+          let h = '<select name="' + name + '" aria-label="For"' + (disabled ? ' disabled' : '') + '><option value="">For…</option>';
+          hqPeople.forEach(function (p) { h += '<option value="' + p.id + '"' + (String(selected) === String(p.id) ? ' selected' : '') + '>' + p.name.replace(/[<>&"]/g, '') + '</option>'; });
+          return h + '</select>';
+        };
+      %>
+      <% asks.forEach(function (a) { const t = typedA('k' + a.id); %>
+        <div class="ask-row<%= errors['k' + a.id] ? ' has-error' : '' %>">
+          <% if (a.agreed) { %>
+            <span class="ask-text"><%= a.issue %></span>
+            <span class="small"><b><%= a.owner_name %></b><%= a.due_date ? ' by ' + fmtDate(a.due_date) : '' %> · <%= a.status %> · agreed</span>
+          <% } else { %>
+            <input name="a[k<%= a.id %>][text]" value="<%= t ? t.text : a.issue %>" maxlength="300" aria-label="What you need"<%= off %>>
+            <%- ownerSelect('a[k' + a.id + '][owner]', t ? t.owner : a.owner_person_id, blocked) %>
+          <% } %>
+          <% if (errors['k' + a.id]) { %><span class="wk-error"><%= errors['k' + a.id] %></span><% } %>
+        </div>
+      <% }) %>
+      <% if (!blocked) { for (let i = 1; i <= Math.max(0, maxAsks - asks.length); i++) { const t = typedA('n' + i); %>
+        <div class="ask-row<%= errors['n' + i] ? ' has-error' : '' %>">
+          <input name="a[n<%= i %>][text]" value="<%= t ? t.text : '' %>" maxlength="300" placeholder="e.g. Need a Tue/Thu locum – can’t keep up chronic sign-ups" aria-label="What you need">
+          <%- ownerSelect('a[n' + i + '][owner]', t ? t.owner : '', false) %>
+          <% if (errors['n' + i]) { %><span class="wk-error"><%= errors['n' + i] %></span><% } %>
+        </div>
+      <% } } %>
+      <% if (lastActions.length) { %>
+        <div class="last-actions">
+          <b class="small">Last week’s HQ actions for <%= branch.code %></b>
+          <% lastActions.forEach(function (a) { %>
+            <div class="small"><%= a.owner_name || 'HQ' %>: <%= a.issue %> <b class="<%= a.status === 'Done' ? 's-on_track' : a.status === 'Open' ? '' : 's-off_track' %>"><%= a.status === 'Done' ? 'Done ✔' : a.status === 'Open' ? 'Open' : a.status + ' ✕' %></b></div>
+          <% }) %>
+        </div>
+      <% } %>
+    </section>
+    <% if (!blocked) { %><button class="button wide" type="submit">Send to HQ</button><% } %>
   </form>
 
-  <section class="wk-card" id="oos" aria-labelledby="oos-h">
-    <h2 id="oos-h">Out of stock</h2>
-    <p class="muted small">Items the branch can’t sell. Inventory (HQ) fills in the reason and when it’s back.</p>
-    <% if (!oos.length) { %><p class="muted">Nothing on the list.</p><% } %>
-    <% oos.forEach(function (o) { const open = openStatuses.includes(o.status); %>
-      <article class="oos<%= open ? '' : ' is-closed' %>" id="oos-<%= o.id %>">
-        <header class="oos-top">
-          <b><%= o.item %></b>
-          <span class="oos-status<%= open ? ' s-off_track' : ' s-on_track' %>"><%= o.status %></span>
-        </header>
-        <p class="oos-meta">
-          <% if (o.out_of_stock_since) { %>Out since <%= fmtDate(o.out_of_stock_since) %> · <% } %>
-          <% if (o.customers_asking) { %>Customers: <%= o.customers_asking %> · <% } %>
-          Logged <%= o.week_start === week ? 'this week' : 'week of ' + fmtDate(o.week_start) %><%= o.created_by_name ? ' by ' + o.created_by_name : '' %>
-        </p>
-        <p class="oos-answer"><% if (o.reason_for_delay || o.expected_back) { %>HQ: <%= o.reason_for_delay || '' %><%= o.expected_back ? ' · back by ' + fmtDate(o.expected_back) : '' %><% } else { %><span class="muted">No answer from HQ yet.</span><% } %></p>
-        <% if (o.branchEdit || canAnswer) { %>
-          <details class="admin-details">
-            <summary>Update</summary>
-            <form method="post" action="/weekly/oos/<%= o.id %>" class="admin-fields">
-              <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
-              <% if (o.branchEdit) { %>
-                <label>Item <input name="item" value="<%= o.item %>" maxlength="120" required></label>
-                <label>Out since <input type="date" name="out_of_stock_since" value="<%= o.out_of_stock_since || '' %>" max="<%= today %>"></label>
-                <label class="wide">Customers asking / lost sales <input name="customers_asking" value="<%= o.customers_asking || '' %>" maxlength="200"></label>
-              <% } %>
-              <% if (canAnswer) { %>
-                <label class="wide">Reason for the delay (HQ) <input name="reason_for_delay" value="<%= o.reason_for_delay || '' %>" maxlength="300"></label>
-                <label>Expected back <input type="date" name="expected_back" value="<%= o.expected_back || '' %>"></label>
-              <% } %>
-              <label>Status
-                <select name="status"><% statuses.forEach(function (st) { %><option<%= st === o.status ? ' selected' : '' %>><%= st %></option><% }) %></select>
-              </label>
-              <button class="button small-button" type="submit">Save</button>
-            </form>
-          </details>
-        <% } %>
-      </article>
-    <% }) %>
-
-    <% if (!blocked) { %>
-      <form method="post" action="/weekly/oos" class="admin-fields oos-add">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
-        <% if (pickAny) { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
-        <label class="wide">Item out of stock <input name="item" maxlength="120" required></label>
-        <label>Out since <input type="date" name="out_of_stock_since" max="<%= today %>"></label>
-        <label class="wide">Customers asking / lost sales <input name="customers_asking" maxlength="200" placeholder="e.g. 3 asked this week"></label>
-        <button class="button small-button" type="submit">Add to the list</button>
-      </form>
-    <% } %>
-  </section>
-
-  <p class="wk-next"><a class="button secondary" href="/commitments?<%= branchQs.slice(1) %>">Next: commitments →</a></p>
+  <p class="wk-next"><a class="button secondary" href="/commitments?<%= branchQs.slice(1) %>">Tuesday: branch WIG session →</a></p>
 </main>
 </body>
 </html>

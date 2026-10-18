@@ -13,6 +13,7 @@ const { hqRoutes } = require('./hq/routes');
 const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
+const { wigRoutes } = require('./wig/routes');
 const oosData = require('./oos/data');
 const calc = require('./calc');
 const fmt = require('./scoreboard/format');
@@ -103,6 +104,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(hqTeamRoutes(db, { now, trackerStart }));
   app.use(salesRoutes(db, { now, salesSheet }));
   app.use(oosRoutes(db, { now, trackerStart }));
+  app.use(wigRoutes(db, { now, trackerStart }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

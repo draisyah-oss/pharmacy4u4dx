@@ -338,6 +338,8 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       wiki_checklist_v1: new Date().toISOString(),
       wiki_tasks_v1: new Date().toISOString(),
       wiki_tasks_hanin_v1: new Date().toISOString(),
+      wig_week_v1: new Date().toISOString(),
+      wiki_approver: seed.hq && seed.hq.wiki_approver ? JSON.stringify(seed.hq.wiki_approver) : null,
       oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
     };
     for (const [key, value] of Object.entries(settings)) {

@@ -9,13 +9,14 @@
      // [key, href, label, search words]
      let quick = []; let groups = [];
      if (role === 'branch_staff') {
-       quick = [['daily', '/daily', 'Daily entry'], ['oos', '/oos', 'Out of stock']];
-       groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['oos', '/oos', 'Out of stock', 'oos report restock']]]];
+       quick = [['daily', '/daily', 'Daily entry'], ['myweek', '/my-week', 'My week']];
+       groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['myweek', '/my-week', 'My week', 'commitment wig'],
+         ['oos', '/oos', 'Out of stock', 'oos report restock']]]];
      } else if (role === 'hq_staff') {
        quick = [['hqtoday', '/hq/today', 'My day'], ['hq', '/hq', 'My KPIs']];
        groups = [
          ['My work', [['hqtoday', '/hq/today', 'My day', 'tasks daily'], ['hq', '/hq', 'My KPIs', 'input lead measures'],
-           ['hqcommit', '/hq/commitments', 'Commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones'],
+           ['hqcommit', '/hq/commitments', 'HQ WIG session', 'weekly commitments focus monday'], ['projects', '/hq/projects', 'Projects', 'milestones'],
            ['oostransfers', '/oos/transfers', 'Transfers to send', 'out of stock oos restock']]],
          ['Scoreboards', [['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi'], ['group', '/group', 'Group scoreboard', 'branches company'],
            ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'], ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
@@ -26,14 +27,15 @@
        groups = [
          ['Branch', [['daily', '/daily' + bq, 'Daily entry', 'log today walk-in'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard', 'week lead'],
            ['oos', '/oos' + bq, 'Out of stock', 'oos report restock'],
-           ['weekly', '/weekly' + bq, 'Weekly check-in', 'monday'], ['commitments', '/commitments' + bq, 'Commitments', 'weekly']]],
+           ['weekly', '/weekly' + bq, 'Weekly update to HQ', 'monday check-in stock zakat'], ['commitments', '/commitments' + bq, 'Branch WIG session', 'tuesday weekly commitments'],
+           ...(role === 'branch_manager' ? [['myweek', '/my-week', 'My week', 'my commitment']] : [])]],
          ['Company', [['group', '/group', 'Group scoreboard', 'branches'], ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'],
            ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];
        if (many) {
          groups.push(['HQ', [['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'], ['oostransfers', '/oos/transfers', 'Transfers to send', 'oos'],
            ['hq', '/hq', 'HQ input', 'kpi b2b'], ['hqtoday', '/hq/today', 'HQ day', 'tasks daily'],
-           ['hqcommit', '/hq/commitments', 'HQ commitments', 'weekly'], ['projects', '/hq/projects', 'Projects', 'milestones'], ['hqwiki', '/hq/wiki', 'Wiki checklist', 'company wiki sop jd policy'],
+           ['hqcommit', '/hq/commitments', 'HQ WIG session', 'weekly commitments focus monday'], ['hqupdate', '/hq/update', 'Weekly update meeting', 'managers monday 4pm branches actions'], ['projects', '/hq/projects', 'Projects', 'milestones'], ['hqwiki', '/hq/wiki', 'Wiki checklist', 'company wiki sop jd policy'],
            ['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi']]]);
        }
        if (role === 'admin') {

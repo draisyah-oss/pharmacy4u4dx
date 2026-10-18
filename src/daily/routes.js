@@ -55,7 +55,14 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
       : null;
     // The branch's open out-of-stock items, with Inventory's answers, plus the Report button.
     const oosItems = (await oosData.loadBranchItems(db, branch, { now })).filter((it) => it.isOpen);
+    // My week: the logged-in person's commitment this week (staff and managers).
+    let myCommit = null;
+    if (['branch_staff', 'branch_manager'].includes(req.user.role) && req.user.person_id && req.user.branch_id === branch.id) {
+      myCommit = (await db.query('SELECT commitment, result FROM commitments WHERE branch_id = $1 AND week_start = $2 AND person_id = $3',
+        [branch.id, calc.weekStart(today), req.user.person_id])).rows[0] || { none: true };
+    }
     res.status(extra.status || 200).render('daily', {
+      myCommit,
       oosItems, of: oosFormat, oosLink: `/oos${req.user.role === 'admin' || req.user.role === 'hq' ? `?branch=${encodeURIComponent(branch.code)}` : ''}`,
       oosCanReport: oosData.canReport(req.user, branch),
       monthSales: { s: board.sales, started: board.started, asOf: board.asOf, href: salesHref }, fmt,

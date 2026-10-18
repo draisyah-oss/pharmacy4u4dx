@@ -314,7 +314,35 @@ async function buildBoard(db, { week, now }) {
   };
 }
 
+// One branch's out-of-stock week for the manager's weekly update (18 Oct) – summed from the
+// daily reports, so nobody types an OOS list on Monday: reported that week, back in stock that
+// week (and the average days it took), still open now, and which open ones are late.
+async function branchWeekSummary(db, { branchId, week, now }) {
+  const at = now(); const today = mytDate(at);
+  const from = atMyt(week, 0); const to = atMyt(calc.addDays(week, 7), 0);
+  const rows = (await db.query(
+    `${SELECT} WHERE o.branch_id = $1 AND (o.status = ANY($2) OR (o.reported_at >= $3 AND o.reported_at < $4) OR (o.received_at >= $3 AND o.received_at < $4))
+     ORDER BY o.reported_at`, [branchId, OPEN, from, to])).rows.map((it) => decorate(it, at, today));
+  const inWeek = (ts) => ts && new Date(ts) >= from && new Date(ts) < to;
+  const back = rows.filter((it) => inWeek(it.received_at));
+  const days = back.map((it) => (new Date(it.received_at) - new Date(it.reported_at || it.received_at)) / 86400e3);
+  const open = rows.filter((it) => it.isOpen);
+  const late = open.filter((it) => it.late || it.overdueAnswer || it.late_flagged_at);
+  return {
+    reported: rows.filter((it) => inWeek(it.reported_at)).length,
+    back: back.length,
+    avgDays: days.length ? days.reduce((a, d) => a + d, 0) / days.length : null,
+    open: open.length,
+    late: late.map((it) => ({
+      id: it.id, item: it.item, customers: it.customers_count || 0, urgent: it.urgent,
+      days: Math.max(0, Math.floor((at - new Date(it.reported_at)) / 86400e3)),
+      why: it.overdueAnswer ? 'not answered yet' : null, due: it.expected_back || null,
+    })),
+  };
+}
+
 module.exports = {
+  branchWeekSummary,
   OPEN, ANSWERS, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
   report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, buildBoard,
 };

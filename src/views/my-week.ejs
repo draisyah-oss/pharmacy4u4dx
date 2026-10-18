@@ -1,0 +1,63 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'myweek' }) %>
+<main class="page oo-page my-week">
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <section class="oo-card" aria-labelledby="mw-h">
+    <h1 id="mw-h">My week <span class="muted small"><%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <% if (mine) { %>
+      <p class="mw-label">MY COMMITMENT THIS WEEK</p>
+      <p class="mw-commit">“<%= mine.commitment %>”</p>
+      <p class="muted small"><%= mine.lead_measure ? 'Moves: ' + mine.lead_measure : '' %><%= mine.by_when ? ' · by ' + fmtDate(mine.by_when) : '' %></p>
+      <form method="post" action="/my-week">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (mine.result === 'yes') { %>
+          <p class="s-on_track"><b>Done ✔</b></p>
+          <button class="button secondary wide" name="mark" value="undo" type="submit">Not done yet – undo</button>
+        <% } else { %>
+          <button class="button wide mw-done" name="mark" value="yes" type="submit">Done ✔</button>
+        <% } %>
+      </form>
+      <p class="muted small">Tap Done when it’s done – the team sees it at next Tuesday’s WIG.</p>
+    <% } else { %>
+      <p class="muted">No commitment yet for this week. Type it below – or your manager types it at Tuesday’s WIG session.</p>
+    <% } %>
+
+    <details class="mw-edit"<%= mine ? '' : ' open' %>>
+      <summary><%= mine ? 'Change my commitment' : 'Write my commitment' %></summary>
+      <form method="post" action="/my-week" class="oo-form" novalidate>
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="oo-label">This week I will…
+          <textarea name="text" rows="3" maxlength="300" placeholder="e.g. Ask every BP-check customer to register as a chronic customer, all week"><%= mine ? mine.commitment : '' %></textarea></label>
+        <label class="oo-label">It moves
+          <select name="lead"><option value="">–</option>
+            <% if (myMeasures.length) { %><optgroup label="Mine"><% myMeasures.forEach(function (m) { %><option<%= mine && mine.lead_measure === m ? ' selected' : '' %>><%= m %></option><% }) %></optgroup><% } %>
+            <optgroup label="Branch"><% measures.filter(function (m) { return !myMeasures.includes(m); }).forEach(function (m) { %><option<%= mine && mine.lead_measure === m ? ' selected' : '' %>><%= m %></option><% }) %></optgroup>
+          </select></label>
+        <label class="oo-label">By when <input type="date" name="by" min="<%= week %>" max="<%= weekEnd %>" value="<%= mine && mine.by_when ? mine.by_when : '' %>"></label>
+        <button class="button wide" type="submit">Save</button>
+      </form>
+    </details>
+  </section>
+
+  <% if (lastMine) { %>
+  <section class="oo-card">
+    <p class="mw-label">LAST WEEK</p>
+    <p>“<%= lastMine.commitment %>” – <b class="<%= lastMine.result === 'yes' ? 's-on_track' : lastMine.result ? 's-off_track' : 'muted' %>"><%= lastMine.result ? resultText[lastMine.result] : 'not marked yet' %></b></p>
+  </section>
+  <% } %>
+
+  <section class="oo-card">
+    <p class="mw-label">TEAM THIS WEEK</p>
+    <% if (!team.length) { %><p class="muted small">No one else has a commitment yet.</p><% } %>
+    <ul class="mw-team">
+      <% team.forEach(function (c) { %>
+        <li><b><%= c.person_name %></b> – <%= c.commitment %> <%= c.result === 'yes' ? '✔' : '' %></li>
+      <% }) %>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

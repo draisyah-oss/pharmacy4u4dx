@@ -1,6 +1,9 @@
-// Weekly check-in (Mondays): the week's stock numbers, SKUs, zakat claims, one win and one
-// issue needing HQ help – next to MTD sales vs target and the sales needed per day.
-// Plus the out-of-stock (OOS) list, which Inventory (HQ) answers.
+// Manager's weekly update to HQ (Monday 4 pm meeting with CEO, Alia, Hanin – was the weekly
+// check-in): sales, branch WIG session, commitments kept and the out-of-stock week come from the
+// app; the manager adds the stock numbers, SKUs, zakat claims, one win and up to three things
+// they need from HQ (each for an HQ person – these become HQ actions, src/wig/data.js).
+// The old OOS list (/weekly/oos) still works but is no longer on the page: out of stock is summed
+// from the daily reports (src/oos).
 
 const calc = require('../calc');
 const { parseOptional, audit } = require('../admin/common');
@@ -55,13 +58,27 @@ async function loadOos(db, branchId, week) {
   return rows;
 }
 
-async function loadCheckinPage(db, { branch, week, today, trackerStart }) {
-  const [board, checkin, oos] = await Promise.all([
+async function loadCheckinPage(db, { branch, week, today, trackerStart, now }) {
+  const wig = require('../wig/data');
+  const oosData = require('../oos/data');
+  const { loadWeek } = require('./commitments');
+  const [board, checkin, oos, oosWeek, asks, lastActions, session, commits, hqPeople] = await Promise.all([
     buildScoreboard(db, { branch, weekStart: week, today, trackerStart }),
     loadCheckin(db, branch.id, week),
     loadOos(db, branch.id, week),
+    oosData.branchWeekSummary(db, { branchId: branch.id, week, now }),
+    wig.loadActions(db, { week, branchId: branch.id }),
+    wig.loadActions(db, { week: calc.addDays(week, -7), branchId: branch.id }),
+    wig.loadSession(db, branch.id, week),
+    loadWeek(db, branch.id, week),
+    wig.hqPeople(db),
   ]);
+  const rows = [...board.top, ...board.groups.flatMap((g) => g.rows)];
+  const leads = board.top.filter((r) => ['on_track', 'watch', 'off_track'].includes(r.week.status));
   return {
+    oosWeek, asks, lastActions, session, commitSummary: wig.resultSummary(commits), hqPeople, maxAsks: wig.MAX_ASKS,
+    leadsOnTrack: { on: leads.filter((r) => r.week.status === 'on_track').length, total: leads.length },
+    measureCount: rows.length,
     sales: board.sales, asOf: board.asOf, started: board.started, weekEnd: board.weekEnd, mtdFrom: board.mtdFrom,
     checkin, turnover: turnoverFor(checkin, branch), oos,
     numbers: numbersFor(branch), texts: TEXTS, hasZakat: Boolean(branch.zakat_field),

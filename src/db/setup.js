@@ -56,6 +56,8 @@ async function backfillNewSettings(db, seed, log) {
   await wigOnMonday(db, log);
   await renameBranchPersonOnce(db, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', log);
   await addHqTaskOnce(db, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', log);
+  await ensureSetting(db, 'wiki_approver', seed.hq && seed.hq.wiki_approver, log);
+  await wigWeekOnce(db, seed, log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -181,6 +183,44 @@ async function wigOnMonday(db, log) {
     await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_measures', 'All WIG sessions moved to Monday (16 Oct)', NULL)");
   });
   log('WIG sessions: wording changed to Monday.');
+}
+
+// 18 Oct: the weekly WIG rhythm – HQ WIG Monday 10 am, managers' update Monday 4 pm, branch WIG
+// Tuesday – and the wiki checklist: Iman owns every page, Hanin approves. Wording, owners and the
+// wiki targets (only where still the old seed numbers) changed once.
+async function wigWeekOnce(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'wig_week_v1'")).rows.length) return;
+  const hq = new Map(((seed.hq && seed.hq.measures) || []).map((m) => [m.id, m]));
+  await db.transaction(async (tx) => {
+    for (const code of ['sessions', 'mgr', 'wiki', 'wikisop']) {
+      const m = hq.get(code);
+      if (m) await tx.query('UPDATE hq_measures SET label = $2, note = $3 WHERE code = $1', [code, m.label, m.note]);
+    }
+    const old = { wiki: { '2026-10': 4, '2026-11': 4, '2026-12': 2 }, wikisop: { '2026-10': 3, '2026-11': 3, '2026-12': 4 } };
+    for (const [code, was] of Object.entries(old)) {
+      const m = hq.get(code);
+      const row = (await tx.query('SELECT id FROM hq_measures WHERE code = $1', [code])).rows[0];
+      if (!m || !row) continue;
+      const now = new Map((await tx.query('SELECT month, target FROM hq_measure_targets WHERE hq_measure_id = $1', [row.id])).rows.map((r) => [r.month, Number(r.target)]));
+      if (Object.entries(was).some(([month, t]) => now.get(month) !== t)) continue; // edited in Admin – keep
+      for (const [month, t] of Object.entries(m.targets)) {
+        await tx.query(`INSERT INTO hq_measure_targets (hq_measure_id, month, target) VALUES ($1, $2, $3)
+          ON CONFLICT (hq_measure_id, month) DO UPDATE SET target = EXCLUDED.target`, [row.id, month, t]);
+      }
+    }
+    await tx.query("UPDATE hq_projects SET milestone = replace(milestone, 'managers 15 min every Monday', 'managers 15 min every Tuesday') WHERE milestone LIKE '%managers 15 min every Monday%'");
+    await tx.query(`UPDATE hq_wiki_items SET title = 'How we run 4DX: WIGs, lead measures, weekly WIG sessions (HQ Monday, branch Tuesday), commitments'
+      WHERE title = 'How we run 4DX: WIGs, lead measures, Monday WIG sessions, commitments'`);
+    const iman = (await tx.query("SELECT id FROM people WHERE branch_id IS NULL AND name = 'Iman'")).rows[0];
+    const moved = iman ? (await tx.query("UPDATE hq_wiki_items SET owner = 'Iman', person_id = $1 WHERE owner = 'Hanin' RETURNING id", [iman.id])).rows.length : 0;
+    await tx.query("UPDATE hq_wiki_items SET checking_at = updated_at WHERE status IN ('Checking', 'Approved') AND checking_at IS NULL");
+    await tx.query(`UPDATE hq_daily_tasks SET label = 'Company wiki: pages waiting for my approval checked today'
+      WHERE label = 'Company wiki: SOPs waiting for my check answered today'`);
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('wig_week_v1', $1)", [new Date().toISOString()]);
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_measures', 'Weekly WIG rhythm + wiki owners (18 Oct)', $1)",
+      [JSON.stringify({ wiki_pages_moved_to_iman: moved })]);
+    log(`Weekly WIG rhythm: branch WIG on Tuesday; ${moved} wiki pages moved to Iman (Hanin approves).`);
+  });
 }
 
 // 16 Oct: the company wiki checklist (64 pages) for Iman and Hanin, added once.
@@ -330,4 +370,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { wigOnMonday, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { wigOnMonday, wigWeekOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

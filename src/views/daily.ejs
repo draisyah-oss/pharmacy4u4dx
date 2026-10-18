@@ -41,6 +41,10 @@
 
 <main class="page daily">
   <%- include('partials/branch-sales', monthSales) %>
+  <% if (myCommit) { %>
+  <a class="mw-strip" href="/my-week"><span class="mw-label">MY WEEK</span>
+    <% if (myCommit.none) { %><span>No commitment yet this week – write it ›</span><% } else { %><span>“<%= myCommit.commitment %>” <%= myCommit.result === 'yes' ? '✔ done' : '– tap when done ›' %></span><% } %></a>
+  <% } %>
   <section class="oo-strip" aria-labelledby="oos-strip-h">
     <div class="oo-strip-top">
       <h2 id="oos-strip-h">Out of stock<%= oosItems.length ? ' · ' + oosItems.length + ' open' : '' %></h2>

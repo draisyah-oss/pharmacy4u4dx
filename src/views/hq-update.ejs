@@ -1,0 +1,97 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'hqupdate' }) %>
+<%- include('partials/week-bar', { base: '/hq/update', pickAny: false }) %>
+<%
+  const typedX = (k) => (typed && typed.x && typed.x[k]) || null;
+  const off = canEdit ? '' : ' disabled';
+  const sel = function (name, list, selected, label, valueOf, textOf) {
+    let h = '<select name="' + name + '" aria-label="' + label + '"' + off + '><option value="">' + label + '…</option>';
+    list.forEach(function (x) { const v = String(valueOf(x)); h += '<option value="' + v + '"' + (String(selected ?? '') === v ? ' selected' : '') + '>' + String(textOf(x)).replace(/[<>&"]/g, '') + '</option>'; });
+    return h + '</select>';
+  };
+  const owners = function (name, selected) { return sel(name, people, selected, 'Owner', function (p) { return p.id; }, function (p) { return p.name; }); };
+%>
+<main class="page wk upd-page">
+  <header class="board-head">
+    <h1>Weekly update with branch managers <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">Monday 4 pm, online · 5 managers + CEO, Alia, Hanin · ≈8 minutes a branch. Updates received: <b><%= rows.filter(function (r) { return r.g.checkedIn; }).length %> of <%= rows.length %></b>.</p>
+  </header>
+
+  <section class="wk-card" aria-labelledby="br-h">
+    <h2 id="br-h">Branches</h2>
+    <div class="table-scroll">
+      <table class="wig-table upd-table">
+        <thead><tr><th>Branch</th><th class="r">Sales vs pace</th><th>Branch WIG</th><th class="r">Commitments kept</th><th class="r">Leads on track</th><th class="r">Days of stock</th><th class="r">Out of stock</th><th class="r">Zakat pending</th><th>Update</th></tr></thead>
+        <tbody>
+          <% rows.forEach(function (r) { const s = r.g.sales; %>
+            <tr>
+              <th><a href="/weekly?branch=<%= r.code %>&week=<%= week %>"><%= r.name %></a></th>
+              <td class="r s-<%= s.status %>"><%= s.pacePct === null || s.pacePct === undefined ? '–' : fmt.pct(s.pacePct) %> <%= fmt.symbol(s.status) %></td>
+              <td class="<%= r.session && r.session.held_on ? 's-on_track' : 's-off_track' %>"><%= r.session && r.session.held_on ? 'Held ✔' : 'Not held ✕' %></td>
+              <td class="r"><%= r.commits.made ? r.commits.yes + ' of ' + r.commits.made : '–' %></td>
+              <td class="r"><%= r.leads.total ? r.leads.on + ' of ' + r.leads.total : '–' %></td>
+              <td class="r"><%= r.g.turnover && r.g.turnover.daysOfStock ? fmt.number(r.g.turnover.daysOfStock, 0) : '–' %></td>
+              <td class="r<%= r.oos.late.length ? ' s-off_track' : '' %>"><%= r.oos.open %> open<%= r.oos.late.length ? ' · ' + r.oos.late.length + ' late' : '' %><span class="muted small"><br><%= r.oos.reported %> reported · <%= r.oos.back %> back</span></td>
+              <td class="r"><%= r.g.hasZakat ? (r.g.zakatPending === null ? '–' : fmt.money(r.g.zakatPending)) : '–' %></td>
+              <td><%= r.g.checkedIn ? 'Sent ✔' : 'Not yet' %></td>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% const wins = rows.filter(function (r) { return r.g.win; }); if (wins.length) { %>
+      <p class="small"><b>Wins:</b> <% wins.forEach(function (r, i) { %><%= i ? ' · ' : '' %><%= r.code %> – <%= r.g.win %><% }) %></p>
+    <% } %>
+    <% const late = rows.filter(function (r) { return r.oos.late.length; }); if (late.length) { %>
+      <p class="small"><b class="s-off_track">Late out-of-stock items:</b> <% late.forEach(function (r) { r.oos.late.forEach(function (l, i) { %> <%= r.code %>: <%= l.item %> (<%= l.days %> days<%= l.customers ? ', ' + l.customers + ' asking' : '' %>, <%= l.why || 'was due ' + fmtDate(l.due) %>) ·<% }) }) %> <a href="/oos/inbox">inbox →</a></p>
+    <% } %>
+  </section>
+
+  <form method="post" action="/hq/update" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="week" value="<%= week %>">
+    <section class="wk-card wk-actions" aria-labelledby="ac-h">
+      <h2 id="ac-h">What branches need → HQ actions</h2>
+      <p class="muted small">Agree an owner and a date in the meeting. With both, it’s on that person’s week (HQ day, HQ WIG) and the branch sees it at its Tuesday WIG.</p>
+      <% if (!actions.length) { %><p class="muted">Nothing raised for this week yet.</p><% } %>
+      <% actions.forEach(function (a) { const t = typedX('k' + a.id); %>
+        <div class="act-row<%= errors[a.id] ? ' has-error' : '' %>" id="a-<%= a.id %>">
+          <b class="act-branch"><%= a.branch_code || 'HQ' %></b>
+          <span class="act-text"><%= a.issue %><span class="muted small"><%= a.raised_by_name ? ' – ' + a.raised_by_name : '' %></span></span>
+          <%- owners('x[k' + a.id + '][owner]', t ? t.owner : a.owner_person_id) %>
+          <input type="date" name="x[k<%= a.id %>][due]" value="<%= t ? t.due : (a.due_date || '') %>" aria-label="Due"<%= off %>>
+          <%- sel('x[k' + a.id + '][status]', statuses, t ? t.status : a.status, 'Status', function (s) { return s; }, function (s) { return s; }) %>
+          <span class="act-tag<%= a.agreed ? ' is-agreed' : '' %>"><%= a.agreed ? '→ ' + (a.owner_name || '').toUpperCase() + '’S WEEK' : 'TO AGREE' %></span>
+          <% if (errors[a.id]) { %><span class="wk-error"><%= errors[a.id] %></span><% } %>
+        </div>
+      <% }) %>
+      <% if (canEdit) { const t = typedX('new') || {}; %>
+        <div class="act-row act-new<%= errors.new ? ' has-error' : '' %>">
+          <%- sel('x[new][branch]', branches, t.branch, 'Branch', function (b) { return b.code; }, function (b) { return b.code; }) %>
+          <input name="x[new][text]" value="<%= t.text || '' %>" maxlength="300" placeholder="Add an action agreed in the meeting" aria-label="New action">
+          <%- owners('x[new][owner]', t.owner) %>
+          <input type="date" name="x[new][due]" value="<%= t.due || '' %>" aria-label="Due">
+          <% if (errors.new) { %><span class="wk-error"><%= errors.new %></span><% } %>
+        </div>
+        <button class="button wide" type="submit">Save HQ actions</button>
+      <% } %>
+    </section>
+  </form>
+
+  <section class="wk-card" aria-labelledby="la-h">
+    <h2 id="la-h">Last week’s HQ actions <span class="muted small"><%= lastSummary.total ? lastSummary.done + ' of ' + lastSummary.total + ' done' + (lastSummary.pct === null ? '' : ' (' + fmt.pct(lastSummary.pct) + ')') : '' %></span></h2>
+    <% if (!lastActions.length) { %><p class="muted">None.</p><% } %>
+    <% lastActions.forEach(function (a) { %>
+      <form method="post" action="/hq/actions/<%= a.id %>" class="act-last">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/hq/update"><input type="hidden" name="week" value="<%= week %>">
+        <span><b><%= a.branch_code || 'HQ' %></b> · <%= a.owner_name || '–' %>: <%= a.issue %><%= a.due_date ? ' (by ' + fmtDate(a.due_date) + ')' : '' %></span>
+        <span class="act-btns">
+          <button class="yn-btn<%= a.status === 'Done' ? ' is-yes' : '' %>" name="status" value="Done" type="submit">Done</button>
+          <button class="yn-btn<%= a.status === 'Not done' ? ' is-no' : '' %>" name="status" value="Not done" type="submit">Not done</button>
+        </span>
+      </form>
+    <% }) %>
+  </section>
+</main>
+</body>
+</html>

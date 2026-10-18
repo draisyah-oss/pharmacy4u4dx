@@ -7,6 +7,7 @@ const { loadBranch } = require('../daily/data');
 const { weekChoices, lastFinishedWeek, pickWeek } = require('../lib/weeks');
 const { viewDenied, editDenied, canAnswerOos } = require('./access');
 const data = require('./data');
+const wig = require('../wig/data');
 const { loadCommitmentsPage, saveCommitments } = require('./commitments');
 
 function weeklyRoutes(db, { now, trackerStart }) {
@@ -48,14 +49,14 @@ function weeklyRoutes(db, { now, trackerStart }) {
   // ─────────────── Weekly check-in ───────────────
 
   async function renderCheckin(req, res, ctx, extra = {}) {
-    const page = await data.loadCheckinPage(db, { branch: ctx.branch, week: ctx.week, today: ctx.today, trackerStart: ctx.start });
+    const page = await data.loadCheckinPage(db, { branch: ctx.branch, week: ctx.week, today: ctx.today, trackerStart: ctx.start, now });
     const values = { ...(page.checkin || {}), ...(extra.typed || {}) };
     for (const o of page.oos) {
       o.branchEdit = !editDenied(req.user, ctx.branch, o.week_start, ctx.today)
         || (req.user.role === 'branch_manager' && req.user.branch_id === o.branch_id && data.OOS_OPEN.includes(o.status));
     }
     res.status(extra.status || 200).render('weekly', {
-      title: `${ctx.branch.name} – weekly check-in`, ...ctx, ...page, fmt, values,
+      title: `${ctx.branch.name} – weekly update to HQ`, ...ctx, ...page, fmt, values,
       weekEnd: calc.addDays(ctx.week, 6), pills: weekPills(ctx, '/weekly'),
       blocked: editDenied(req.user, ctx.branch, ctx.week, ctx.today),
       canAnswer: canAnswerOos(req.user), statuses: data.OOS_STATUSES, openStatuses: data.OOS_OPEN,
@@ -78,7 +79,9 @@ function weeklyRoutes(db, { now, trackerStart }) {
       if (blocked) return res.status(403).render('message', { title: 'Can’t save', message: blocked });
       const result = await data.saveCheckin(db, req.user, ctx.branch, ctx.week, req.body);
       if (result.errors) return renderCheckin(req, res, ctx, { status: 400, errors: result.errors, typed: req.body, err: 'Nothing saved – fix the boxes in red.' });
-      res.redirect(`/weekly?week=${ctx.week}${ctx.branchQs}&ok=${encodeURIComponent(result.saved ? 'Check-in saved.' : 'No changes to save.')}`);
+      const asks = req.body.a ? await wig.saveAsks(db, req.user, ctx.branch, ctx.week, req.body) : { saved: 0 };
+      if (asks.errors) return renderCheckin(req, res, ctx, { status: 400, errors: asks.errors, typed: req.body, err: 'The numbers are saved – fix what you need from HQ (in red).' });
+      res.redirect(`/weekly?week=${ctx.week}${ctx.branchQs}&ok=${encodeURIComponent(result.saved || asks.saved ? 'Update saved – HQ can see it.' : 'No changes to save.')}`);
     } catch (err) { next(err); }
   });
 
@@ -117,12 +120,15 @@ function weeklyRoutes(db, { now, trackerStart }) {
   async function renderCommitments(req, res, ctx, extra = {}) {
     const page = await loadCommitmentsPage(db, { branch: ctx.branch, week: ctx.week, today: ctx.today, trackerStart: ctx.start });
     res.status(extra.status || 200).render('commitments', {
-      title: `${ctx.branch.name} – commitments`, ...ctx, ...page, fmt,
+      title: `${ctx.branch.name} – branch WIG session`, ...ctx, ...page, fmt,
       weekEnd: calc.addDays(ctx.week, 6), pills: weekPills(ctx, '/commitments'),
       blocked: editDenied(req.user, ctx.branch, ctx.week, ctx.today),
       typed: extra.typed || null, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || null,
     });
   }
+
+  // The branch WIG session lives at /commitments (its old name); /wig is a short link.
+  router.get('/wig', (req, res) => res.redirect(`/commitments${req.query.branch ? `?branch=${encodeURIComponent(String(req.query.branch))}` : ''}`));
 
   router.get('/commitments', async (req, res, next) => {
     try {
@@ -137,9 +143,9 @@ function weeklyRoutes(db, { now, trackerStart }) {
       if (!guard(req, res, ctx)) return;
       const blocked = editDenied(req.user, ctx.branch, ctx.week, ctx.today);
       if (blocked) return res.status(403).render('message', { title: 'Can’t save', message: blocked });
-      const r = await saveCommitments(db, req.user, ctx.branch, ctx.week, req.body);
+      const r = await saveCommitments(db, req.user, ctx.branch, ctx.week, req.body, { today: ctx.today });
       if (r.errors) return renderCommitments(req, res, ctx, { status: 400, errors: r.errors, typed: req.body, err: 'Nothing saved – fix the boxes in red.' });
-      res.redirect(`/commitments?week=${ctx.week}${ctx.branchQs}&ok=${encodeURIComponent(r.saved ? 'Commitments saved.' : 'No changes to save.')}`);
+      res.redirect(`/commitments?week=${ctx.week}${ctx.branchQs}&ok=${encodeURIComponent(r.saved ? 'Session saved.' : 'No changes to save.')}`);
     } catch (err) { next(err); }
   });
 

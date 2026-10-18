@@ -6,23 +6,57 @@
   const off = blocked ? ' disabled' : '';
   const typedFor = (pid) => (typed && typed.c && typed.c['p' + pid]) || null;
   const doneTyped = (id) => (typed && typed.done ? typed.done['k' + id] : undefined);
+  const whyTyped = (id) => (typed && typed.why ? typed.why['k' + id] : undefined);
+  const attended = new Set(session ? session.attended : []);
+  const s = board.sales;
+  const ls = lastSummary;
 %>
 <main class="page wk">
   <header class="board-head">
-    <h1>Commitments <span class="board-week"><%= branch.name %> · week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
-    <p class="muted">Each person: was last week’s commitment done? Then one new commitment for this week that moves a lead measure.</p>
+    <h1>Branch WIG session <span class="board-week"><%= branch.name %> · week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <p class="muted">Tuesday, 30 minutes with the whole team: scoreboard → account for last week → this week’s commitments → finish.
+      <% if (session && session.held_on) { %><b class="s-on_track">Held <%= fmtDate(session.held_on) %> ✔</b><% } %></p>
+    <nav class="wig-steps" aria-label="Steps">
+      <a href="#step-1">1 Scoreboard</a><a href="#step-2">2 Account</a><a href="#step-3">3 Plan</a><a href="#step-4">4 Finish</a>
+    </nav>
   </header>
 
-  <section class="wk-card" aria-labelledby="off-h">
-    <h2 id="off-h">Off track <%= reviewIsThisWeek ? 'this week so far' : 'last week' %> <span class="s-off_track">✕</span></h2>
-    <% if (!offTrack.length) { %><p class="muted">Nothing under 90%. Commit to keeping the leads moving.</p><% } else { %>
-      <ul class="off-list">
-        <% offTrack.forEach(function (m) { %>
-          <li><% if (reviewAsOf >= reviewWeek) { %><a href="/scoreboard/trace?type=measure&code=<%= encodeURIComponent(m.code) %>&from=<%= reviewWeek %>&to=<%= reviewAsOf %><%= branchQs %>" class="off-link"><%= m.label %></a><% } else { %><%= m.label %><% } %>
-            <span class="muted"><%= m.owner %> · <%= fmt.pct(m.pct) || '–' %></span></li>
+  <section class="wk-card" id="step-1" aria-labelledby="sb-h">
+    <h2 id="sb-h">1 · Scoreboard <span class="muted small"><%= reviewIsThisWeek ? 'this week so far' : 'last week' %></span></h2>
+    <div class="wig-facts">
+      <div><span class="wk-k">Month sales so far</span><b><%= fmt.money(s.mtd) %></b>
+        <% if (s.monthTarget) { %><span class="small s-<%= s.status %>"><%= s.pacePct >= 1 ? 'Ahead of pace' : 'Behind pace' %> <%= fmt.symbol(s.status) %><%= s.perDay ? ' · need ' + fmt.money(s.perDay) + ' a day' : '' %></span><% } %></div>
+      <div><span class="wk-k">Commitments kept last week</span><b><%= ls.made ? ls.yes + ' of ' + ls.made : '–' %></b>
+        <span class="small muted"><%= ls.partly ? ls.partly + ' partly · ' : '' %><%= ls.unmarked ? ls.unmarked + ' not marked yet' : '' %></span></div>
+    </div>
+    <% if (board.top.length) { %>
+      <table class="wig-table">
+        <thead><tr><th>Measure</th><th>Who</th><th class="r">Actual</th><th class="r">Target</th><th class="r">Status</th></tr></thead>
+        <tbody>
+          <% board.top.forEach(function (r) { %>
+            <tr><td><%= r.label %></td><td class="muted"><%= r.owner %></td><td class="r"><%= fmt.value(r, r.week.actual) %></td>
+              <td class="r"><%= r.week.target === null ? '–' : fmt.value(r, r.week.target) %></td>
+              <td class="r s-<%= r.week.status %>"><%= fmt.symbol(r.week.status) %> <%= fmt.pct(r.week.pct) || '' %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    <% } %>
+    <% if (offTrack.length) { %>
+      <p class="small"><b class="s-off_track">Off track ✕</b>
+        <% offTrack.forEach(function (m, i) { %><%= i ? ' · ' : '' %><% if (reviewAsOf >= reviewWeek) { %><a href="/scoreboard/trace?type=measure&code=<%= encodeURIComponent(m.code) %>&from=<%= reviewWeek %>&to=<%= reviewAsOf %><%= branchQs %>"><%= m.label %></a><% } else { %><%= m.label %><% } %> <span class="muted">(<%= m.owner %>)</span><% }) %></p>
+    <% } %>
+    <p class="small"><a href="/scoreboard?week=<%= reviewWeek %><%= branchQs %>">Open the full scoreboard →</a></p>
+
+    <div class="wig-hq">
+      <b>From the update with HQ – what HQ will do for us</b>
+      <% if (!actions.length) { %><p class="muted small">Nothing from HQ this week. Raise what you need in the manager’s weekly update.</p><% } %>
+      <ul>
+        <% actions.forEach(function (a) { %>
+          <li><b><%= a.owner_name || 'HQ (owner to agree)' %>:</b> <%= a.issue %><%= a.due_date ? ' – by ' + fmtDate(a.due_date) : '' %>
+            <span class="pill-status st-<%= a.status.replace(/\s/g, '').toLowerCase() %>"><%= a.status %></span></li>
         <% }) %>
       </ul>
-    <% } %>
+    </div>
   </section>
 
   <form method="post" action="/commitments" novalidate>
@@ -31,24 +65,29 @@
     <% if (pickAny) { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
     <% if (blocked) { %><p class="alert alert-info"><%= blocked %></p><% } %>
 
-    <section class="wk-card" aria-labelledby="last-h">
-      <h2 id="last-h">Last week’s commitments</h2>
+    <section class="wk-card" id="step-2" aria-labelledby="last-h">
+      <h2 id="last-h">2 · Account – last week’s commitments</h2>
       <% if (!last.length) { %><p class="muted">None were made for the week of <%= fmtDate(prev) %>.</p><% } %>
       <% last.forEach(function (c) {
-           const t = doneTyped(c.id);
-           const v = t !== undefined ? t : (c.done === true ? 'yes' : c.done === false ? 'no' : ''); %>
-        <fieldset class="commit-done">
+           const t = doneTyped(c.id); const v = t !== undefined ? t : (c.result || '');
+           const w = whyTyped(c.id); const why = w !== undefined ? w : (c.why || ''); %>
+        <fieldset class="commit-done<%= errors['k' + c.id] ? ' has-error' : '' %>">
           <legend><b><%= c.person_name %></b>: <%= c.commitment %><% if (c.lead_measure) { %><span class="muted small"> – <%= c.lead_measure %></span><% } %></legend>
-          <div class="yesno">
+          <div class="yesno yesno-3">
             <label class="yn yn-yes"><input type="radio" name="done[k<%= c.id %>]" value="yes"<%= v === 'yes' ? ' checked' : '' %><%= off %>><span>Done</span></label>
+            <label class="yn yn-partly"><input type="radio" name="done[k<%= c.id %>]" value="partly"<%= v === 'partly' ? ' checked' : '' %><%= off %>><span>Partly</span></label>
             <label class="yn yn-no"><input type="radio" name="done[k<%= c.id %>]" value="no"<%= v === 'no' ? ' checked' : '' %><%= off %>><span>Not done</span></label>
           </div>
+          <label class="wk-field"><span class="wk-label small">Why (if partly or not done)</span>
+            <input name="why[k<%= c.id %>]" value="<%= why %>" maxlength="200"<%= off %>></label>
+          <% if (errors['k' + c.id]) { %><span class="wk-error"><%= errors['k' + c.id] %></span><% } %>
         </fieldset>
       <% }) %>
     </section>
 
-    <section class="wk-card" aria-labelledby="new-h">
-      <h2 id="new-h">This week – one commitment each</h2>
+    <section class="wk-card" id="step-3" aria-labelledby="new-h">
+      <h2 id="new-h">3 · Plan – one commitment each this week</h2>
+      <p class="muted small">Each person can type their own on their phone (My week) – or type it here for them. Both land in the same place.</p>
       <% people.forEach(function (p) {
            const c = current.get(p.id);
            const t = typedFor(p.id);
@@ -57,7 +96,8 @@
            const by = t ? t.by : (c ? c.by_when : '');
            const mine = offTrack.filter(function (m) { return m.owner === p.name; }); %>
         <div class="commit<%= errors[p.id] ? ' has-error' : '' %>">
-          <h3><%= p.name %> <span class="muted small"><%= p.role || '' %></span></h3>
+          <h3><%= p.name %> <span class="muted small"><%= p.role || '' %></span>
+            <% if (c) { %><span class="typed-tag<%= c.typed_by_self ? ' by-self' : '' %>"><%= c.typed_by_self ? '📱 typed on their phone' : '🖥 typed by ' + (c.updated_by_name || 'the manager') %></span><% } else { %><span class="typed-tag is-empty">waiting – or type it here</span><% } %></h3>
           <% if (mine.length) { %><p class="small s-off_track">Off track: <%= mine.map(function (m) { return m.label; }).join('; ') %></p><% } %>
           <label class="wk-field"><span class="wk-label">I will…</span>
             <textarea name="c[p<%= p.id %>][text]" rows="2" maxlength="300"<%= off %>><%= text || '' %></textarea></label>
@@ -71,11 +111,25 @@
               <input type="date" name="c[p<%= p.id %>][by]" value="<%= by || '' %>" min="<%= week %>"<%= off %>></label>
           </div>
           <% if (errors[p.id]) { %><span class="wk-error"><%= errors[p.id] %></span><% } %>
-          <% if (c && c.updated_by_name) { %><p class="muted small">Saved by <%= c.updated_by_name %></p><% } %>
         </div>
       <% }) %>
     </section>
-    <% if (!blocked) { %><button class="button wide" type="submit">Save commitments</button><% } %>
+
+    <section class="wk-card" id="step-4" aria-labelledby="fin-h">
+      <h2 id="fin-h">4 · Finish</h2>
+      <input type="hidden" name="finish" value="1">
+      <fieldset class="att">
+        <legend class="wk-label">Who was there</legend>
+        <% people.forEach(function (p) { %>
+          <label class="att-box"><input type="checkbox" name="att[p<%= p.id %>]" value="1"<%= attended.has(p.id) ? ' checked' : '' %><%= off %>> <%= p.name %></label>
+        <% }) %>
+      </fieldset>
+      <label class="att-box att-held"><input type="checkbox" name="held" value="1"<%= session && session.held_on ? ' checked' : '' %><%= off %>> <b>Session held</b>
+        <input type="date" name="held_on" value="<%= session && session.held_on ? session.held_on : '' %>" min="<%= week %>" max="<%= weekEnd %>" aria-label="Held on"<%= off %>></label>
+      <% if (errors.session) { %><span class="wk-error"><%= errors.session %></span><% } %>
+      <p class="muted small">Win and anything you need from HQ go in Monday’s weekly update (<a href="/weekly?<%= branchQs.slice(1) %>">open it</a>).</p>
+    </section>
+    <% if (!blocked) { %><button class="button wide" type="submit">Save the session</button><% } %>
   </form>
 </main>
 </body>

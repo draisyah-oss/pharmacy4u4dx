@@ -5,7 +5,7 @@
 //    out) – e.g. Alia's "B2B quotes sent within 24 hours", "POs … approved against 30-day sales".
 //  - From the out-of-stock flow: inter-store transfers sent within 48 hours of Inventory's answer.
 //  - Iman's "HR daily checks fully done": her days fully done ÷ working days.
-//  - Iman's and Hanin's wiki measures: checklist pages they own approved that week (/hq/wiki).
+//  - Iman's wiki measure: pages she sent to Hanin that week; Hanin's: pages she approved (/hq/wiki).
 // Every suggestion says where it came from; nothing is saved until they press Save.
 
 const calc = require('../calc');
@@ -50,9 +50,14 @@ async function suggestions(db, { week, rows, today, at = new Date() }) {
       else if (rule.kind === 'count') out.set(m.id, { value: yes, from: rule.what });
       continue;
     }
-    if (m.code === 'wiki' || m.code === 'wikisop') {
-      const n = await wikilist.approvedInWeek(db, { week, personId: m.person_id });
-      out.set(m.id, { value: n, from: 'the company wiki checklist: your pages marked Approved this week' });
+    if (m.code === 'wiki') {
+      const n = await wikilist.sentInWeek(db, { week, personId: m.person_id });
+      out.set(m.id, { value: n, from: 'the company wiki checklist: your pages sent to Hanin (Checking) this week' });
+      continue;
+    }
+    if (m.code === 'wikisop') {
+      const n = await wikilist.approvedInWeek(db, { week });
+      out.set(m.id, { value: n, from: 'the company wiki checklist: pages you approved this week' });
       continue;
     }
     if (m.code === 'hrdaily') {

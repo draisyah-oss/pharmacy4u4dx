@@ -96,7 +96,7 @@ test('who can open the check-in: managers their own branch, HQ/admin all, staff 
   const m = await manager();
   const page = await m.get('/weekly');
   assert.equal(page.status, 200);
-  assert.match(page.html, /Weekly check-in/);
+  assert.match(page.html, /Weekly update to HQ/);
   assert.match(page.html, /12–18 Oct/, 'defaults to last week');
   assert.equal((await m.get('/weekly?branch=JH')).status, 200, 'branch in the URL is ignored for managers');
   assert.match((await m.get('/weekly?branch=JH')).html, /Wangsa Maju|WM/);
@@ -196,8 +196,9 @@ test('OOS: manager adds an item, HQ answers it, other branches can’t touch it'
   assert.equal(after.item, 'Panadol Actifast 20s', 'HQ answers; the branch’s words stay');
   assert.equal((await lastAudit('oos_items')).username, 'alia');
 
-  // Still open, so it shows on this week's check-in too
-  assert.match((await m.get(`/weekly?week=${THIS}`)).html, /Panadol Actifast 20s/);
+  // Still open, so it shows on the branch's out-of-stock page (18 Oct: the weekly update only shows the week's summary)
+  assert.match((await m.get('/oos')).html, /Panadol Actifast 20s/);
+  assert.match((await m.get(`/weekly?week=${THIS}`)).html, /Out of stock this week/);
 
   const jh = await jhManager();
   assert.equal((await jh.post(`/weekly/oos/${item.id}`, { week: LAST, item: 'Hacked', status: 'Back in stock' })).status, 403);

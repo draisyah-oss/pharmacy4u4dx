@@ -1,12 +1,15 @@
-// Commitments: at the weekly WIG session each person says whether they did last week's
-// commitment (Done Y/N), then makes one new commitment for this week – ideally on a
-// measure that was off track (✕) last week.
+// Branch WIG session (Tuesday, 18 Oct – was "Commitments"): scoreboard, what HQ will do for the
+// branch, each person accounts for last week's commitment (Done / Partly / Not done + why), then
+// one new commitment each for this week – ideally on a measure that was off track (✕) last week.
+// A commitment can be typed by the staff on their phone (/my-week) or by the manager here.
+// Finish: who attended and "session held".
 
 const calc = require('../calc');
 const { audit } = require('../admin/common');
 const { buildScoreboard } = require('../scoreboard/data');
 const { cleanText } = require('./access');
 const { isRealDate } = require('../lib/dates');
+const wig = require('../wig/data');
 
 async function loadPeople(db, branchId) {
   return (await db.query(
@@ -15,7 +18,8 @@ async function loadPeople(db, branchId) {
 
 async function loadWeek(db, branchId, week) {
   return (await db.query(
-    `SELECT c.*, p.name AS person_name, u.display_name AS updated_by_name
+    `SELECT c.*, p.name AS person_name, u.display_name AS updated_by_name, u.role AS created_by_role,
+       (u.person_id = c.person_id) AS typed_by_self
      FROM commitments c JOIN people p ON p.id = c.person_id LEFT JOIN users u ON u.id = c.created_by
      WHERE c.branch_id = $1 AND c.week_start = $2 ORDER BY p.sort_order, p.id`, [branchId, week])).rows;
 }
@@ -25,14 +29,16 @@ async function loadCommitmentsPage(db, { branch, week, today, trackerStart }) {
   const first = calc.weekStart(trackerStart);
   // Off-track measures from last week; in the tracker's first week, this week so far.
   const reviewWeek = prev >= first ? prev : week;
-  const [people, last, current, board] = await Promise.all([
+  const [people, last, current, board, session, actions] = await Promise.all([
     loadPeople(db, branch.id), loadWeek(db, branch.id, prev), loadWeek(db, branch.id, week),
     buildScoreboard(db, { branch, weekStart: reviewWeek, today, trackerStart }),
+    wig.loadSession(db, branch.id, week), wig.actionsForBranchWig(db, { branchId: branch.id, week }),
   ]);
   const rows = [...board.top, ...board.groups.flatMap((g) => g.rows)];
   const offTrack = rows.filter((r) => r.week.status === 'off_track')
     .map((r) => ({ code: r.code, label: r.label, owner: r.owner, pct: r.week.pct, top: r.top }));
   return {
+    session, actions, board: { top: board.top, sales: board.sales }, lastSummary: wig.resultSummary(last),
     prev, reviewWeek, reviewAsOf: board.asOf, reviewIsThisWeek: reviewWeek === week, people, last, offTrack,
     current: new Map(current.map((c) => [c.person_id, c])),
     measures: rows.map((r) => ({ code: r.code, label: r.label, offTrack: r.week.status === 'off_track' })),
@@ -40,7 +46,7 @@ async function loadCommitmentsPage(db, { branch, week, today, trackerStart }) {
 }
 
 // Returns { errors } or { saved }.
-async function saveCommitments(db, user, branch, week, body) {
+async function saveCommitments(db, user, branch, week, body, { today } = {}) {
   const prev = calc.addDays(week, -7);
   const people = await loadPeople(db, branch.id);
   const lastWeek = await loadWeek(db, branch.id, prev);
@@ -49,11 +55,15 @@ async function saveCommitments(db, user, branch, week, body) {
   const plans = [];
 
   const done = body.done || {};
+  const why = body.why || {};
   for (const c of lastWeek) {
     const v = done[`k${c.id}`];
-    if (v === undefined) continue;
-    const next = v === 'yes' ? true : v === 'no' ? false : null;
-    if (next !== c.done) plans.push({ type: 'done', c, next });
+    const w = why[`k${c.id}`];
+    if (v === undefined && w === undefined) continue;
+    const next = v === undefined ? (c.result || null) : (wig.RESULTS.includes(v) ? v : null);
+    const reason = w === undefined ? { value: c.why || null } : cleanText(w, { max: 200, label: 'Why' });
+    if (reason.error) { errors[`k${c.id}`] = reason.error; continue; }
+    if (next !== (c.result || null) || reason.value !== (c.why || null)) plans.push({ type: 'done', c, next, why: reason.value });
   }
 
   const typed = body.c || {};
@@ -75,8 +85,10 @@ async function saveCommitments(db, user, branch, week, body) {
   await db.transaction(async (tx) => {
     for (const plan of plans) {
       if (plan.type === 'done') {
-        await tx.query('UPDATE commitments SET done = $2, updated_at = now() WHERE id = $1', [plan.c.id, plan.next]);
-        await audit(tx, user, 'update', 'commitments', `${branch.code} ${prev} ${plan.c.person_name}`, { done: plan.c.done }, { done: plan.next });
+        await tx.query('UPDATE commitments SET result = $2, done = $3, why = $4, updated_at = now() WHERE id = $1',
+          [plan.c.id, plan.next, plan.next === null ? null : plan.next === 'yes', plan.why]);
+        await audit(tx, user, 'update', 'commitments', `${branch.code} ${prev} ${plan.c.person_name}`,
+          { result: plan.c.result || null, why: plan.c.why || null }, { result: plan.next, why: plan.why });
         saved++;
         continue;
       }
@@ -107,11 +119,13 @@ async function saveCommitments(db, user, branch, week, body) {
       saved++;
     }
   });
-  return { saved };
+  const s = await wig.saveSession(db, user, branch, week, body, { today, people });
+  if (s.error) return { errors: { session: s.error } };
+  return { saved: saved + s.saved };
 }
 
 async function buildMeasureLabels(db, branchId) {
   return (await db.query('SELECT label FROM measures WHERE branch_id = $1 AND active', [branchId])).rows.map((r) => r.label);
 }
 
-module.exports = { loadCommitmentsPage, saveCommitments };
+module.exports = { loadCommitmentsPage, saveCommitments, loadWeek, loadPeople, buildMeasureLabels };
