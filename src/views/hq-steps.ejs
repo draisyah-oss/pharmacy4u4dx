@@ -1,55 +1,80 @@
-<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <%- include('partials/nav', { navActive: 'steps-' + p.id }) %>
-<% if (ok) { %><p class="alert alert-good page-flash" role="status"><%= ok %></p><% } %>
-<% if (err) { %><p class="alert alert-bad page-flash" role="alert"><%= err %></p><% } %>
-<main class="page wk">
-  <header class="board-head">
-    <h1><%= p.milestone %> <span class="board-week"><%= p.project %></span></h1>
-    <p class="muted"><%= p.owner %> · due <%= p.due_date ? fmtDate(p.due_date) : 'not set' %> · <a href="/hq/projects#p-<%= p.id %>">milestone status</a></p>
-  </header>
-  <section class="wk-card steps">
-    <% if (p.steps.total) { %>
-      <p class="steps-head">Steps · <b><%= p.steps.done %> of <%= p.steps.total %></b> done<% if (p.steps.overdue) { %> · <span class="step-late"><%= p.steps.overdue %> late</span><% } %></p>
-      <span class="bar steps-bar" aria-hidden="true"><span class="<%= p.steps.done === p.steps.total ? 's-on_track' : p.steps.overdue ? 's-off_track' : 's-watch' %>" style="width: <%= Math.round(100 * p.steps.done / p.steps.total) %>%"></span></span>
-    <% } else { %><p class="muted">No steps yet.</p><% } %>
-    <% p.steps.phases.forEach(function (ph) { const left = ph.steps.filter(function (x) { return x.state !== 'done'; }).length; %>
-      <% if (ph.phase) { %><h3 class="step-phase"><%= ph.phase %> <span class="muted"><%= ph.steps.length - left %>/<%= ph.steps.length %></span></h3><% } %>
-      <ul class="step-list">
-        <% ph.steps.forEach(function (st) { %>
-          <li class="step step-<%= st.state %>" id="s-<%= st.id %>">
-            <% if (st.canTick) { %>
-              <form method="post" action="/hq/projects/steps/<%= st.id %>" class="step-tick">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit" name="action" value="<%= st.state === 'done' ? 'undo' : 'done' %>" class="step-box" aria-label="<%= st.state === 'done' ? 'Undo: ' : 'Mark done: ' %><%= st.step %>"><%= st.state === 'done' ? '✔' : '' %></button>
-              </form>
-            <% } else { %><span class="step-box" aria-hidden="true"><%= st.state === 'done' ? '✔' : '' %></span><% } %>
-            <div class="step-body">
-              <span class="step-text"><%= st.step %></span>
-              <small class="step-meta"><%= st.owner || p.owner %><% if (st.due_date) { %> · by <%= fmtDate(st.due_date) %><% } %><% if (st.state === 'overdue') { %> · <b class="step-late">late</b><% } else if (st.state === 'today') { %> · <b>due today</b><% } %><% if (st.state === 'done') { %> · done<%= st.done_by_name ? ' by ' + st.done_by_name : '' %><% } %></small>
-            </div>
-            <% if (p.canEdit) { %>
-              <form method="post" action="/hq/projects/steps/<%= st.id %>" class="step-remove">
-                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                <button type="submit" name="action" value="remove" class="link-button" aria-label="Remove step: <%= st.step %>" title="Remove step">×</button>
-              </form>
-            <% } %>
-          </li>
-        <% }) %>
-      </ul>
+<%# Project checklist (19 Oct) – same layout as the Company wiki checklist: tiles, filter pills, one card per phase. %>
+<%
+  const bar = (a, t) => (t ? Math.round(a / t * 100) : 0);
+  const due = (d) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' });
+  const chip = { 'Not started': 'oc-grey', 'In progress': 'oc-info', Done: 'oc-good' };
+  const base = '/hq/projects/' + p.id + '/steps';
+%>
+<main class="page wk-wide hw-page">
+  <header class="oo-head"><h1><%= p.milestone %></h1>
+    <p class="muted"><%= p.project %> · <b><%= p.owner %></b> · due <%= p.due_date ? due(p.due_date) : 'not set' %>.
+      Work through the steps phase by phase; set each one In progress, then Done. Late steps show in the owner’s <b>Needs you</b> list.
+      <a href="/hq/projects#p-<%= p.id %>">Milestone status</a></p></header>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <div class="oo-kpis">
+    <div class="oo-kpi"><span>Steps done</span><b><%= summary.done %> of <%= summary.total %></b>
+      <div class="bar" aria-hidden="true"><span class="s-<%= summary.total && summary.done >= summary.total ? 'on_track' : summary.overdue ? 'off_track' : 'watch' %>" style="width:<%= bar(summary.done, summary.total) %>%"></span></div><small>milestone due <%= p.due_date ? due(p.due_date) : '–' %></small></div>
+    <% summary.phases.forEach(function (ph) { %>
+      <div class="oo-kpi"><span><%= ph.phase || 'Steps' %></span><b><%= ph.done %> of <%= ph.total %></b>
+        <div class="bar" aria-hidden="true"><span class="s-<%= ph.done >= ph.total ? 'on_track' : ph.steps.some(function (x) { return x.late; }) ? 'off_track' : 'watch' %>" style="width:<%= bar(ph.done, ph.total) %>%"></span></div><small><%= ph.owners || p.owner %><%= ph.due ? ' · by ' + due(ph.due) : '' %></small></div>
     <% }) %>
-    <% if (p.canEdit) { %>
-      <form method="post" action="/hq/projects/<%= p.id %>/steps" class="admin-fields step-add">
+    <% summary.owners.forEach(function (o) { %>
+      <div class="oo-kpi"><span><%= o.owner %></span><b><%= o.done %> of <%= o.total %></b><small>steps done</small></div>
+    <% }) %>
+    <div class="oo-kpi"><span>In progress</span><b><%= summary.inProgress %></b><small><%= summary.dueSoon %> due in the next 7 days</small></div>
+    <div class="oo-kpi"><span>Past their date</span><b class="<%= summary.overdue ? 's-off_track' : '' %>"><%= summary.overdue %></b><small>not done by the due date</small></div>
+  </div>
+
+  <nav class="strip oo-tabs" aria-label="Show">
+    <a href="<%= base %>" class="strip-pill<%= show === 'all' ? ' is-current' : '' %>">All steps</a>
+    <a href="<%= base %>?show=mine" class="strip-pill<%= show === 'mine' ? ' is-current' : '' %>">Mine</a>
+    <a href="<%= base %>?show=open" class="strip-pill<%= show === 'open' ? ' is-current' : '' %>">Not done yet</a>
+  </nav>
+
+  <% if (!view.phases.length) { %><section class="oo-card"><p class="muted"><%= show === 'all' ? 'No steps yet.' : 'Nothing here.' %></p></section><% } %>
+  <% view.phases.forEach(function (ph, n) { %>
+    <section class="oo-card hw-area" aria-labelledby="ps-a<%= n %>">
+      <header class="hw-area-head"><h2 id="ps-a<%= n %>"><%= ph.phase || 'Steps' %></h2><span class="muted small"><%= ph.owners || p.owner %> · <%= ph.done %> of <%= ph.total %> done<%= ph.due ? ' · by ' + due(ph.due) : '' %></span></header>
+      <% ph.steps.forEach(function (st) { %>
+        <form method="post" action="/hq/projects/steps/<%= st.id %>" class="hw-row<%= st.late ? ' is-late' : '' %><%= st.state === 'done' ? ' is-done' : '' %>" id="s-<%= st.id %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="show" value="<%= show %>">
+          <span class="hw-title"><span><%= st.step %></span>
+            <small class="muted"><%= st.owner || p.owner %> · due <%= st.due_date ? due(st.due_date) : '–' %><%= st.late ? ' · late' : st.state === 'today' ? ' · due today' : '' %><%= st.state === 'done' && st.done_by_name ? ' · done by ' + st.done_by_name : '' %></small></span>
+          <% if (st.canTick) { %>
+            <label class="sr-only" for="ss-<%= st.id %>">Status</label>
+            <select id="ss-<%= st.id %>" name="status" class="hw-select">
+              <% statuses.forEach(function (s) { %><option value="<%= s %>"<%= s === st.status ? ' selected' : '' %>><%= s %></option><% }) %>
+            </select>
+            <% if (p.canEdit) { %>
+              <label class="sr-only" for="so-<%= st.id %>">Owner</label>
+              <input id="so-<%= st.id %>" name="owner" class="hw-writer" maxlength="80" value="<%= st.owner || '' %>" placeholder="Owner">
+            <% } %>
+            <button class="button small-button" type="submit" name="action" value="save">Save</button>
+            <% if (p.canEdit) { %><button class="link-button ps-remove" type="submit" name="action" value="remove" aria-label="Remove step: <%= st.step %>" title="Remove step">×</button><% } %>
+          <% } else { %><span class="oo-chip <%= chip[st.status] %>"><%= st.status.toUpperCase() %></span><% } %>
+        </form>
+      <% }) %>
+    </section>
+  <% }) %>
+
+  <% if (p.canEdit) { %>
+    <details class="oo-card admin-details"><summary>Add a step</summary>
+      <form method="post" action="/hq/projects/<%= p.id %>/steps" class="admin-fields">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <label class="wide">New step <input name="step" maxlength="200" required></label>
-        <label>Phase <input name="phase" maxlength="60" list="phases-<%= p.id %>" placeholder="optional"></label>
-        <datalist id="phases-<%= p.id %>"><% p.steps.phases.forEach(function (ph) { if (ph.phase) { %><option value="<%= ph.phase %>"><% } }) %></datalist>
+        <label class="wide">Step <input name="step" maxlength="200" required></label>
+        <label>Phase <input name="phase" maxlength="60" list="ps-phases" placeholder="optional"></label>
+        <datalist id="ps-phases"><% summary.phases.forEach(function (ph) { if (ph.phase) { %><option value="<%= ph.phase %>"><% } }) %></datalist>
         <label>Owner <input name="owner" maxlength="80" placeholder="<%= p.owner %>"></label>
-        <label>By <input type="date" name="due_date"></label>
-        <button class="button small-button" type="submit">Add step</button>
+        <label>Due <input type="date" name="due_date"></label>
+        <button class="button small-button" type="submit">Add</button>
       </form>
-    <% } %>
-  </section>
+    </details>
+  <% } %>
 </main>
 </body>
 </html>

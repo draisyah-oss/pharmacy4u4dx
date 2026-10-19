@@ -316,7 +316,9 @@ test('project steps: min/max milestone seeded with its 3-phase checklist', async
   assert.equal(rows[0].due_date, '2026-10-20');
   const page = (await (await syarafana()).get(`/hq/projects/${await minmax()}/steps`)).html;
   assert.doesNotMatch((await (await syarafana()).get('/hq/projects')).html, /Export 90-day sales/, 'Projects page stays clean');
-  assert.match(page, new RegExp(`Steps · <b>0 of ${seedSteps.length}</b> done`));
+  assert.match(page, new RegExp(`<span>Steps done</span><b>0 of ${seedSteps.length}</b>`));
+  assert.match(page, /<span>1 · Agree the rules<\/span><b>0 of 5<\/b>/);
+  assert.match(page, /All steps[\s\S]*Mine[\s\S]*Not done yet/);
   assert.match(page, /2 · Pull the data/);
   assert.match(page, /Export 90-day sales per item per branch from Dynamod POS/);
 });
@@ -350,6 +352,17 @@ test('project steps: add and remove; salary guard; late steps show in Needs you'
   await al.post(`/hq/projects/${id}/steps`, { step: 'Share the min/max sheet with Fariz', phase: '3 · Set, check and load', owner: 'Alia', due_date: '2026-10-30' });
   const added = (await db.query("SELECT id, sort_order FROM hq_project_steps WHERE step = 'Share the min/max sheet with Fariz'")).rows[0];
   assert.ok(added);
+  // Status + owner from the row (like the wiki checklist); the milestone's owners (Syarafana here) can change both
+  await al.post(`/hq/projects/steps/${added.id}`, { action: 'save', status: 'In progress', owner: 'Alia, with Fariz' });
+  let row = (await db.query('SELECT status, owner, done_at FROM hq_project_steps WHERE id = $1', [added.id])).rows[0];
+  assert.deepEqual([row.status, row.owner, row.done_at], ['In progress', 'Alia, with Fariz', null]);
+  const sy = await syarafana();
+  await sy.post(`/hq/projects/steps/${added.id}`, { action: 'save', status: 'Done', owner: 'Syarafana' });
+  row = (await db.query('SELECT status, owner, done_at FROM hq_project_steps WHERE id = $1', [added.id])).rows[0];
+  assert.equal(row.status, 'Done'); assert.ok(row.done_at);
+  assert.equal(row.owner, 'Syarafana', 'she owns the milestone');
+  assert.match((await sy.get(`/hq/projects/${id}/steps?show=open`)).html, /Not done yet/);
+  assert.doesNotMatch((await sy.get(`/hq/projects/${id}/steps?show=open`)).html, /Share the min\/max sheet/);
   const bad = await al.post(`/hq/projects/${id}/steps`, { step: 'Check the payroll list' });
   assert.match(bad.location, /err=/);
   await al.post(`/hq/projects/steps/${added.id}`, { action: 'remove' });
@@ -360,7 +373,7 @@ test('project steps: add and remove; salary guard; late steps show in Needs you'
   const page = (await al.get(`/hq/projects/${id}/steps`)).html;
   assert.match(page, /Project steps overdue/);
   assert.match(page, /Project steps due today/);
-  assert.match(page, /<b class="step-late">late<\/b>/);
+  assert.match(page, /hw-row is-late/);
 });
 
 test('an older database gets the project steps once', async () => {

@@ -331,34 +331,75 @@ function canTickStep(user, project, step) {
   return canEditProject(user, project) || (user.role === 'hq_staff' && ownsStep(step, user.display_name));
 }
 
-const stepState = (s, today) => (s.done_at ? 'done' : s.due_date && s.due_date < today ? 'overdue' : s.due_date === today ? 'today' : 'open');
+const STEP_STATUSES = ['Not started', 'In progress', 'Done'];
+const isStepDone = (s) => s.status === 'Done' || (!s.status && Boolean(s.done_at));
+const stepState = (s, today) => (isStepDone(s) ? 'done' : s.due_date && s.due_date < today ? 'overdue' : s.due_date === today ? 'today' : 'open');
 
-// Steps grouped by phase (in order of first appearance), with done / overdue counts.
+// Steps grouped by phase (in order of first appearance), with done / overdue counts, per phase
+// (owners, last due date) and per owner – for the checklist page's tiles.
 function stepSummary(steps, today) {
   const phases = [];
   for (const s of steps) {
     let ph = phases.find((x) => x.phase === (s.phase || ''));
     if (!ph) phases.push(ph = { phase: s.phase || '', steps: [] });
-    ph.steps.push({ ...s, state: stepState(s, today) });
+    ph.steps.push({ ...s, state: stepState(s, today), late: !isStepDone(s) && Boolean(s.due_date) && s.due_date < today });
+  }
+  for (const ph of phases) {
+    ph.total = ph.steps.length;
+    ph.done = ph.steps.filter((x) => x.state === 'done').length;
+    ph.due = ph.steps.reduce((m, x) => (x.due_date && (!m || x.due_date > m) ? x.due_date : m), null);
+    ph.owners = [...new Set(ph.steps.map((x) => x.owner).filter(Boolean))].join(', ');
   }
   const all = phases.flatMap((ph) => ph.steps);
+  const owners = [];
+  for (const st of all) {
+    const name = (st.owner || '').split(/,| with /)[0].trim() || 'Team';
+    let o = owners.find((x) => x.owner === name);
+    if (!o) owners.push(o = { owner: name, total: 0, done: 0 });
+    o.total++; if (st.state === 'done') o.done++;
+  }
   return {
-    phases, total: all.length, done: all.filter((s) => s.state === 'done').length,
-    overdue: all.filter((s) => s.state === 'overdue').length,
+    phases, owners, total: all.length, done: all.filter((s) => s.state === 'done').length,
+    overdue: all.filter((s) => s.late).length,
+    inProgress: all.filter((s) => s.status === 'In progress').length,
+    dueSoon: all.filter((s) => s.state !== 'done' && s.due_date && s.due_date >= today && calc.diffDays(today, s.due_date) <= 7).length,
   };
 }
 
 async function tickStep(db, user, step, done, at) {
-  const want = Boolean(done);
-  if (Boolean(step.done_at) === want) return { saved: 0 };
+  return updateStep(db, user, step, { status: done ? 'Done' : 'Not started' }, { at, canEditOwner: false });
+}
+
+// Save one step from the checklist page: status (anyone who can tick it) and owner (milestone owners,
+// full HQ, admin). Moving to Done stamps done_at / done_by; moving back clears them.
+async function updateStep(db, user, step, body, { at, canEditOwner }) {
+  const next = {};
+  if (body.status !== undefined) {
+    if (!STEP_STATUSES.includes(body.status)) return { error: 'Pick a status from the list.' };
+    next.status = body.status;
+  }
+  if (canEditOwner && body.owner !== undefined) {
+    const o = cleanText(body.owner, { max: 80, label: 'Owner' });
+    if (o.error) return { error: o.error };
+    next.owner = o.value;
+  }
+  const was = { status: step.status || (step.done_at ? 'Done' : 'Not started'), owner: step.owner ?? null };
+  const changed = Object.fromEntries(Object.entries(next).filter(([k, v]) => was[k] !== v));
+  if (!Object.keys(changed).length) return { saved: 0, status: was.status };
+  const sets = Object.keys(changed).map((c, i) => `${c} = $${i + 2}`);
+  const vals = Object.values(changed);
+  if (changed.status !== undefined) {
+    const done = changed.status === 'Done';
+    sets.push(`done_at = $${vals.length + 2}`, `done_by = $${vals.length + 3}`);
+    vals.push(done ? at : null, done ? user.id : null);
+  }
   await db.transaction(async (tx) => {
-    await tx.query(
-      'UPDATE hq_project_steps SET done_at = $2, done_by = $3, updated_by = $4, updated_at = now() WHERE id = $1',
-      [step.id, want ? at : null, want ? user.id : null, user.id]);
+    await tx.query(`UPDATE hq_project_steps SET ${sets.join(', ')}, updated_by = $${vals.length + 2}, updated_at = now() WHERE id = $1`,
+      [step.id, ...vals, user.id]);
     await audit(tx, user, 'update', 'hq_project_steps', step.step,
-      { done: Boolean(step.done_at) }, { done: want });
+      Object.fromEntries(Object.keys(changed).map((k) => [k, was[k]])), changed);
   });
-  return { saved: 1, done: want };
+  return { saved: Object.keys(changed).length, status: changed.status || was.status, done: (changed.status || was.status) === 'Done' };
 }
 
 async function addStep(db, user, project, body) {
@@ -396,7 +437,7 @@ async function removeStep(db, user, step) {
 // ones they own or have a step on.
 async function stepMenu(db, user) {
   const rows = (await db.query(
-    `SELECT p.id, p.milestone, p.owner, count(s.id)::int AS total, count(s.done_at)::int AS done,
+    `SELECT p.id, p.milestone, p.owner, count(s.id)::int AS total, count(*) FILTER (WHERE s.status = 'Done')::int AS done,
             array_agg(s.owner) AS step_owners
      FROM hq_projects p JOIN hq_project_steps s ON s.project_id = p.id AND s.active
      WHERE p.active AND p.status <> 'Done' GROUP BY p.id ORDER BY p.sort_order, p.id`)).rows;
@@ -459,5 +500,5 @@ module.exports = {
   loadTasks, loadTicks, dailyWeekSummary, dayEditDenied, saveTicks, addTask, retireTask, loadDayPage,
   loadCommitmentWeek, movesFor, keptSummary, saveCommitments,
   loadProjects, ownsProject, canEditProject, updateProject, addProject, projectState, teamSummary,
-  loadSteps, ownsStep, canTickStep, stepState, stepSummary, tickStep, addStep, removeStep, insertSeedSteps, stepMenu,
+  STEP_STATUSES, loadSteps, ownsStep, canTickStep, stepState, stepSummary, tickStep, updateStep, addStep, removeStep, insertSeedSteps, stepMenu,
 };

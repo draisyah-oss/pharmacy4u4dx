@@ -53,7 +53,7 @@ async function forHqPerson(db, user, today, add) {
   const team = require('../hq/team');
   const steps = (await db.query(`SELECT s.project_id, s.step, s.owner, s.due_date, p.owner AS project_owner
     FROM hq_project_steps s JOIN hq_projects p ON p.id = s.project_id
-    WHERE s.active AND p.active AND s.done_at IS NULL AND s.due_date <= $1`, [today])).rows
+    WHERE s.active AND p.active AND s.status <> 'Done' AND s.due_date <= $1`, [today])).rows
     .filter((s) => team.ownsStep({ owner: s.owner || s.project_owner }, user.display_name));
   const stepsLate = steps.filter((s) => s.due_date < today);
   const stepsToday = steps.filter((s) => s.due_date === today);

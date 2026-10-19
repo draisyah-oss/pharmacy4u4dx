@@ -257,9 +257,15 @@ function hqTeamRoutes(db, { now, trackerStart }) {
         return res.status(403).render('message', { title: 'Not yours', message: 'You can see the checklists of the milestones you own.' });
       }
       const canEdit = team.canEditProject(req.user, project);
-      const steps = team.stepSummary(rows, today);
-      for (const ph of steps.phases) for (const st of ph.steps) st.canTick = team.canTickStep(req.user, project, st);
-      res.render('hq-steps', { title: project.milestone, p: { ...project, canEdit, steps }, ...flash(req) });
+      const show = ['mine', 'open', 'all'].includes(req.query.show) ? req.query.show : 'all';
+      const mine = (st) => team.ownsStep({ owner: st.owner || project.owner }, req.user.display_name);
+      const visible = rows.filter((st) => show === 'all' || (show === 'mine' ? mine(st) : st.status !== 'Done'));
+      const view = team.stepSummary(visible, today);
+      for (const ph of view.phases) for (const st of ph.steps) st.canTick = team.canTickStep(req.user, project, st);
+      res.render('hq-steps', {
+        title: project.milestone, p: { ...project, canEdit }, summary: team.stepSummary(rows, today), view, show,
+        statuses: team.STEP_STATUSES, ...flash(req),
+      });
     } catch (err) { next(err); }
   });
 
@@ -283,15 +289,19 @@ function hqTeamRoutes(db, { now, trackerStart }) {
         ? (await db.query('SELECT * FROM hq_project_steps WHERE id = $1 AND active', [req.params.sid])).rows[0] : null;
       const project = step ? (await db.query('SELECT * FROM hq_projects WHERE id = $1 AND active', [step.project_id])).rows[0] : null;
       if (!step || !project) return res.status(404).render('message', { title: 'Not found', message: 'That step doesn’t exist.' });
-      const back = (q) => res.redirect(`/hq/projects/${project.id}/steps?${q}#s-${step.id}`);
+      const showQ = ['mine', 'open'].includes(req.body.show) ? `show=${req.body.show}&` : '';
+      const back = (q) => res.redirect(`/hq/projects/${project.id}/steps?${showQ}${q}#s-${step.id}`);
       if (req.body.action === 'remove') {
         if (!team.canEditProject(req.user, project)) return res.status(403).render('message', { title: 'Can’t save', message: 'Only the milestone’s owners can remove a step.' });
         return back(msg(await team.removeStep(db, req.user, step), 'Step removed.'));
       }
-      if (!['done', 'undo'].includes(req.body.action)) return back(`err=${encodeURIComponent('Pick Done or Undo.')}`);
-      if (!team.canTickStep(req.user, project, step)) return res.status(403).render('message', { title: 'Can’t save', message: 'You can only tick your own steps.' });
-      const r = await team.tickStep(db, req.user, step, req.body.action === 'done', now());
-      back(`ok=${encodeURIComponent(r.saved ? (r.done ? 'Step done.' : 'Step reopened.') : 'No change.')}`);
+      if (!['done', 'undo', 'save'].includes(req.body.action || 'save')) return back(`err=${encodeURIComponent('Pick a status.')}`);
+      if (!team.canTickStep(req.user, project, step)) return res.status(403).render('message', { title: 'Can’t save', message: 'You can only change your own steps.' });
+      const r = req.body.action === 'done' || req.body.action === 'undo'
+        ? await team.tickStep(db, req.user, step, req.body.action === 'done', now())
+        : await team.updateStep(db, req.user, step, req.body, { at: now(), canEditOwner: team.canEditProject(req.user, project) });
+      if (r.error) return back(`err=${encodeURIComponent(r.error)}`);
+      back(`ok=${encodeURIComponent(r.saved ? `${step.step.slice(0, 60)}${step.step.length > 60 ? '…' : ''}: ${r.status}.` : 'No change.')}`);
     } catch (err) { next(err); }
   });
 
