@@ -6,7 +6,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - **Branch staff** (5 branches: WM, JH, BR, Bangi, Ampang): enter the daily log at closing, mostly on a phone.
 - **Branch managers**: weekly update to HQ (Monday 4 pm meeting) and the branch WIG session with their team on **Tuesday** (18 Oct: HQ WIG Monday 10 am → managers' update Monday 4 pm → branch WIG Tuesday; see "Weekly WIG rhythm").
 - **HQ – full access (Alia, Hanin, Iman)**: read every branch, HQ input; Iman fills in for everyone. Password login. The out-of-stock inbox and transfers are for the inventory team only (Alia, Syarafana, Fariz).
-- **HQ staff (Syarafana, Fariz, Azwani)**: group scoreboard, HQ scoreboard, their own KPIs, daily tasks, commitments and project milestones only. PIN login.
+- **HQ staff (Syarafana, Fariz, Azwani)**: group scoreboard, HQ scoreboard, their own KPIs, daily tasks, commitments and project milestones; since 19 Oct they see **the whole HQ team's WIG** (everyone's focus and commitments on /hq/commitments, everyone's numbers on /hq via "See everyone's numbers") – read only, they change only their own. PIN login.
 - Dr Aisyah (CEO) has her own HQ measure but logs in as admin.
 - **CEO / admin**: sees everything; edits targets, people and measures.
 

@@ -211,11 +211,15 @@ test('HQ commitments: one per person, own only (Iman for everyone), Done / Partl
   const kept = team.keptSummary(await team.loadCommitmentWeek(db, LAST));
   assert.deepEqual([kept.made, kept.kept, kept.partly], [2, 0, 1]);
 
-  // HQ staff see only their own row
+  // 19 Oct: HQ staff see the whole team's WIG, but can only change their own
   const f = await fariz();
   const html = (await f.get(`/hq/commitments?week=${THIS}`)).html;
   assert.match(html, /Check every delivery against its PO/);
-  assert.doesNotMatch(html, /slow movers at WM/);
+  assert.match(html, /slow movers at WM/, 'everyone’s commitments are visible');
+  assert.match(html, new RegExp(`name="c\\[p${ids.Alia}\\]\\[text\\]"[^>]*disabled`), 'other people’s boxes are read only');
+  await f.post('/hq/commitments', { week: THIS, [`c[p${ids.Alia}][text]`]: 'Changed by Fariz' });
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM hq_commitments WHERE commitment = 'Changed by Fariz'")).rows[0].n, 0);
+  assert.match((await f.get('/hq?show=all')).html, /See everyone|Show only mine/);
   // "To move" must be one of their measures or project milestones
   const bad = await f.post('/hq/commitments', { week: THIS, [`c[p${ids.Fariz}][text]`]: 'x', [`c[p${ids.Fariz}][moves]`]: 'Inventory turnover, end-to-end (days) – INVENTORY WIG' });
   assert.equal(bad.status, 400);

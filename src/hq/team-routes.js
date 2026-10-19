@@ -95,7 +95,9 @@ function hqTeamRoutes(db, { now, trackerStart }) {
   }
 
   async function renderCommitments(req, res, ctx, extra = {}) {
-    const people = await team.visiblePeople(db, req.user);
+    // 19 Oct: the HQ WIG session shows the whole HQ team to everyone in it (HQ staff too); each
+    // person still changes only their own focus and commitments (canActFor).
+    const people = await team.hqPeople(db);
     const prev = calc.addDays(ctx.week, -7);
     const ids = new Set(people.map((p) => p.id));
     const last = (await team.loadCommitmentWeek(db, prev)).filter((c) => ids.has(c.person_id));
@@ -135,7 +137,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
       if (req.user.role !== 'admin' && ctx.week < calc.addDays(calc.weekStart(ctx.today), -7)) {
         return res.status(403).render('message', { title: 'Can’t save', message: 'Only this week and last week can be changed. Ask admin to fix older weeks.' });
       }
-      const people = await team.visiblePeople(db, req.user);
+      const people = await team.hqPeople(db);
       const f = await wig.saveFocus(db, req.user, { week: ctx.week, body: req.body, people, canActFor: (id) => team.canActFor(req.user, id) });
       if (f.errors) {
         const errors = Object.fromEntries(Object.entries(f.errors).map(([k, v]) => [`f${k}`, v]));
