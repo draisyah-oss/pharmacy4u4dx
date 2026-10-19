@@ -49,6 +49,16 @@ async function forHqPerson(db, user, today, add) {
   }
   const wikiLate = await one(db, "SELECT count(*) AS n FROM hq_wiki_items WHERE person_id = $1 AND status <> 'Approved' AND due_date < $2", [pid, today]);
   if (wikiLate) add('late', wikiLate, 'Wiki pages past their date', 'your checklist pages', '/hq/wiki?show=mine');
+  // Project steps (19 Oct) named on this person (or on a milestone they own when the step has no owner).
+  const team = require('../hq/team');
+  const steps = (await db.query(`SELECT s.project_id, s.step, s.owner, s.due_date, p.owner AS project_owner
+    FROM hq_project_steps s JOIN hq_projects p ON p.id = s.project_id
+    WHERE s.active AND p.active AND s.done_at IS NULL AND s.due_date <= $1`, [today])).rows
+    .filter((s) => team.ownsStep({ owner: s.owner || s.project_owner }, user.display_name));
+  const stepsLate = steps.filter((s) => s.due_date < today);
+  const stepsToday = steps.filter((s) => s.due_date === today);
+  if (stepsLate.length) add('late', stepsLate.length, 'Project steps overdue', stepsLate.slice(0, 2).map((s) => s.step).join(' · '), `/hq/projects?open=${stepsLate[0].project_id}#p-${stepsLate[0].project_id}`);
+  if (stepsToday.length) add('today', stepsToday.length, 'Project steps due today', stepsToday.slice(0, 2).map((s) => s.step).join(' · '), `/hq/projects?open=${stepsToday[0].project_id}#p-${stepsToday[0].project_id}`);
 }
 
 async function forCeo(db, today, add) {

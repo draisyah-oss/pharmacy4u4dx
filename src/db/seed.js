@@ -301,9 +301,10 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
     }
     await require('../hq/wikilist').insertChecklist(tx, seed);
     for (const [i, pr] of (seed.hq.projects || []).entries()) {
-      await tx.query(
-        'INSERT INTO hq_projects (project, milestone, owner, start_date, due_date, sort_order) VALUES ($1,$2,$3,$4,$5,$6)',
-        [pr.project, pr.milestone, pr.owner, pr.start || null, pr.due || null, i + 1]);
+      const row = (await tx.query(
+        'INSERT INTO hq_projects (project, milestone, owner, start_date, due_date, sort_order) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id',
+        [pr.project, pr.milestone, pr.owner, pr.start || null, pr.due || null, i + 1])).rows[0];
+      await require('../hq/team').insertSeedSteps(tx, row.id, pr.steps);
     }
 
     const admin = await one(
@@ -340,6 +341,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       wiki_tasks_hanin_v1: new Date().toISOString(),
       wig_week_v1: new Date().toISOString(),
       ampang_anis_v1: new Date().toISOString(),
+      project_steps_v1: new Date().toISOString(),
       inventory_team: seed.hq && seed.hq.inventory_team ? JSON.stringify(seed.hq.inventory_team) : null,
       hq_extra_moves: seed.hq && seed.hq.extra_moves ? JSON.stringify(seed.hq.extra_moves) : null,
       wiki_approver: seed.hq && seed.hq.wiki_approver ? JSON.stringify(seed.hq.wiki_approver) : null,

@@ -61,6 +61,7 @@ async function backfillNewSettings(db, seed, log) {
   await ensureSetting(db, 'inventory_team', seed.hq && seed.hq.inventory_team, log);
   await ensureSetting(db, 'hq_extra_moves', seed.hq && seed.hq.extra_moves, log);
   await addBranchPersonOnce(db, 'Ampang', { name: 'Anis', job: 'Intern' }, 'ampang_anis_v1', log);
+  await projectStepsOnce(db, seed, log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -226,6 +227,27 @@ async function wigWeekOnce(db, seed, log) {
   });
 }
 
+// 19 Oct: project steps from seed.json (first: min/max for the top 300 items). Once, matched by
+// project + milestone, and only for milestones that have no steps yet.
+async function projectStepsOnce(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'project_steps_v1'")).rows.length) return;
+  const added = [];
+  await db.transaction(async (tx) => {
+    for (const pr of ((seed.hq && seed.hq.projects) || []).filter((x) => x.steps && x.steps.length)) {
+      const row = (await tx.query('SELECT id FROM hq_projects WHERE project = $1 AND milestone = $2 AND active ORDER BY id LIMIT 1', [pr.project, pr.milestone])).rows[0];
+      if (!row || (await tx.query('SELECT 1 FROM hq_project_steps WHERE project_id = $1 LIMIT 1', [row.id])).rows.length) continue;
+      await require('../hq/team').insertSeedSteps(tx, row.id, pr.steps);
+      added.push(`${pr.milestone} (${pr.steps.length})`);
+    }
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('project_steps_v1', $1)", [new Date().toISOString()]);
+    if (added.length) {
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'hq_project_steps', 'Project steps from seed.json (19 Oct)', $1)",
+        [JSON.stringify(added)]);
+    }
+  });
+  if (added.length) log(`Added project steps: ${added.join(', ')}.`);
+}
+
 // Add a person (with a staff login, PIN set in Admin → People) to a branch once.
 async function addBranchPersonOnce(db, code, person, flag, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -384,4 +406,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

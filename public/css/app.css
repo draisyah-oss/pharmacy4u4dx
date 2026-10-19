@@ -916,3 +916,23 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .lv-todo .sn-n { background: var(--brand-tint); color: var(--brand); }
 .sn-clear { margin: 0; font-size: 0.85rem; color: var(--good); }
 .sn-more { margin: 0; }
+
+/* Project steps (19 Oct): a checklist under a milestone */
+.steps { margin-top: 8px; border-left: 3px solid var(--brand-tint); padding-left: 10px; }
+.steps > summary { cursor: pointer; color: var(--brand); font-weight: 600; padding: 6px 0; }
+.steps-bar { display: block; max-width: 260px; margin-top: 4px; }
+.step-phase { font-size: 0.9rem; margin: 12px 0 4px; }
+.step-list { list-style: none; margin: 0; padding: 0; }
+.step { display: flex; align-items: flex-start; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+.step-tick, .step-remove { margin: 0; }
+.step-box { flex: none; width: 32px; height: 32px; border: 2px solid var(--line); border-radius: 8px; background: var(--card); color: #fff; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+span.step-box { cursor: default; }
+.step-done .step-box { background: var(--good); border-color: var(--good); }
+.step-body { flex: 1; min-width: 0; }
+.step-text { display: block; }
+.step-done .step-text { color: var(--ink-soft); text-decoration: line-through; }
+.step-meta { display: block; color: var(--ink-soft); }
+.step-late { color: var(--short); }
+.step-overdue .step-box { border-color: var(--short); }
+.step-remove .link-button { text-decoration: none; font-size: 1.2rem; color: var(--ink-soft); padding: 4px 6px; }
+.step-add { margin-top: 10px; }

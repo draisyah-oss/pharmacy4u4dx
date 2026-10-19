@@ -312,6 +312,95 @@ async function addProject(db, user, body) {
   return { ok: 'Milestone added.' };
 }
 
+// ─────────────── Project steps (19 Oct) ───────────────
+// A milestone can carry a short checklist of steps (phase heading, owner, due date, Done).
+// Who can tick a step: anyone who can update the milestone, plus HQ staff named on the step.
+
+const STEP_MAX = 40;
+
+async function loadSteps(db, projectIds) {
+  if (!projectIds.length) return [];
+  return (await db.query(
+    `SELECT s.*, u.display_name AS done_by_name FROM hq_project_steps s LEFT JOIN users u ON u.id = s.done_by
+     WHERE s.active AND s.project_id = ANY($1::int[]) ORDER BY s.project_id, s.sort_order, s.id`, [projectIds])).rows;
+}
+
+const ownsStep = (s, name) => Boolean(s.owner) && ownsProject({ owner: s.owner }, name);
+
+function canTickStep(user, project, step) {
+  return canEditProject(user, project) || (user.role === 'hq_staff' && ownsStep(step, user.display_name));
+}
+
+const stepState = (s, today) => (s.done_at ? 'done' : s.due_date && s.due_date < today ? 'overdue' : s.due_date === today ? 'today' : 'open');
+
+// Steps grouped by phase (in order of first appearance), with done / overdue counts.
+function stepSummary(steps, today) {
+  const phases = [];
+  for (const s of steps) {
+    let ph = phases.find((x) => x.phase === (s.phase || ''));
+    if (!ph) phases.push(ph = { phase: s.phase || '', steps: [] });
+    ph.steps.push({ ...s, state: stepState(s, today) });
+  }
+  const all = phases.flatMap((ph) => ph.steps);
+  return {
+    phases, total: all.length, done: all.filter((s) => s.state === 'done').length,
+    overdue: all.filter((s) => s.state === 'overdue').length,
+  };
+}
+
+async function tickStep(db, user, step, done, at) {
+  const want = Boolean(done);
+  if (Boolean(step.done_at) === want) return { saved: 0 };
+  await db.transaction(async (tx) => {
+    await tx.query(
+      'UPDATE hq_project_steps SET done_at = $2, done_by = $3, updated_by = $4, updated_at = now() WHERE id = $1',
+      [step.id, want ? at : null, want ? user.id : null, user.id]);
+    await audit(tx, user, 'update', 'hq_project_steps', step.step,
+      { done: Boolean(step.done_at) }, { done: want });
+  });
+  return { saved: 1, done: want };
+}
+
+async function addStep(db, user, project, body) {
+  const fields = {};
+  for (const [k, max, label, required] of [['step', 200, 'Step', true], ['phase', 60, 'Phase', false], ['owner', 80, 'Owner', false]]) {
+    const v = cleanText(body[k], { max, label });
+    if (v.error) return { error: v.error };
+    if (required && !v.value) return { error: `${label} can’t be empty.` };
+    fields[k] = v.value;
+  }
+  const due = String(body.due_date ?? '').trim();
+  if (due && !isRealDate(due)) return { error: 'Pick a real date.' };
+  fields.due_date = due || null;
+  const count = (await db.query('SELECT count(*)::int AS n FROM hq_project_steps WHERE project_id = $1 AND active', [project.id])).rows[0].n;
+  if (count >= STEP_MAX) return { error: `A milestone can have ${STEP_MAX} steps at most.` };
+  await db.transaction(async (tx) => {
+    const order = (await tx.query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM hq_project_steps WHERE project_id = $1', [project.id])).rows[0].n;
+    await tx.query(
+      'INSERT INTO hq_project_steps (project_id, phase, step, owner, due_date, sort_order, updated_by) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+      [project.id, fields.phase, fields.step, fields.owner, fields.due_date, order, user.id]);
+    await audit(tx, user, 'insert', 'hq_project_steps', `${project.milestone}: ${fields.step}`, null, fields);
+  });
+  return { ok: 'Step added.' };
+}
+
+async function removeStep(db, user, step) {
+  await db.transaction(async (tx) => {
+    await tx.query('UPDATE hq_project_steps SET active = false, updated_by = $2, updated_at = now() WHERE id = $1', [step.id, user.id]);
+    await audit(tx, user, 'delete', 'hq_project_steps', step.step, { active: true }, { active: false });
+  });
+  return { ok: 'Step removed.' };
+}
+
+// Seed steps for one milestone (first load and older databases): only when it has none yet.
+async function insertSeedSteps(tx, projectId, steps) {
+  for (const [i, s] of (steps || []).entries()) {
+    await tx.query(
+      'INSERT INTO hq_project_steps (project_id, phase, step, owner, due_date, sort_order) VALUES ($1,$2,$3,$4,$5,$6)',
+      [projectId, s.phase || null, s.step, s.owner || null, s.due || null, i + 1]);
+  }
+}
+
 function projectState(p, today) {
   if (p.status === 'Done') return 'done';
   if (p.due_date && p.due_date < today) return 'overdue';
@@ -357,4 +446,5 @@ module.exports = {
   loadTasks, loadTicks, dailyWeekSummary, dayEditDenied, saveTicks, addTask, retireTask, loadDayPage,
   loadCommitmentWeek, movesFor, keptSummary, saveCommitments,
   loadProjects, ownsProject, canEditProject, updateProject, addProject, projectState, teamSummary,
+  loadSteps, ownsStep, canTickStep, stepState, stepSummary, tickStep, addStep, removeStep, insertSeedSteps,
 };

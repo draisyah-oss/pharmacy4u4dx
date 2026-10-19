@@ -300,3 +300,80 @@ test('every HQ person starts with daily tasks; an older database gets them once,
   assert.equal(await count('Azwani'), 0, 'runs once – removed tasks stay removed');
   await old.close();
 });
+
+// ───────────── Project steps (19 Oct) ─────────────
+
+const MINMAX = 'Min/max stock levels set for top 300 items';
+const minmax = async (d = db) => (await d.query('SELECT id FROM hq_projects WHERE milestone = $1', [MINMAX])).rows[0].id;
+const stepId = async (like) => (await db.query('SELECT id FROM hq_project_steps WHERE step LIKE $1', [like])).rows[0].id;
+
+test('project steps: min/max milestone seeded with its 3-phase checklist', async () => {
+  const seedSteps = readSeed().hq.projects.find((p) => p.milestone === MINMAX).steps;
+  const rows = (await db.query('SELECT phase, step, owner, due_date FROM hq_project_steps WHERE project_id = $1 ORDER BY sort_order', [await minmax()])).rows;
+  assert.equal(rows.length, seedSteps.length);
+  assert.deepEqual([...new Set(rows.map((r) => r.phase))], ['1 · Agree the rules', '2 · Pull the data', '3 · Set, check and load']);
+  assert.equal(rows[0].due_date, '2026-10-20');
+  const page = (await (await syarafana()).get(`/hq/projects?open=${await minmax()}`)).html;
+  assert.match(page, new RegExp(`Steps · <b>0 of ${seedSteps.length}</b> done`));
+  assert.match(page, /2 · Pull the data/);
+  assert.match(page, /Export 90-day sales per item per branch from Dynamod POS/);
+});
+
+test('project steps: owners tick their steps; others cannot; every change audited', async () => {
+  const s = await syarafana();
+  const exp = await stepId('Export 90-day sales%');
+  await s.post(`/hq/projects/steps/${exp}`, { action: 'done' });
+  const row = (await db.query('SELECT done_at, done_by FROM hq_project_steps WHERE id = $1', [exp])).rows[0];
+  assert.ok(row.done_at);
+  assert.equal((await lastAudit('hq_project_steps')).username, 'syarafana');
+  assert.match((await s.get('/hq/projects')).html, /done by Syarafana/);
+  await s.post(`/hq/projects/steps/${exp}`, { action: 'undo' });
+  assert.equal((await db.query('SELECT done_at FROM hq_project_steps WHERE id = $1', [exp])).rows[0].done_at, null);
+
+  // Fariz doesn't own the milestone or the step: can't see it, can't tick it
+  const f = await fariz();
+  assert.doesNotMatch((await f.get('/hq/projects')).html, /Min\/max stock levels/);
+  assert.equal((await f.post(`/hq/projects/steps/${exp}`, { action: 'done' })).status, 403);
+  assert.equal((await f.post(`/hq/projects/${await minmax()}/steps`, { step: 'X' })).status, 403);
+  // Alia (full HQ) ticks her own rule step
+  const top = await stepId('Define "top 300"%');
+  await (await alia()).post(`/hq/projects/steps/${top}`, { action: 'done' });
+  assert.ok((await db.query('SELECT done_at FROM hq_project_steps WHERE id = $1', [top])).rows[0].done_at);
+});
+
+test('project steps: add and remove; salary guard; late steps show in Needs you', async () => {
+  const al = await alia();
+  const id = await minmax();
+  await al.post(`/hq/projects/${id}/steps`, { step: 'Share the min/max sheet with Fariz', phase: '3 · Set, check and load', owner: 'Alia', due_date: '2026-10-30' });
+  const added = (await db.query("SELECT id, sort_order FROM hq_project_steps WHERE step = 'Share the min/max sheet with Fariz'")).rows[0];
+  assert.ok(added);
+  const bad = await al.post(`/hq/projects/${id}/steps`, { step: 'Check the payroll list' });
+  assert.match(bad.location, /err=/);
+  await al.post(`/hq/projects/steps/${added.id}`, { action: 'remove' });
+  assert.equal((await db.query('SELECT active FROM hq_project_steps WHERE id = $1', [added.id])).rows[0].active, false);
+
+  // Today is Tue 20 Oct: Alia's remaining Phase 1 steps are due today; one is moved to yesterday
+  await db.query("UPDATE hq_project_steps SET due_date = '2026-10-19' WHERE step LIKE 'Decide whether min/max%'");
+  const page = (await al.get('/hq/projects')).html;
+  assert.match(page, /Project steps overdue/);
+  assert.match(page, /Project steps due today/);
+  assert.match(page, /<b class="step-late">late<\/b>/);
+});
+
+test('an older database gets the project steps once', async () => {
+  const { projectStepsOnce } = require('../../src/db/setup');
+  const seed = readSeed();
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  const noSteps = { ...seed, hq: { ...seed.hq, projects: seed.hq.projects.map(({ steps, ...p }) => p) } };
+  await loadSeed(old, noSteps, { adminPassword: 'admin-pass-1' });
+  await old.query("DELETE FROM app_settings WHERE key = 'project_steps_v1'");
+  const count = async () => (await old.query('SELECT count(*)::int AS n FROM hq_project_steps WHERE active')).rows[0].n;
+  assert.equal(await count(), 0);
+  await projectStepsOnce(old, seed, () => {});
+  assert.equal(await count(), seed.hq.projects.find((p) => p.milestone === MINMAX).steps.length);
+  await old.query('UPDATE hq_project_steps SET active = false');
+  await projectStepsOnce(old, seed, () => {});
+  assert.equal(await count(), 0, 'runs once – removed steps stay removed');
+  await old.close();
+});

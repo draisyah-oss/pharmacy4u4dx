@@ -162,6 +162,12 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Access widened: **branch staff can open the group scoreboard and their own branch's scoreboard** (read only; links only into their own branch).
 - Ampang: **Anis (Intern)** added with a staff login (username anis – set her PIN in Admin → People); older databases once (ampang_anis_v1). Ayuni stays at Bangi.
 
+## Project steps (19 Oct)
+- A milestone on /hq/projects can carry a checklist of **steps** (migration 018 hq_project_steps: phase heading, step, owner, due date, done_at/done_by; salary guard). Shown under the milestone as "Steps · x of y done" with a progress bar, grouped by phase, collapsed unless opened (?open=<project id>). src/hq/team.js (loadSteps, stepSummary, tickStep, addStep, removeStep), routes POST /hq/projects/:id/steps and POST /hq/projects/steps/:sid (action done / undo / remove).
+- Who: anyone who can update the milestone ticks, adds and removes steps; HQ staff named on a step can also tick it (and see that milestone). Every change audited.
+- First list: **"Min/max stock levels set for top 300 items"** (Syarafana, with Alia) – 17 steps in seed hq.projects[].steps: 1 · Agree the rules (Alia, by 20 Oct), 2 · Pull the data (Syarafana, by 23 Oct), 3 · Set, check and load (27–30 Oct). Older databases once via projectStepsOnce (flag project_steps_v1), only for milestones with no steps yet.
+- Needs you: steps not done that are past their date / due today, for the step's owner (or the milestone's owners when the step has none).
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 
