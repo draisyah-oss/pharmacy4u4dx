@@ -191,6 +191,31 @@ function hqTeamRoutes(db, { now, trackerStart }) {
         if (!g) groups.push(g = { project: p.project, rows: [] });
         g.rows.push({ ...p, state: team.projectState(p, today), canEdit: team.canEditProject(req.user, p) });
       }
+      // 19 Oct: "Company wiki" follows the wiki checklist – one line per checklist heading, status
+      // worked out from its pages, so the whole HQ team sees what's moving. Replaces typed milestones.
+      const wikiAt = groups.findIndex((g) => g.project === 'Company wiki');
+      if (wikiAt >= 0) groups.splice(wikiAt, 1);
+      const sum = wikilist.summarise(await wikilist.load(db, { today }));
+      if (sum.areas.length) {
+        const canOpenWiki = req.user.role === 'admin' || req.user.role === 'hq';
+        const rows = sum.areas.map((a, i) => {
+          const open = a.items.filter((it) => it.status !== 'Approved');
+          const late = open.filter((it) => it.overdue).length;
+          const started = a.items.some((it) => it.status !== 'Not started');
+          const status = !open.length ? 'Done' : started ? 'In progress' : 'Not started';
+          const dues = open.map((it) => it.due_date).filter(Boolean).sort();
+          return {
+            auto: true, milestone: a.area, status, state: !open.length ? 'done' : late ? 'overdue' : 'open',
+            approved: a.approved, total: a.total, late,
+            checking: a.items.filter((it) => it.status === 'Checking').length,
+            drafting: a.items.filter((it) => it.status === 'Drafting').length,
+            nextDue: dues[0] || null, owner: a.owner === 'Iman' ? 'Iman writes · Hanin approves' : a.owner,
+            href: canOpenWiki ? `/hq/wiki#hw-a${i}` : null,
+          };
+        });
+        groups.splice(wikiAt >= 0 ? wikiAt : groups.length, 0, { project: 'Company wiki', auto: true, rows,
+          summary: `${sum.p1.approved} of ${sum.p1.total} must-have pages approved (by 15 Nov) · ${sum.all.approved} of ${sum.all.total} in all` });
+      }
       res.render('hq-projects', {
         title: 'Projects', groups, today, statuses: team.PROJECT_STATUSES, fmt,
         canAdd: req.user.role === 'admin' || req.user.role === 'hq', staff: req.user.role === 'hq_staff', ...flash(req),

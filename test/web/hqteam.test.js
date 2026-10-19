@@ -230,7 +230,8 @@ test('projects: seeded from the HQ Tracker; owners update their own; HQ adds mil
   const s = await syarafana();
   const page = (await s.get('/hq/projects')).html;
   assert.match(page, /Central ordering/);
-  assert.doesNotMatch(page, /Company wiki/, 'only the milestones she owns');
+  assert.doesNotMatch(page, /Training calendar published/, 'only the milestones she owns');
+  assert.match(page, /Company wiki[\s\S]*from the wiki checklist/, '19 Oct: the wiki progress is shown to the whole HQ team');
   const mine = (await db.query("SELECT id FROM hq_projects WHERE owner LIKE 'Syarafana%' ORDER BY id LIMIT 1")).rows[0];
   await s.post(`/hq/projects/${mine.id}`, { status: 'In progress', start_date: '2026-10-15', due_date: '2027-01-31' });
   const p = (await db.query('SELECT status, start_date, due_date FROM hq_projects WHERE id = $1', [mine.id])).rows[0];

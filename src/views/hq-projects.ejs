@@ -15,8 +15,19 @@
   <% if (!groups.length) { %><section class="wk-card"><p class="muted">No milestones <%= staff ? 'owned by you' : 'yet' %>.</p></section><% } %>
   <% groups.forEach(function (g) { %>
     <section class="wk-card">
-      <h2><%= g.project %></h2>
-      <% g.rows.forEach(function (p) { %>
+      <h2><%= g.project %><% if (g.auto) { %> <span class="muted small">from the wiki checklist – updates itself</span><% } %></h2>
+      <% if (g.auto) { %>
+        <p class="small"><%= g.summary %></p>
+        <% g.rows.forEach(function (p) { %>
+          <article class="oos wiki-area">
+            <header class="oos-top"><b><% if (p.href) { %><a href="<%= p.href %>"><%= p.milestone %></a><% } else { %><%= p.milestone %><% } %></b>
+              <span class="oos-status <%= stateClass[p.state] %>"><%= p.status %><%= p.late ? ' · ' + p.late + ' late' : '' %></span></header>
+            <p class="oos-meta"><%= p.owner %> · <b><%= p.approved %> of <%= p.total %></b> pages approved<%= p.checking ? ' · ' + p.checking + ' waiting for Hanin' : '' %><%= p.drafting ? ' · ' + p.drafting + ' drafting' : '' %><%= p.nextDue ? ' · next due ' + fmtDate(p.nextDue) : '' %></p>
+            <span class="bar steps-bar" aria-hidden="true"><span class="<%= p.approved === p.total ? 's-on_track' : p.late ? 's-off_track' : 's-watch' %>" style="width: <%= Math.round(100 * p.approved / p.total) %>%"></span></span>
+          </article>
+        <% }) %>
+      <% } %>
+      <% g.rows.filter(function (p) { return !p.auto; }).forEach(function (p) { %>
         <article class="oos" id="p-<%= p.id %>">
           <header class="oos-top"><b><%= p.milestone %></b><span class="oos-status <%= stateClass[p.state] %>"><%= p.status %><%= p.state === 'overdue' ? ' · overdue' : p.state === 'due_soon' ? ' · due soon' : '' %></span></header>
           <p class="oos-meta"><%= p.owner %> · start <%= p.start_date ? fmtDate(p.start_date) : 'not set' %> · due <%= p.due_date ? fmtDate(p.due_date) : 'not set' %></p>

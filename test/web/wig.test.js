@@ -287,3 +287,13 @@ test('19 Oct: "Needs you" at the top of the menu – counts per person, fixed ti
   assert.match(st, />WM scoreboard</);
   assert.match(st, />Group scoreboard</);
 });
+
+test('19 Oct: Projects → Company wiki shows one line per checklist heading, worked out from the pages', async () => {
+  const html = (await (await hanin()).get('/hq/projects')).html;
+  assert.match(html, /Company wiki[\s\S]*from the wiki checklist/);
+  assert.match(html, /Branch operations SOPs[\s\S]*In progress/, 'Opening the branch was approved earlier, so this heading has started');
+  assert.match(html, /About Pharmacy4U<\/a>/);
+  assert.doesNotMatch(html, /Wiki live with org chart and JDs/);
+  const f = (await (await fariz()).get('/hq/projects')).html;
+  assert.match(f, /Company wiki[\s\S]*HR policies/, 'the whole HQ team sees it');
+});

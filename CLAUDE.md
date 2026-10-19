@@ -168,6 +168,9 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - First list: **"Min/max stock levels set for top 300 items"** (Syarafana, with Alia) – 17 steps in seed hq.projects[].steps: 1 · Agree the rules (Alia, by 20 Oct), 2 · Pull the data (Syarafana, by 23 Oct), 3 · Set, check and load (27–30 Oct). Older databases once via projectStepsOnce (flag project_steps_v1), only for milestones with no steps yet.
 - Needs you: steps not done that are past their date / due today, for the step's owner (or the milestone's owners when the step has none).
 
+## Projects → Company wiki from the checklist (19 Oct)
+- /hq/projects shows "Company wiki" as one line per wiki checklist heading (About Pharmacy4U, People and roles, HR policies, Branch operations SOPs, HQ SOPs, …), worked out from its pages: Not started / In progress / Done, x of y approved, waiting for Hanin, drafting, late, next due date, progress bar; heading links into /hq/wiki (full HQ + admin). Shown to the whole HQ team (HQ staff included) so everyone sees what's moving. The two typed "Company wiki" milestones are no longer in seed.json and are hidden from the page on older databases.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 
