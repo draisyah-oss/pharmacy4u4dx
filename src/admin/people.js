@@ -25,6 +25,21 @@ async function adminUser(db) {
   return (await db.query("SELECT id, username, last_login_at FROM users WHERE role = 'admin' ORDER BY id LIMIT 1")).rows[0];
 }
 
+// All admin logins (19 Oct): the super admin first, then the extra admins (iman.admin, hanin.admin).
+async function adminUsers(db) {
+  return (await db.query(
+    `SELECT id, username, display_name, is_super, active, last_login_at, password_hash IS NOT NULL AS has_password,
+            locked_until > now() AS locked
+     FROM users WHERE role = 'admin' ORDER BY is_super DESC, id`)).rows;
+}
+
+// Only the super admin changes admin logins (their own password is fine for any admin).
+function adminLoginDenied(user, target) {
+  if (!target || target.role !== 'admin') return null;
+  if (user.is_super || user.id === target.id) return null;
+  return 'Only the super admin (Dr Aisyah) can change other admin logins.';
+}
+
 async function usernameFree(db, username, exceptUserId = null) {
   const { rows } = await db.query('SELECT id FROM users WHERE username = $1 AND id IS DISTINCT FROM $2', [username, exceptUserId]);
   return rows.length === 0;
@@ -130,6 +145,8 @@ async function setActive(db, { personId, active, user }) {
 async function setSecret(db, { userId, secret, user, currentSessionId = null }) {
   const u = (await db.query('SELECT id, username, role FROM users WHERE id = $1', [userId])).rows[0];
   if (!u) return { error: 'That login doesn’t exist.' };
+  const denied = adminLoginDenied(user, u);
+  if (denied) return { error: denied };
   const s = String(secret || '');
   if (usesPin(u.role)) {
     if (!/^\d{4}$/.test(s)) return { error: 'A PIN is exactly 4 digits.' };
@@ -149,11 +166,13 @@ async function setSecret(db, { userId, secret, user, currentSessionId = null }) 
 }
 
 async function unlock(db, { userId, user }) {
-  const u = (await db.query('SELECT username FROM users WHERE id = $1', [userId])).rows[0];
+  const u = (await db.query('SELECT id, username, role FROM users WHERE id = $1', [userId])).rows[0];
   if (!u) return { error: 'That login doesn’t exist.' };
+  const denied = adminLoginDenied(user, u);
+  if (denied) return { error: denied };
   await db.query('UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = $1', [userId]);
   await audit(db, user, 'unlock', 'users', u.username, null, null);
   return { ok: `${u.username} can log in again.` };
 }
 
-module.exports = { LOGIN_ROLES, loadPeople, adminUser, addPerson, updatePerson, setActive, setSecret, unlock };
+module.exports = { LOGIN_ROLES, loadPeople, adminUser, adminUsers, adminLoginDenied, addPerson, updatePerson, setActive, setSecret, unlock };

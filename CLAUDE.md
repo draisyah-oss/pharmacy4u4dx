@@ -171,6 +171,10 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## Projects → Company wiki from the checklist (19 Oct)
 - /hq/projects shows "Company wiki" as one line per wiki checklist heading (About Pharmacy4U, People and roles, HR policies, Branch operations SOPs, HQ SOPs, …), worked out from its pages: Not started / In progress / Done, x of y approved, waiting for Hanin, drafting, late, next due date, progress bar; heading links into /hq/wiki (full HQ + admin). Shown to the whole HQ team (HQ staff included) so everyone sees what's moving. The two typed "Company wiki" milestones are no longer in seed.json and are hidden from the page on older databases.
 
+## Super admin and admin logins (19 Oct)
+- Migration 019 users.is_super. Dr Aisyah's login (username admin) is the **super admin**: everything, plus changing admin logins and setting / approving HQ focuses, and her CEO lines in Needs you. The side menu says "Super admin".
+- **Extra admin logins** for Iman and Hanin (seed hq.admin_logins: iman.admin "Iman (admin)", hanin.admin "Hanin (admin)"; added once via addAdminLoginsOnce, flag admin_logins_v1) – role admin, not super: see and fix everything for everyone (all branches, admin pages, targets, people), but can't change another admin login's password or unlock it, and can't approve HQ focuses (they can propose). They keep their own logins (iman, hanin) for their own KPIs, day and commitments. No password at first – the super admin sets it in Admin → People & logins → HQ → Admin logins (any admin can change their own).
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

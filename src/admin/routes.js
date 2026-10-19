@@ -69,7 +69,7 @@ function adminRoutes(db, { now, salesSheet }) {
     const { list, branch, hq } = await pick(req, { allowHq: true });
     res.render('admin/people', {
       title: 'People & logins', list, branch, hq, people: await P.loadPeople(db, branch),
-      admin: hq ? await P.adminUser(db) : null, ...flash(req),
+      admin: hq ? await P.adminUser(db) : null, admins: hq ? await P.adminUsers(db) : [], ...flash(req),
     });
   }));
   const peoplePath = (req) => `/admin/people?branch=${encodeURIComponent(req.body.branch || '')}`;

@@ -297,3 +297,26 @@ test('19 Oct: Projects → Company wiki shows one line per checklist heading, wo
   const f = (await (await fariz()).get('/hq/projects')).html;
   assert.match(f, /Company wiki[\s\S]*HR policies/, 'the whole HQ team sees it');
 });
+
+test('19 Oct: super admin (Dr Aisyah) + admin logins for Iman and Hanin', async () => {
+  const { addAdminLoginsOnce } = require('../../src/db/setup');
+  await addAdminLoginsOnce(db, readSeed(), () => {});
+  const rows = (await db.query("SELECT username, is_super FROM users WHERE role = 'admin' ORDER BY is_super DESC, id")).rows;
+  assert.deepEqual(rows, [{ username: 'admin', is_super: true }, { username: 'iman.admin', is_super: false }, { username: 'hanin.admin', is_super: false }]);
+  const ceo = await admin();
+  const im = (await db.query("SELECT id FROM users WHERE username = 'iman.admin'")).rows[0].id;
+  const r = await ceo.post(`/admin/users/${im}/secret`, { branch: 'HQ', secret: 'iman-admin-1' });
+  assert.match(decodeURIComponent(r.location), /Password set for iman.admin/);
+  const ia = await login('password', 'iman.admin', 'iman-admin-1');
+  const people = (await ia.get('/admin/people?branch=HQ')).html;
+  assert.match(people, /Admin logins[\s\S]*Super admin/);
+  // An admin can't change the super admin's (or another admin's) password …
+  const sup = (await db.query("SELECT id FROM users WHERE username = 'admin'")).rows[0].id;
+  assert.match(decodeURIComponent((await ia.post(`/admin/users/${sup}/secret`, { branch: 'HQ', secret: 'hijack-pass-1' })).location), /Only the super admin/);
+  // … nor approve HQ focuses, but sees every branch and admin pages
+  assert.equal((await ia.get('/admin/targets')).status, 200);
+  assert.equal((await ia.get('/scoreboard?branch=JH')).status, 200);
+  assert.doesNotMatch((await ia.get(`/hq/commitments?week=${THIS}`)).html, /name="f\[p\d+\]\[approve\]"/);
+  // Iman's own login still works for her own KPIs
+  assert.equal((await (await iman()).get('/hq/today')).status, 200);
+});

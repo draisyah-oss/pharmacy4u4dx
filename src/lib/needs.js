@@ -120,7 +120,7 @@ async function buildNeeds(db, user, { at }) {
   if (user.role === 'admin' || user.inventory) {
     if (user.inventory) await forInventory(db, at, add);
   }
-  if (user.role === 'admin') await forCeo(db, today, add);
+  if (user.role === 'admin' && user.is_super) await forCeo(db, today, add);
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);
   if ((user.role === 'branch_manager' || user.role === 'branch_staff') && user.branch_id) await forBranch(db, user, today, at, add);
   items.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);

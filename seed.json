@@ -839,6 +839,7 @@
     },
     "wiki_approver": "Hanin",
     "inventory_team": ["Alia", "Syarafana", "Fariz"],
+    "admin_logins": [{"username": "iman.admin", "name": "Iman (admin)"}, {"username": "hanin.admin", "name": "Hanin (admin)"}],
     "extra_moves": {"Dr Aisyah": ["Remove bottlenecks for staff"]},
     "wiki_checklist_due": {"P1": "2026-11-15", "P2": "2026-12-31", "P3": "2027-03-31"},
     "wiki_checklist": [

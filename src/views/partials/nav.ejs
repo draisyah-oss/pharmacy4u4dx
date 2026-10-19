@@ -60,7 +60,7 @@
      const count = (n, what) => '<span class="sn-badge" aria-label="' + n + ' ' + what + '">' + n + '</span>';
      const badge = (key) => (key === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount ? count(oosCount, 'to answer')
        : '');
-     const sub = role === 'admin' ? 'Admin' : role === 'hq' || role === 'hq_staff' ? 'HQ' : (user.branch_name || user.branch_code || '');
+     const sub = role === 'admin' ? (user.is_super ? 'Super admin' : 'Admin') : role === 'hq' || role === 'hq_staff' ? 'HQ' : (user.branch_name || user.branch_code || '');
 %>
 <input type="checkbox" id="nav-open" class="nav-check" aria-hidden="true" tabindex="-1">
 <label for="nav-open" class="nav-backdrop" aria-hidden="true"></label>

@@ -10,6 +10,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   if (await isSeeded(db)) {
     log('Seed already loaded – using the data in the database.');
     await backfillNewSettings(db, readSeed(), log);
+    await addAdminLoginsOnce(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -18,6 +19,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   warnings.forEach((w) => log(`Note: ${w}`));
 
   const summary = await loadSeed(db, seed, { adminPassword: process.env.ADMIN_PASSWORD });
+  await addAdminLoginsOnce(db, seed, log);
   log(
     `Loaded seed.json: ${summary.branches} branches, ${summary.people} people, ` +
       `${summary.daily_fields} daily fields, ${summary.measures} measures, ` +
@@ -248,6 +250,18 @@ async function projectStepsOnce(db, seed, log) {
   if (added.length) log(`Added project steps: ${added.join(', ')}.`);
 }
 
+// 19 Oct: extra admin logins (seed hq.admin_logins – Iman, Hanin) next to the super admin.
+// No password yet: the super admin sets it in Admin → People & logins → HQ.
+async function addAdminLoginsOnce(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'admin_logins_v1'")).rows.length) return;
+  for (const a of (seed.hq && seed.hq.admin_logins) || []) {
+    if ((await db.query('SELECT 1 FROM users WHERE username = $1', [a.username])).rows.length) continue;
+    await db.query("INSERT INTO users (username, display_name, role, is_super) VALUES ($1, $2, 'admin', false)", [a.username, a.name]);
+    log(`Added admin login ${a.username} (set its password in Admin → People & logins → HQ).`);
+  }
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('admin_logins_v1', $1)", [new Date().toISOString()]);
+}
+
 // Add a person (with a staff login, PIN set in Admin → People) to a branch once.
 async function addBranchPersonOnce(db, code, person, flag, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -406,4 +420,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

@@ -242,7 +242,8 @@ function resultSummary(list) {
 
 // ─────────────── HQ focus ───────────────
 
-const canApproveFocus = (user) => user.role === 'admin';
+// Only the super admin (Dr Aisyah) sets / approves HQ focuses; other admin logins can't.
+const canApproveFocus = (user) => user.role === 'admin' && Boolean(user.is_super);
 
 // Up to 2 focuses a person a week (19 Oct). Map person_id → [slot 1, slot 2] (missing ones left out).
 async function loadFocusWeek(db, week) {

@@ -100,14 +100,23 @@
     </form>
   </section>
 
-  <% if (hq && admin) { %>
+  <% if (hq && admins.length) { %>
     <section class="admin-person">
-      <h2>Admin login <span class="muted">username <%= admin.username %></span></h2>
-      <form method="post" action="/admin/users/<%= admin.id %>/secret" class="inline-form">
-        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="HQ">
-        <label>New password <input name="secret" type="text" minlength="8" autocomplete="off" required></label>
-        <button class="button small-button" type="submit">Change admin password</button>
-      </form>
+      <h2>Admin logins</h2>
+      <p class="muted small">The super admin can do everything, including changing admin logins and approving HQ focuses. Admins see and fix everything else; they keep their own login for their own KPIs.</p>
+      <% admins.forEach(function (a) { const mayChange = user.is_super || user.id === a.id; %>
+        <div class="admin-login-row">
+          <p><b><%= a.display_name %></b> <span class="muted">username <%= a.username %> · <%= a.is_super ? 'Super admin' : 'Admin' %><%= a.has_password ? '' : ' · no password yet' %><%= a.locked ? ' · locked' : '' %></span></p>
+          <% if (mayChange) { %>
+            <form method="post" action="/admin/users/<%= a.id %>/secret" class="inline-form">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="HQ">
+              <label>New password <input name="secret" type="text" minlength="8" autocomplete="off" required></label>
+              <button class="button small-button" type="submit"><%= a.has_password ? 'Change password' : 'Set password' %></button>
+            </form>
+            <% if (a.locked) { %><form method="post" action="/admin/users/<%= a.id %>/unlock" class="inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="HQ"><button class="button small-button" type="submit">Unlock</button></form><% } %>
+          <% } %>
+        </div>
+      <% }) %>
     </section>
   <% } %>
 </main>

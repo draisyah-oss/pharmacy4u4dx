@@ -308,8 +308,8 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
     }
 
     const admin = await one(
-      `INSERT INTO users (username, display_name, role, password_hash)
-       VALUES ('admin', 'Admin', 'admin', $1) RETURNING id`,
+      `INSERT INTO users (username, display_name, role, password_hash, is_super)
+       VALUES ('admin', 'Admin', 'admin', $1, true) RETURNING id`,
       [bcrypt.hashSync(adminPassword, 10)]
     );
     summary.users++;
