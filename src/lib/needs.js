@@ -57,8 +57,8 @@ async function forHqPerson(db, user, today, add) {
     .filter((s) => team.ownsStep({ owner: s.owner || s.project_owner }, user.display_name));
   const stepsLate = steps.filter((s) => s.due_date < today);
   const stepsToday = steps.filter((s) => s.due_date === today);
-  if (stepsLate.length) add('late', stepsLate.length, 'Project steps overdue', stepsLate.slice(0, 2).map((s) => s.step).join(' · '), `/hq/projects?open=${stepsLate[0].project_id}#p-${stepsLate[0].project_id}`);
-  if (stepsToday.length) add('today', stepsToday.length, 'Project steps due today', stepsToday.slice(0, 2).map((s) => s.step).join(' · '), `/hq/projects?open=${stepsToday[0].project_id}#p-${stepsToday[0].project_id}`);
+  if (stepsLate.length) add('late', stepsLate.length, 'Project steps overdue', stepsLate.slice(0, 2).map((s) => s.step).join(' · '), `/hq/projects/${stepsLate[0].project_id}/steps`);
+  if (stepsToday.length) add('today', stepsToday.length, 'Project steps due today', stepsToday.slice(0, 2).map((s) => s.step).join(' · '), `/hq/projects/${stepsToday[0].project_id}/steps`);
 }
 
 async function forCeo(db, today, add) {

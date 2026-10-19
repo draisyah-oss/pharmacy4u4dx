@@ -13,7 +13,10 @@
      const inventory = inv ? [['Inventory', [['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'],
        ['oostransfers', '/oos/transfers', 'Transfers to send', 'oos transfer']]]] : [];
      // Projects (HQ team only), with the wiki checklist as a sub-item (full HQ and admin open it).
-     const projects = ['Projects', [['projects', '/hq/projects', 'Projects', 'milestones'],
+     // Milestones with a step checklist (19 Oct, e.g. min/max top 300) are sub-items too, with done / total.
+     const stepItems = (typeof stepMenu !== 'undefined' && stepMenu ? stepMenu : []).map(function (m) {
+       return ['steps-' + m.id, '/hq/projects/' + m.id + '/steps', m.milestone, 'steps checklist project', 'sub', m.done + '/' + m.total]; });
+     const projects = ['Projects', [['projects', '/hq/projects', 'Projects', 'milestones'], ...stepItems,
        ...(role === 'admin' || role === 'hq' ? [['hqwiki', '/hq/wiki', 'Wiki checklist', 'company wiki sop jd policy', 'sub']] : [])]];
      if (role === 'branch_staff') {
        quick = [['daily', '/daily', 'Daily entry'], ['myweek', '/my-week', 'My week']];
@@ -91,7 +94,7 @@
       <details class="sn-group" open>
         <summary><%= g[0] %></summary>
         <% g[1].forEach(function (l) { %>
-          <a href="<%= l[1] %>" class="sn-link<%= l[4] === 'sub' ? ' sn-sub' : '' %><%= here === l[0] ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- here === l[0] ? ' aria-current="page"' : '' %>><%= l[2] %><%- badge(l[0]) %></a>
+          <a href="<%= l[1] %>" class="sn-link<%= l[4] === 'sub' ? ' sn-sub' : '' %><%= here === l[0] ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- here === l[0] ? ' aria-current="page"' : '' %>><%= l[2] %><%- badge(l[0]) %><% if (l[5]) { %><span class="sn-count" aria-label="<%= l[5].replace('/', ' of ') %> steps done"><%= l[5] %></span><% } %></a>
         <% }) %>
       </details>
     <% }) %>

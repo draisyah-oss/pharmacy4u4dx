@@ -313,7 +313,8 @@ test('project steps: min/max milestone seeded with its 3-phase checklist', async
   assert.equal(rows.length, seedSteps.length);
   assert.deepEqual([...new Set(rows.map((r) => r.phase))], ['1 · Agree the rules', '2 · Pull the data', '3 · Set, check and load']);
   assert.equal(rows[0].due_date, '2026-10-20');
-  const page = (await (await syarafana()).get(`/hq/projects?open=${await minmax()}`)).html;
+  const page = (await (await syarafana()).get(`/hq/projects/${await minmax()}/steps`)).html;
+  assert.doesNotMatch((await (await syarafana()).get('/hq/projects')).html, /Export 90-day sales/, 'Projects page stays clean');
   assert.match(page, new RegExp(`Steps · <b>0 of ${seedSteps.length}</b> done`));
   assert.match(page, /2 · Pull the data/);
   assert.match(page, /Export 90-day sales per item per branch from Dynamod POS/);
@@ -326,13 +327,14 @@ test('project steps: owners tick their steps; others cannot; every change audite
   const row = (await db.query('SELECT done_at, done_by FROM hq_project_steps WHERE id = $1', [exp])).rows[0];
   assert.ok(row.done_at);
   assert.equal((await lastAudit('hq_project_steps')).username, 'syarafana');
-  assert.match((await s.get('/hq/projects')).html, /done by Syarafana/);
+  assert.match((await s.get(`/hq/projects/${await minmax()}/steps`)).html, /done by Syarafana/);
   await s.post(`/hq/projects/steps/${exp}`, { action: 'undo' });
   assert.equal((await db.query('SELECT done_at FROM hq_project_steps WHERE id = $1', [exp])).rows[0].done_at, null);
 
   // Fariz doesn't own the milestone or the step: can't see it, can't tick it
   const f = await fariz();
   assert.doesNotMatch((await f.get('/hq/projects')).html, /Min\/max stock levels/);
+  assert.equal((await f.get(`/hq/projects/${await minmax()}/steps`)).status, 403);
   assert.equal((await f.post(`/hq/projects/steps/${exp}`, { action: 'done' })).status, 403);
   assert.equal((await f.post(`/hq/projects/${await minmax()}/steps`, { step: 'X' })).status, 403);
   // Alia (full HQ) ticks her own rule step
@@ -354,7 +356,7 @@ test('project steps: add and remove; salary guard; late steps show in Needs you'
 
   // Today is Tue 20 Oct: Alia's remaining Phase 1 steps are due today; one is moved to yesterday
   await db.query("UPDATE hq_project_steps SET due_date = '2026-10-19' WHERE step LIKE 'Decide whether min/max%'");
-  const page = (await al.get('/hq/projects')).html;
+  const page = (await al.get(`/hq/projects/${id}/steps`)).html;
   assert.match(page, /Project steps overdue/);
   assert.match(page, /Project steps due today/);
   assert.match(page, /<b class="step-late">late<\/b>/);
@@ -376,4 +378,13 @@ test('an older database gets the project steps once', async () => {
   await projectStepsOnce(old, seed, () => {});
   assert.equal(await count(), 0, 'runs once – removed steps stay removed');
   await old.close();
+});
+
+test('side menu: milestones with steps are sub-items under Projects, with done / total', async () => {
+  const id = await minmax();
+  const total = (await db.query('SELECT count(*)::int AS n, count(done_at)::int AS d FROM hq_project_steps WHERE project_id = $1 AND active', [id])).rows[0];
+  const html = (await (await syarafana()).get('/hq/today')).html;
+  assert.match(html, new RegExp(`href="/hq/projects/${id}/steps" class="sn-link sn-sub[^"]*"[^>]*>Min/max stock levels set for top 300 items<span class="sn-count"[^>]*>${total.d}/${total.n}</span>`));
+  assert.match((await (await syarafana()).get(`/hq/projects/${id}/steps`)).html, new RegExp(`sn-sub is-current"[^>]*aria-current="page">Min/max`));
+  assert.doesNotMatch((await (await fariz()).get('/hq/today')).html, /Min\/max stock levels/, 'not his milestone');
 });

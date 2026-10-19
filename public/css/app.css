@@ -918,8 +918,7 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .sn-more { margin: 0; }
 
 /* Project steps (19 Oct): a checklist under a milestone */
-.steps { margin-top: 8px; border-left: 3px solid var(--brand-tint); padding-left: 10px; }
-.steps > summary { cursor: pointer; color: var(--brand); font-weight: 600; padding: 6px 0; }
+.steps-head { margin: 0; font-weight: 600; }
 .steps-bar { display: block; max-width: 260px; margin-top: 4px; }
 .step-phase { font-size: 0.9rem; margin: 12px 0 4px; }
 .step-list { list-style: none; margin: 0; padding: 0; }
@@ -936,3 +935,4 @@ span.step-box { cursor: default; }
 .step-overdue .step-box { border-color: var(--short); }
 .step-remove .link-button { text-decoration: none; font-size: 1.2rem; color: var(--ink-soft); padding: 4px 6px; }
 .step-add { margin-top: 10px; }
+.sn-count { margin-left: 8px; font-size: 0.75rem; font-weight: 700; padding: 1px 7px; border-radius: 999px; background: var(--brand-tint); color: var(--brand); vertical-align: 1px; white-space: nowrap; }

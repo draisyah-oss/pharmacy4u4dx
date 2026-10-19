@@ -87,6 +87,12 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
     try {
       if (req.method === 'GET') res.locals.needs = await buildNeeds(db, req.user, { at: now() });
     } catch (err) { console.error('Needs you:', err.message); }
+    // Side menu (19 Oct): milestones with a step checklist, as sub-items under Projects.
+    try {
+      if (req.method === 'GET' && ['admin', 'hq', 'hq_staff'].includes(req.user.role)) {
+        res.locals.stepMenu = await require('./hq/team').stepMenu(db, req.user);
+      }
+    } catch (err) { console.error('Menu steps:', err.message); }
     try {
       if (req.method === 'GET' && oosData.canAnswer(req.user)) {
         res.locals.oosCount = await oosData.countToAnswer(db);

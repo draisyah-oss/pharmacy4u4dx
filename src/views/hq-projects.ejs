@@ -21,50 +21,6 @@
           <header class="oos-top"><b><%= p.milestone %></b><span class="oos-status <%= stateClass[p.state] %>"><%= p.status %><%= p.state === 'overdue' ? ' · overdue' : p.state === 'due_soon' ? ' · due soon' : '' %></span></header>
           <p class="oos-meta"><%= p.owner %> · start <%= p.start_date ? fmtDate(p.start_date) : 'not set' %> · due <%= p.due_date ? fmtDate(p.due_date) : 'not set' %></p>
           <% if (p.notes) { %><p class="oos-answer"><%= p.notes %></p><% } %>
-          <% if (p.steps.total || p.canEdit) { %>
-            <details class="steps"<%= p.openSteps ? ' open' : '' %>>
-              <summary>
-                <% if (p.steps.total) { %>Steps · <b><%= p.steps.done %> of <%= p.steps.total %></b> done<% if (p.steps.overdue) { %> · <span class="step-late"><%= p.steps.overdue %> late</span><% } %><% } else { %>Add steps<% } %>
-                <% if (p.steps.total) { %><span class="bar steps-bar" aria-hidden="true"><span class="<%= p.steps.done === p.steps.total ? 's-on_track' : p.steps.overdue ? 's-off_track' : 's-watch' %>" style="width: <%= Math.round(100 * p.steps.done / p.steps.total) %>%"></span></span><% } %>
-              </summary>
-              <% p.steps.phases.forEach(function (ph) { const left = ph.steps.filter(function (x) { return x.state !== 'done'; }).length; %>
-                <% if (ph.phase) { %><h3 class="step-phase"><%= ph.phase %> <span class="muted"><%= ph.steps.length - left %>/<%= ph.steps.length %></span></h3><% } %>
-                <ul class="step-list">
-                  <% ph.steps.forEach(function (st) { %>
-                    <li class="step step-<%= st.state %>" id="s-<%= st.id %>">
-                      <% if (st.canTick) { %>
-                        <form method="post" action="/hq/projects/steps/<%= st.id %>" class="step-tick">
-                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                          <button type="submit" name="action" value="<%= st.state === 'done' ? 'undo' : 'done' %>" class="step-box" aria-label="<%= st.state === 'done' ? 'Undo: ' : 'Mark done: ' %><%= st.step %>"><%= st.state === 'done' ? '✔' : '' %></button>
-                        </form>
-                      <% } else { %><span class="step-box" aria-hidden="true"><%= st.state === 'done' ? '✔' : '' %></span><% } %>
-                      <div class="step-body">
-                        <span class="step-text"><%= st.step %></span>
-                        <small class="step-meta"><%= st.owner || p.owner %><% if (st.due_date) { %> · by <%= fmtDate(st.due_date) %><% } %><% if (st.state === 'overdue') { %> · <b class="step-late">late</b><% } else if (st.state === 'today') { %> · <b>due today</b><% } %><% if (st.state === 'done') { %> · done<%= st.done_by_name ? ' by ' + st.done_by_name : '' %><% } %></small>
-                      </div>
-                      <% if (p.canEdit) { %>
-                        <form method="post" action="/hq/projects/steps/<%= st.id %>" class="step-remove">
-                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                          <button type="submit" name="action" value="remove" class="link-button" aria-label="Remove step: <%= st.step %>" title="Remove step">×</button>
-                        </form>
-                      <% } %>
-                    </li>
-                  <% }) %>
-                </ul>
-              <% }) %>
-              <% if (p.canEdit) { %>
-                <form method="post" action="/hq/projects/<%= p.id %>/steps" class="admin-fields step-add">
-                  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-                  <label class="wide">New step <input name="step" maxlength="200" required></label>
-                  <label>Phase <input name="phase" maxlength="60" list="phases-<%= p.id %>" placeholder="optional"></label>
-                  <datalist id="phases-<%= p.id %>"><% p.steps.phases.forEach(function (ph) { if (ph.phase) { %><option value="<%= ph.phase %>"><% } }) %></datalist>
-                  <label>Owner <input name="owner" maxlength="80" placeholder="<%= p.owner %>"></label>
-                  <label>By <input type="date" name="due_date"></label>
-                  <button class="button small-button" type="submit">Add step</button>
-                </form>
-              <% } %>
-            </details>
-          <% } %>
           <% if (p.canEdit) { %>
             <details class="admin-details"><summary>Update</summary>
               <form method="post" action="/hq/projects/<%= p.id %>" class="admin-fields">

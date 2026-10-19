@@ -392,6 +392,19 @@ async function removeStep(db, user, step) {
   return { ok: 'Step removed.' };
 }
 
+// Side menu: milestones (not Done) that have steps, with done / total – HQ staff only see the
+// ones they own or have a step on.
+async function stepMenu(db, user) {
+  const rows = (await db.query(
+    `SELECT p.id, p.milestone, p.owner, count(s.id)::int AS total, count(s.done_at)::int AS done,
+            array_agg(s.owner) AS step_owners
+     FROM hq_projects p JOIN hq_project_steps s ON s.project_id = p.id AND s.active
+     WHERE p.active AND p.status <> 'Done' GROUP BY p.id ORDER BY p.sort_order, p.id`)).rows;
+  return rows.filter((r) => user.role !== 'hq_staff' || ownsProject(r, user.display_name)
+    || (r.step_owners || []).some((o) => o && ownsStep({ owner: o }, user.display_name)))
+    .map(({ id, milestone, total, done }) => ({ id, milestone, total, done }));
+}
+
 // Seed steps for one milestone (first load and older databases): only when it has none yet.
 async function insertSeedSteps(tx, projectId, steps) {
   for (const [i, s] of (steps || []).entries()) {
@@ -446,5 +459,5 @@ module.exports = {
   loadTasks, loadTicks, dailyWeekSummary, dayEditDenied, saveTicks, addTask, retireTask, loadDayPage,
   loadCommitmentWeek, movesFor, keptSummary, saveCommitments,
   loadProjects, ownsProject, canEditProject, updateProject, addProject, projectState, teamSummary,
-  loadSteps, ownsStep, canTickStep, stepState, stepSummary, tickStep, addStep, removeStep, insertSeedSteps,
+  loadSteps, ownsStep, canTickStep, stepState, stepSummary, tickStep, addStep, removeStep, insertSeedSteps, stepMenu,
 };
