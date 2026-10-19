@@ -101,10 +101,11 @@ test('expired sessions are cleaned up', async () => {
 
 // ───────────── Who sees what ─────────────
 
-test('staff: daily entry for own branch only – no scoreboard, admin, setup page or export', async () => {
+test('staff: own branch daily entry and scoreboard only – no admin, setup page or export', async () => {
   const s = await login('/login/pin', { username: 'zawiyah', pin: '2222' });
   assert.equal((await s.get('/daily')).status, 200);
-  for (const p of ['/scoreboard', '/scoreboard/trace?type=measure&code=T1&from=2026-10-12&to=2026-10-18', '/admin', '/admin/targets', '/status', '/admin/export/WM.xlsx', '/admin/export/group.xlsx']) {
+  assert.equal((await s.get('/scoreboard')).status, 200);
+  for (const p of ['/admin', '/admin/targets', '/status', '/admin/export/WM.xlsx', '/admin/export/group.xlsx']) {
     assert.equal((await s.get(p)).status, 403, p);
   }
   assert.doesNotMatch((await s.get('/daily?branch=JH')).html, /Jenderam Hilir/);

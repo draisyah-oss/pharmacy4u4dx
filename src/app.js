@@ -14,6 +14,7 @@ const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
 const { wigRoutes } = require('./wig/routes');
+const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
 const fmt = require('./scoreboard/format');
@@ -82,6 +83,10 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
         req.user.inventory = Boolean(r && team.includes(r.name));
       }
     } catch (err) { console.error('Inventory team:', err.message); }
+    // "Needs you" list at the top of the side menu (src/lib/needs.js).
+    try {
+      if (req.method === 'GET') res.locals.needs = await buildNeeds(db, req.user, { at: now() });
+    } catch (err) { console.error('Needs you:', err.message); }
     try {
       if (req.method === 'GET' && oosData.canAnswer(req.user)) {
         res.locals.oosCount = await oosData.countToAnswer(db);

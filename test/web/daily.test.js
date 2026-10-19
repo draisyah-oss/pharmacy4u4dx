@@ -149,7 +149,8 @@ test('daily page: one card per person, Team first, then the person logged in', a
 
 test('date strip shows the last 7 days (14–20 Oct)', async () => {
   const b = await pinLogin('hazera', '1111');
-  const dates = [...(await b.get('/daily')).html.matchAll(/class="strip-day[^"]*" href|href="\/daily\?date=(\d{4}-\d{2}-\d{2})/g)]
+  const page = (await b.get('/daily')).html;
+  const dates = [...page.slice(page.indexOf('aria-label="Choose a day"'), page.indexOf('</nav>', page.indexOf('aria-label="Choose a day"'))).matchAll(/class="strip-day[^"]*" href|href="\/daily\?date=(\d{4}-\d{2}-\d{2})/g)]
     .map((m) => m[1]).filter(Boolean);
   assert.deepEqual(dates, ['2026-10-14', '2026-10-15', '2026-10-16', '2026-10-17', '2026-10-18', '2026-10-19', '2026-10-20']);
 });

@@ -176,7 +176,7 @@ test('clicking a number: the trace comes back as a fragment, or a full page with
   assert.equal((await get('/scoreboard/trace?type=measure&code=T1&from=2026-10-18&to=2026-10-12')).status, 400);
 });
 
-test('managers only see their own branch; staff can\'t open the scoreboard; HQ sees any branch', async () => {
+test('managers only see their own branch; staff see their own; HQ sees any branch', async () => {
   const jh = await login({ username: 'afifah', password: 'manager-pass-2' });
   const own = await jh('/scoreboard?branch=WM');
   assert.match(own.html, /Jenderam Hilir/);
@@ -184,7 +184,9 @@ test('managers only see their own branch; staff can\'t open the scoreboard; HQ s
   assert.equal((await jh('/scoreboard/trace?type=measure&code=T1&from=2026-10-12&to=2026-10-18&branch=WM')).html.includes('12,365'), false);
 
   const staff = await login({ username: 'hazera', pin: '1111' }, '/login/pin');
-  assert.equal((await staff('/scoreboard')).status, 403);
+  // 19 Oct: staff see their own branch's scoreboard (read only), never another branch's
+  assert.equal((await staff('/scoreboard')).status, 200);
+  assert.doesNotMatch((await staff('/scoreboard?branch=JH')).html, /Jenderam Hilir/);
 
   const hq = await login({ username: 'alia', password: 'hq-pass-123' });
   const r = await hq('/scoreboard?branch=WM&week=2026-10-12');

@@ -72,7 +72,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Week chooser lists every week from the tracker's first week to this week. The current week counts days to today once any of today's numbers are in, otherwise to yesterday.
 - Top section = measures of kind WIG, labels with "LEAD n", or Lead measures on the branch's lead1/lead2 fields. Everything else grouped by owner (Team, then people).
 - Month sales are coloured by pace (MTD vs month target × days gone ÷ days in month), with the full-month % shown.
-- Branch staff can't open the scoreboard (daily log only); managers see their own branch; HQ/admin all.
+- Staff and managers see their own branch's scoreboard (staff since 19 Oct); HQ/admin all.
 - Every number links to /scoreboard/trace (inline with JS, full page without).
 
 ## BR update (14 Oct, core JD revision sheet)
@@ -158,6 +158,8 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - **Up to 2 focuses and 2 commitments** per HQ person a week (migration 017: hq_focus / hq_commitments slot 1–2; form keys f/f2, c/c2). Both show on HQ day and the HQ scoreboard.
 - Dr Aisyah's commitments can move **"Remove bottlenecks for staff"** (app_settings hq_extra_moves = seed hq.extra_moves; only offered to her).
 - Menu name: **Weekly Branch Manager Meeting** (/hq/update, the Monday 4 pm meeting).
+- **Top of the side menu** (replaces the shortcut tiles): **Needs you** (src/lib/needs.js, res.locals.needs on every GET) – up to 5 lines with a count, most urgent first: late (red), due today (amber), to do (blue); each opens its page; nothing to do → "All clear". Inventory team: OOS reports overdue / to answer, transfers late / to send. HQ people: branch actions overdue / due today / open, daily tasks not ticked (weekdays), Hanin: wiki pages waiting for approval, owner's wiki pages past their date. CEO (admin): focuses waiting for approval, branch actions overdue (by owner), branch updates not sent (Mon/Tue). Managers: yesterday's numbers missing, weekly update (Mon due 4 pm / Tue late), late OOS items, branch WIG today (Tue) / not marked held (Wed–Sun), staff without a commitment (Mon–Wed). Staff: yesterday's numbers missing, my commitment not written. Then **fixed tiles**: Daily entry + own branch scoreboard (branch logins) and **Group scoreboard for everyone**.
+- Access widened: **branch staff can open the group scoreboard and their own branch's scoreboard** (read only; links only into their own branch).
 - Ampang: **Anis (Intern)** added with a staff login (username anis – set her PIN in Admin → People); older databases once (ampang_anis_v1). Ayuni stays at Bangi.
 
 ## Name and menu (16 Oct)

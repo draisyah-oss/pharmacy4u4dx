@@ -8,7 +8,8 @@ const { weekChoices, pickWeek } = require('../lib/weeks');
 const { buildGroup } = require('./data');
 const { sheetYearCard } = require('../sales/data');
 
-const canSeeGroup = (user) => ['branch_manager', 'hq', 'hq_staff', 'admin'].includes(user.role);
+// 19 Oct: everyone sees the group scoreboard (staff and HQ staff without links into branches).
+const canSeeGroup = (user) => ['branch_staff', 'branch_manager', 'hq', 'hq_staff', 'admin'].includes(user.role);
 
 function groupRoutes(db, { now, trackerStart }) {
   const router = express.Router();

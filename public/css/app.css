@@ -903,3 +903,16 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .commit-slot { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 8px; }
 .wig-steps a.is-current { background: var(--brand); border-color: var(--brand); color: #fff; }
 .hq-steps { margin: 4px 0 12px; }
+/* "Needs you" (19 Oct) */
+.sn-needs { margin-bottom: 12px; display: flex; flex-direction: column; gap: 6px; }
+.sn-needs-h { margin: 0; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-soft); }
+.sn-need { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px 10px; line-height: 1.3; }
+.sn-need:hover { border-color: var(--brand); }
+.sn-need b { display: block; font-size: 0.9rem; }
+.sn-need small { display: block; font-size: 0.78rem; color: var(--ink-soft); }
+.sn-n { flex: none; min-width: 28px; height: 28px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.85rem; }
+.lv-late .sn-n { background: var(--short-tint); color: var(--short); }
+.lv-today .sn-n { background: #fdf0d8; color: #7a4a00; }
+.lv-todo .sn-n { background: var(--brand-tint); color: var(--brand); }
+.sn-clear { margin: 0; font-size: 0.85rem; color: var(--good); }
+.sn-more { margin: 0; }

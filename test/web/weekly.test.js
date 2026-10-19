@@ -300,7 +300,8 @@ test('group scoreboard: one row per branch, numbers match the branch scoreboard,
 });
 
 test('group scoreboard: managers, HQ and admin; managers only get links into their own branch', async () => {
-  assert.equal((await (await staff()).get('/group')).status, 403);
+  assert.equal((await (await staff()).get('/group')).status, 200, '19 Oct: everyone sees the group scoreboard');
+  assert.doesNotMatch((await (await staff()).get('/group')).html, /scoreboard\?[^"]*branch=JH/, 'staff only get links into their own branch');
   const m = await manager();
   const page = await m.get(`/group?week=${LAST}`);
   assert.equal(page.status, 200);

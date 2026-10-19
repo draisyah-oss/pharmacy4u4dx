@@ -275,3 +275,15 @@ test('19 Oct: Inventory menu only for Alia, Syarafana, Fariz (and admin); Projec
   const anis = (await db.query("SELECT p.role, u.username, u.role AS login FROM people p JOIN branches b ON b.id = p.branch_id JOIN users u ON u.person_id = p.id WHERE b.code = 'Ampang' AND p.name = 'Anis'")).rows[0];
   assert.deepEqual(anis, { role: 'Intern', username: 'anis', login: 'branch_staff' });
 });
+
+test('19 Oct: "Needs you" at the top of the menu – counts per person, fixed tiles for everyone', async () => {
+  const ceo = (await (await admin()).get('/hq/update')).html;
+  assert.match(ceo, /Needs you[\s\S]*Focuses waiting for your approval/);
+  assert.match(ceo, />Group scoreboard</);
+  const al = (await (await alia()).get('/hq/today')).html;
+  assert.match(al, /Needs you[\s\S]*(Out-of-stock reports|Daily tasks to tick)/);
+  const st = (await (await staff()).get('/daily')).html;
+  assert.match(st, />Daily entry</);
+  assert.match(st, />WM scoreboard</);
+  assert.match(st, />Group scoreboard</);
+});

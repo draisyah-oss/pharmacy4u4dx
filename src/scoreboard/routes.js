@@ -15,7 +15,9 @@ const MAX_TRACE_DAYS = 100;
 function scoreboardAccess(user, branch) {
   if (user.role === 'admin' || user.role === 'hq') return null;
   if (user.role === 'branch_manager' && user.branch_id === branch.id) return null;
-  if (user.role === 'branch_manager') return 'You can only open your own branch’s scoreboard.';
+  // 19 Oct: staff see their own branch's scoreboard too (read only).
+  if (user.role === 'branch_staff' && user.branch_id === branch.id) return null;
+  if (user.role === 'branch_manager' || user.role === 'branch_staff') return 'You can only open your own branch’s scoreboard.';
   return 'The scoreboard is for branch managers, HQ and admin. Your manager shows it at the Monday WIG session.';
 }
 

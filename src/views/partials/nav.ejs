@@ -17,8 +17,8 @@
        ...(role === 'admin' || role === 'hq' ? [['hqwiki', '/hq/wiki', 'Wiki checklist', 'company wiki sop jd policy', 'sub']] : [])]];
      if (role === 'branch_staff') {
        quick = [['daily', '/daily', 'Daily entry'], ['myweek', '/my-week', 'My week']];
-       groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['myweek', '/my-week', 'My week', 'commitment wig'],
-         ['oos', '/oos', 'Out of stock', 'oos report restock']]]];
+       groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['scoreboard', '/scoreboard', 'Scoreboard', 'week lead'], ['myweek', '/my-week', 'My week', 'commitment wig'],
+         ['oos', '/oos', 'Out of stock', 'oos report restock']]], ['Company', [['group', '/group', 'Group scoreboard', 'branches']]]];
      } else if (role === 'hq_staff') {
        quick = [['hqtoday', '/hq/today', 'My day'], ['hqcommit', '/hq', 'HQ WIG']];
        groups = [
@@ -67,10 +67,23 @@
     <button type="button" class="sn-collapse" data-nav-collapse aria-label="Hide menu" title="Hide menu">«</button>
     <label for="nav-open" class="sn-close" aria-label="Close menu">✕</label>
   </div>
-  <div class="sn-quick">
-    <% quick.forEach(function (q, i) { %>
-      <a href="<%= q[1] %>" class="sn-tile<%= here === q[0] ? ' is-current' : '' %><%= quick.length % 2 && i === quick.length - 1 ? ' sn-wide' : '' %>"><%= q[2] %><%- badge(q[0]) %></a>
+  <% const nd = typeof needs !== 'undefined' && needs ? needs : null; if (nd) { %>
+  <section class="sn-needs" aria-label="Needs you">
+    <p class="sn-needs-h">Needs you</p>
+    <% if (!nd.items.length) { %><p class="sn-clear">✔ All clear – nothing waiting for you</p><% } %>
+    <% nd.items.forEach(function (it) { %>
+      <a class="sn-need lv-<%= it.level %>" href="<%= it.href %>"><span class="sn-n"><%= it.count %></span><span><b><%= it.title %></b><small><%= it.sub %></small></span></a>
     <% }) %>
+    <% if (nd.more) { %><p class="sn-more muted small">+ <%= nd.more %> more in the menu</p><% } %>
+  </section>
+  <% } %>
+  <%# Fixed for everyone (19 Oct): Daily entry and own branch scoreboard (branch logins), Group scoreboard (all). %>
+  <div class="sn-quick">
+    <% if (role === 'branch_staff' || role === 'branch_manager') { %>
+      <a href="/daily" class="sn-tile<%= here === 'daily' ? ' is-current' : '' %>">Daily entry</a>
+      <a href="/scoreboard" class="sn-tile<%= here === 'scoreboard' ? ' is-current' : '' %>"><%= user.branch_code || 'Branch' %> scoreboard</a>
+    <% } %>
+    <a href="/group" class="sn-tile sn-wide<%= here === 'group' ? ' is-current' : '' %>">Group scoreboard</a>
   </div>
   <input type="search" class="sn-search" data-nav-search placeholder="Search… e.g. sales, OOS" aria-label="Search the menu" hidden>
   <nav>
