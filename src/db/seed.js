@@ -339,6 +339,9 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       wiki_tasks_v1: new Date().toISOString(),
       wiki_tasks_hanin_v1: new Date().toISOString(),
       wig_week_v1: new Date().toISOString(),
+      ampang_anis_v1: new Date().toISOString(),
+      inventory_team: seed.hq && seed.hq.inventory_team ? JSON.stringify(seed.hq.inventory_team) : null,
+      hq_extra_moves: seed.hq && seed.hq.extra_moves ? JSON.stringify(seed.hq.extra_moves) : null,
       wiki_approver: seed.hq && seed.hq.wiki_approver ? JSON.stringify(seed.hq.wiki_approver) : null,
       oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
     };

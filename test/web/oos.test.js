@@ -82,9 +82,15 @@ test('the whole flow: report → inbox badge → transfer answer → Fariz sends
   assert.match(inbox, /class="sn-badge"[^>]*>1</);
   assert.match(inbox, /Loyuric 100mg \(30s\)[\s\S]*URGENT/);
   assert.match(inbox, /13 h 20 m left/);
-  // Staff and Fariz can't answer
+  // 19 Oct: the inventory team (Alia, Syarafana, Fariz) has the inbox; other HQ (Hanin) and staff don't
   const fariz = await login('pin', 'fariz', '1357');
-  assert.equal((await fariz.get(`/oos/${item.id}`)).status, 403);
+  assert.equal((await fariz.get(`/oos/${item.id}`)).status, 200);
+  await db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [bcrypt.hashSync('hanin-pass-1', 4), 'hanin']);
+  const hn = await login('password', 'hanin', 'hanin-pass-1');
+  assert.equal((await hn.get('/oos/inbox')).status, 403);
+  assert.equal((await hn.get('/oos/transfers')).status, 403);
+  assert.doesNotMatch((await hn.get('/hq/today')).html, /Out-of-stock inbox/);
+  assert.match(inbox, /Inventory<\/summary>/);
   assert.equal((await staff.post(`/oos/${item.id}/answer`, { answer: 'order', qty: '5', expected_back: '2026-10-20' })).status, 403);
   // Answer: transfer 6 from WM? Not the same branch – WM reported it, so from JH
   clock = new Date('2026-10-16T10:05:00+08:00');

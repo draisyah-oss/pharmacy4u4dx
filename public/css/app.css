@@ -898,3 +898,8 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .focus-edit input, .my-week select { width: 100%; min-height: 44px; border: 2px solid var(--line); border-radius: 10px; padding: 0 10px; font: inherit; font-size: 1rem; box-sizing: border-box; background: #fff; }
 .focus-edit .wk-label { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
 .page.upd-page { max-width: 1180px; }
+.sn-link.sn-sub { padding-left: 34px; font-size: 0.95em; }
+.sn-link.sn-sub::before { content: "↳ "; color: var(--ink-soft); }
+.commit-slot { border-top: 1px dashed var(--line); padding-top: 8px; margin-top: 8px; }
+.wig-steps a.is-current { background: var(--brand); border-color: var(--brand); color: #fff; }
+.hq-steps { margin: 4px 0 12px; }

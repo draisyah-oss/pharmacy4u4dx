@@ -26,7 +26,7 @@ function editDenied(user, branch, week, today) {
 }
 
 // HQ (Inventory) and admin answer OOS items: reason for the delay, expected date, status.
-const canAnswerOos = (user) => user.role === 'hq' || user.role === 'admin';
+const canAnswerOos = (user) => user.role === 'admin' || Boolean(user.inventory);
 
 // Free text from a form: trimmed, length-limited, never salary/pay details.
 function cleanText(value, { max = 500, label = 'This box' } = {}) {

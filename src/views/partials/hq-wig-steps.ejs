@@ -1,0 +1,6 @@
+<%# HQ WIG session (Monday 10 am) = HQ input + focus & commitments in one flow (19 Oct). step: 1 or 2. %>
+<nav class="wig-steps hq-steps" aria-label="HQ WIG session steps">
+  <a href="/hq"<%- step === 1 ? ' aria-current="step" class="is-current"' : '' %>>1 · Numbers for last week (HQ input)</a>
+  <a href="/hq/commitments"<%- step === 2 ? ' aria-current="step" class="is-current"' : '' %>>2 · Focus &amp; commitments this week</a>
+  <a href="/hq/scoreboard">HQ scoreboard</a>
+</nav>

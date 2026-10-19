@@ -107,7 +107,7 @@ test('Monday 4 pm: HQ agrees owner + date → on the owner’s day; they tick it
   const a = await alia();
   const page = await a.get(`/hq/update?week=${LAST}`);
   assert.equal(page.status, 200);
-  assert.match(page.html, /Weekly update with branch managers/);
+  assert.match(page.html, /Weekly Branch Manager Meeting/);
   assert.match(page.html, /locum/);
   const act = (await db.query('SELECT id FROM hq_actions WHERE week_start = $1', [LAST])).rows[0];
   const r = await a.post('/hq/update', {
@@ -241,4 +241,37 @@ test('18 Oct upgrade: older databases move Hanin’s wiki pages to Iman and get 
   const t = (await old.query("SELECT target FROM hq_measure_targets WHERE hq_measure_id = $1 AND month = '2026-10'", [wiki])).rows[0].target;
   assert.equal(Number(t), 7);
   await old.close();
+});
+
+test('19 Oct: HQ WIG takes up to 2 focuses and 2 commitments; the CEO can commit to removing bottlenecks for staff', async () => {
+  const ceo = await admin();
+  const r = await ceo.post('/hq/commitments', {
+    week: THIS, [`f2[p${ids.Alia}][text]`]: 'Top 100 in stock 95% by Fri',
+    [`c[p${ids['Dr Aisyah']}][text]`]: 'Sit with each branch manager for 15 min', [`c[p${ids['Dr Aisyah']}][moves]`]: 'Remove bottlenecks for staff',
+    [`c2[p${ids['Dr Aisyah']}][text]`]: 'Sign off the November campaign',
+  });
+  assert.equal(r.status, 302, r.html.slice(0, 300));
+  const focus = (await db.query('SELECT slot, status FROM hq_focus WHERE week_start = $1 AND person_id = $2 ORDER BY slot', [THIS, ids.Alia])).rows;
+  assert.deepEqual(focus.map((f) => f.slot), [1, 2]);
+  const cs = (await db.query('SELECT slot, moves FROM hq_commitments WHERE week_start = $1 AND person_id = $2 ORDER BY slot', [THIS, ids['Dr Aisyah']])).rows;
+  assert.deepEqual(cs, [{ slot: 1, moves: 'Remove bottlenecks for staff' }, { slot: 2, moves: null }]);
+  assert.match((await (await alia()).get('/hq/today')).html, /Top 100 in stock 95% by Fri/);
+  // Not offered to anyone else
+  const bad = await (await alia()).post('/hq/commitments', { week: THIS, [`c[p${ids.Alia}][text]`]: 'x', [`c[p${ids.Alia}][moves]`]: 'Remove bottlenecks for staff' });
+  assert.equal(bad.status, 400);
+});
+
+test('19 Oct: Inventory menu only for Alia, Syarafana, Fariz (and admin); Projects menu for HQ; Anis at Ampang', async () => {
+  const a = (await (await alia()).get('/hq/today')).html;
+  assert.match(a, /<summary>Inventory<\/summary>/);
+  assert.match(a, /<summary>Projects<\/summary>[\s\S]*sn-sub[^>]*>Wiki checklist/);
+  const h = (await (await hanin()).get('/hq/today')).html;
+  assert.doesNotMatch(h, /<summary>Inventory<\/summary>/);
+  assert.match(h, /<summary>Projects<\/summary>/);
+  assert.equal((await (await hanin()).get('/oos/transfers')).status, 403);
+  const f = (await (await fariz()).get('/hq/today')).html;
+  assert.match(f, /<summary>Inventory<\/summary>/);
+  assert.doesNotMatch((await (await manager()).get('/daily')).html, /<summary>Projects<\/summary>|<summary>Inventory<\/summary>/);
+  const anis = (await db.query("SELECT p.role, u.username, u.role AS login FROM people p JOIN branches b ON b.id = p.branch_id JOIN users u ON u.person_id = p.id WHERE b.code = 'Ampang' AND p.name = 'Anis'")).rows[0];
+  assert.deepEqual(anis, { role: 'Intern', username: 'anis', login: 'branch_staff' });
 });

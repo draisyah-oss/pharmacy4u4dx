@@ -24,8 +24,10 @@ const ANSWERS = {
 
 const canReport = (user, branch) => user.role === 'admin'
   || (['branch_staff', 'branch_manager'].includes(user.role) && user.branch_id === branch.id);
-const canAnswer = (user) => user.role === 'hq' || user.role === 'admin';
-const canSend = (user) => ['hq', 'hq_staff', 'admin'].includes(user.role);
+// 19 Oct: the out-of-stock inbox and transfers are for the inventory team only (app_settings inventory_team:
+// Alia, Syarafana, Fariz) and admin – req.user.inventory is set in src/app.js.
+const canAnswer = (user) => user.role === 'admin' || Boolean(user.inventory);
+const canSend = (user) => user.role === 'admin' || Boolean(user.inventory);
 const canSeeBoard = (user) => ['hq', 'hq_staff', 'admin', 'branch_manager'].includes(user.role);
 
 async function targets(db) {

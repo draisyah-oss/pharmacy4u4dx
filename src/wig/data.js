@@ -244,56 +244,66 @@ function resultSummary(list) {
 
 const canApproveFocus = (user) => user.role === 'admin';
 
+// Up to 2 focuses a person a week (19 Oct). Map person_id → [slot 1, slot 2] (missing ones left out).
 async function loadFocusWeek(db, week) {
-  return new Map((await db.query(
+  const rows = (await db.query(
     `SELECT f.*, pu.display_name AS proposed_by_name, au.display_name AS approved_by_name FROM hq_focus f
-     LEFT JOIN users pu ON pu.id = f.proposed_by LEFT JOIN users au ON au.id = f.approved_by WHERE f.week_start = $1`, [week])).rows
-    .map((f) => [f.person_id, f]));
+     LEFT JOIN users pu ON pu.id = f.proposed_by LEFT JOIN users au ON au.id = f.approved_by WHERE f.week_start = $1
+     ORDER BY f.person_id, f.slot`, [week])).rows;
+  const out = new Map();
+  for (const f of rows) { if (!out.has(f.person_id)) out.set(f.person_id, []); out.get(f.person_id).push(f); }
+  return out;
 }
 
 async function loadFocus(db, week, personId) {
-  return (await loadFocusWeek(db, week)).get(personId) || null;
+  return (await loadFocusWeek(db, week)).get(personId) || [];
 }
+
+const FOCUS_KEYS = { 1: 'f', 2: 'f2' };
 
 // f[p<id>][text] (+ f[p<id>][approve] = '1' for the CEO). The CEO's own text is approved at once;
 // anyone else's is a proposal – changing an approved focus sends it back for approval.
 async function saveFocus(db, user, { week, body, people, canActFor }) {
-  const typed = body.f || {};
   const current = await loadFocusWeek(db, week);
   const errors = {};
   const plans = [];
-  for (const p of people) {
-    const t = typed[`p${p.id}`];
-    if (!t || typeof t !== 'object') continue;
-    const ceo = canApproveFocus(user);
-    if (!ceo && !canActFor(p.id)) continue;
-    const text = cleanText(t.text, { max: 200, label: 'Focus' });
-    if (text.error) { errors[p.id] = text.error; continue; }
-    const before = current.get(p.id) || null;
-    if (!text.value) { if (before) plans.push({ type: 'delete', p, before }); continue; }
-    const approve = ceo && (t.approve === '1' || t.approve === 'on' || !before || before.focus !== text.value || before.status === 'approved');
-    const status = ceo ? (approve ? 'approved' : 'proposed') : (before && before.focus === text.value ? before.status : 'proposed');
-    if (before && before.focus === text.value && before.status === status) continue;
-    plans.push({ type: 'set', p, before, text: text.value, status });
+  const ceo = canApproveFocus(user);
+  for (const [slotKey, key] of Object.entries(FOCUS_KEYS)) {
+    const slot = Number(slotKey);
+    const typed = body[key] || {};
+    for (const p of people) {
+      const t = typed[`p${p.id}`];
+      if (!t || typeof t !== 'object') continue;
+      if (!ceo && !canActFor(p.id)) continue;
+      const ek = slot === 1 ? p.id : `${p.id}s2`;
+      const text = cleanText(t.text, { max: 200, label: 'Focus' });
+      if (text.error) { errors[ek] = text.error; continue; }
+      const before = (current.get(p.id) || []).find((f) => f.slot === slot) || null;
+      if (!text.value) { if (before) plans.push({ type: 'delete', p, slot, before }); continue; }
+      const approve = ceo && (t.approve === '1' || t.approve === 'on' || !before || before.focus !== text.value || before.status === 'approved');
+      const status = ceo ? (approve ? 'approved' : 'proposed') : (before && before.focus === text.value ? before.status : 'proposed');
+      if (before && before.focus === text.value && before.status === status) continue;
+      plans.push({ type: 'set', p, slot, before, text: text.value, status });
+    }
   }
   if (Object.keys(errors).length) return { errors };
   if (!plans.length) return { saved: 0 };
   await db.transaction(async (tx) => {
     for (const pl of plans) {
-      const key = `HQ ${week} ${pl.p.name} focus`;
+      const key = `HQ ${week} ${pl.p.name} focus${pl.slot === 2 ? ' (2)' : ''}`;
       if (pl.type === 'delete') {
-        await tx.query('DELETE FROM hq_focus WHERE week_start = $1 AND person_id = $2', [week, pl.p.id]);
+        await tx.query('DELETE FROM hq_focus WHERE week_start = $1 AND person_id = $2 AND slot = $3', [week, pl.p.id, pl.slot]);
         await audit(tx, user, 'delete', 'hq_focus', key, { focus: pl.before.focus }, null);
         continue;
       }
       const textChanged = !pl.before || pl.before.focus !== pl.text;
       await tx.query(
-        `INSERT INTO hq_focus (week_start, person_id, focus, status, proposed_by, approved_by, approved_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7)
-         ON CONFLICT (week_start, person_id) DO UPDATE SET focus = EXCLUDED.focus, status = EXCLUDED.status,
+        `INSERT INTO hq_focus (week_start, person_id, focus, status, proposed_by, approved_by, approved_at, slot)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$9)
+         ON CONFLICT (week_start, person_id, slot) DO UPDATE SET focus = EXCLUDED.focus, status = EXCLUDED.status,
            proposed_by = CASE WHEN $8 THEN EXCLUDED.proposed_by ELSE hq_focus.proposed_by END,
            approved_by = EXCLUDED.approved_by, approved_at = EXCLUDED.approved_at, updated_at = now()`,
-        [week, pl.p.id, pl.text, pl.status, user.id, pl.status === 'approved' ? user.id : null, pl.status === 'approved' ? new Date() : null, textChanged]);
+        [week, pl.p.id, pl.text, pl.status, user.id, pl.status === 'approved' ? user.id : null, pl.status === 'approved' ? new Date() : null, textChanged, pl.slot]);
       await audit(tx, user, pl.before ? 'update' : 'insert', 'hq_focus', key,
         pl.before ? { focus: pl.before.focus, status: pl.before.status } : null, { focus: pl.text, status: pl.status });
     }

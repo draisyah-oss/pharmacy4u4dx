@@ -99,7 +99,8 @@ function hqTeamRoutes(db, { now, trackerStart }) {
     const prev = calc.addDays(ctx.week, -7);
     const ids = new Set(people.map((p) => p.id));
     const last = (await team.loadCommitmentWeek(db, prev)).filter((c) => ids.has(c.person_id));
-    const current = new Map((await team.loadCommitmentWeek(db, ctx.week)).filter((c) => ids.has(c.person_id)).map((c) => [c.person_id, c]));
+    // Up to 2 commitments a person (slot 1, 2): key `${person}|${slot}`.
+    const current = new Map((await team.loadCommitmentWeek(db, ctx.week)).filter((c) => ids.has(c.person_id)).map((c) => [`${c.person_id}|${c.slot || 1}`, c]));
     const moves = new Map();
     for (const p of people) moves.set(p.id, await team.movesFor(db, p));
     const thisWeek = calc.weekStart(ctx.today);

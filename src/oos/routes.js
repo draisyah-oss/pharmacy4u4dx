@@ -86,7 +86,7 @@ function oosRoutes(db, { now, trackerStart }) {
   // ─────────────── Inventory: inbox + answer ───────────────
   router.get('/oos/inbox', async (req, res, next) => {
     try {
-      if (!oos.canAnswer(req.user)) return forbid(res, 'The out-of-stock inbox is for Inventory (HQ) and admin.');
+      if (!oos.canAnswer(req.user)) return forbid(res, 'The out-of-stock inbox is for the inventory team (Alia, Syarafana, Fariz) and admin.');
       const inbox = await oos.loadInbox(db, { now });
       res.render('oos-inbox', { title: 'Out of stock – inbox', ...inbox, fmt, of, tab: ['waiting', 'done'].includes(req.query.tab) ? req.query.tab : 'answer', ok: req.query.ok || null, at: now() });
     } catch (err) { next(err); }
@@ -107,7 +107,7 @@ function oosRoutes(db, { now, trackerStart }) {
   router.get('/oos/:id', async (req, res, next) => {
     try {
       if (!/^\d{1,9}$/.test(req.params.id)) return next();
-      if (!oos.canAnswer(req.user)) return forbid(res, 'Answering out-of-stock items is for Inventory (HQ) and admin.');
+      if (!oos.canAnswer(req.user)) return forbid(res, 'Answering out-of-stock items is for the inventory team and admin.');
       const item = await itemOr404(req, res); if (!item) return;
       await renderAnswer(req, res, item);
     } catch (err) { next(err); }
@@ -115,7 +115,7 @@ function oosRoutes(db, { now, trackerStart }) {
 
   router.post('/oos/:id/answer', async (req, res, next) => {
     try {
-      if (!oos.canAnswer(req.user)) return forbid(res, 'Answering out-of-stock items is for Inventory (HQ) and admin.');
+      if (!oos.canAnswer(req.user)) return forbid(res, 'Answering out-of-stock items is for the inventory team and admin.');
       const item = await itemOr404(req, res); if (!item) return;
       const r = await oos.answerItem(db, req.user, item, req.body, { now });
       if (r.error) return renderAnswer(req, res, item, { status: 400, typed: req.body, err: r.error });
@@ -126,7 +126,7 @@ function oosRoutes(db, { now, trackerStart }) {
   // ─────────────── Transfers (Fariz) ───────────────
   router.get('/oos/transfers', async (req, res, next) => {
     try {
-      if (!oos.canSend(req.user)) return forbid(res, 'Transfers are for HQ.');
+      if (!oos.canSend(req.user)) return forbid(res, 'Transfers are for the inventory team (Alia, Syarafana, Fariz).');
       const t = await oos.loadTransfers(db, { now });
       res.render('oos-transfers', { title: 'Transfers to send', ...t, fmt, of, ok: req.query.ok || null, at: now() });
     } catch (err) { next(err); }
@@ -135,7 +135,7 @@ function oosRoutes(db, { now, trackerStart }) {
   router.post('/oos/:id/:step', async (req, res, next) => {
     try {
       if (!['picked', 'sent'].includes(req.params.step)) return next();
-      if (!oos.canSend(req.user)) return forbid(res, 'Transfers are for HQ.');
+      if (!oos.canSend(req.user)) return forbid(res, 'Transfers are for the inventory team (Alia, Syarafana, Fariz).');
       const item = await itemOr404(req, res); if (!item) return;
       const r = await oos.markTransfer(db, req.user, item, req.params.step, { now });
       if (r.error) return back(res, '/oos/transfers', r.error, 'err');

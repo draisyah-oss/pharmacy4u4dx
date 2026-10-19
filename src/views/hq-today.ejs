@@ -30,12 +30,12 @@
     <p class="muted"><%= person.role || '' %> · tick each task by 11 am on working days. A day counts when every task is done.</p>
   </header>
 
-  <section class="focus-card<%= focus ? '' : ' is-empty' %>" aria-label="This week’s focus">
+  <section class="focus-card<%= focus.length ? '' : ' is-empty' %>" aria-label="This week’s focus">
     <span class="wk-k">This week’s focus</span>
-    <% if (focus) { %>
-      <b><%= focus.focus %></b>
-      <span class="small <%= focus.status === 'approved' ? 's-on_track' : 'muted' %>"><%= focus.status === 'approved' ? 'Approved by the CEO ✔' : 'Proposed – waiting for the CEO' %></span>
-    <% } else { %>
+    <% if (focus.length) { focus.forEach(function (f) { %>
+      <b><%= f.focus %></b>
+      <span class="small <%= f.status === 'approved' ? 's-on_track' : 'muted' %>"><%= f.status === 'approved' ? 'Approved by the CEO ✔' : 'Proposed – waiting for the CEO' %></span>
+    <% }) } else { %>
       <span class="muted small">Not set yet – set at the Monday 10 am HQ WIG (<a href="/hq/commitments">HQ WIG session</a>).</span>
     <% } %>
   </section>

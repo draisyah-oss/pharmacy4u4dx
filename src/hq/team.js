@@ -150,14 +150,22 @@ async function loadCommitmentWeek(db, week) {
   return (await db.query(
     `SELECT c.*, p.name AS person_name, u.display_name AS written_by FROM hq_commitments c
      JOIN people p ON p.id = c.person_id LEFT JOIN users u ON u.id = c.created_by
-     WHERE c.week_start = $1 ORDER BY p.sort_order, p.id`, [week])).rows;
+     WHERE c.week_start = $1 ORDER BY p.sort_order, p.id, c.slot`, [week])).rows;
 }
 
-// What a commitment can move: the person's HQ measures and the project milestones they own.
+// Form keys per slot (19 Oct: up to 2 commitments a person a week): c[p<id>] = slot 1, c2[p<id>] = slot 2.
+const SLOT_KEYS = { 1: 'c', 2: 'c2' };
+
+// What a commitment can move: the person's HQ measures, the project milestones they own, and any
+// extra aims for that person (app_settings hq_extra_moves, seed hq.extra_moves – e.g. the CEO's
+// "Remove bottlenecks for staff").
 async function movesFor(db, person) {
   const measures = (await db.query('SELECT label FROM hq_measures WHERE active AND (person_id = $1 OR owner_name = $2) ORDER BY sort_order', [person.id, person.name])).rows.map((r) => r.label);
   const projects = (await loadProjects(db)).filter((p) => ownsProject(p, person.name)).map((p) => `${p.project}: ${p.milestone}`);
-  return [...measures, ...projects];
+  let extra = [];
+  const row = (await db.query("SELECT value FROM app_settings WHERE key = 'hq_extra_moves'")).rows[0];
+  if (row) { try { extra = JSON.parse(row.value)[person.name] || []; } catch { extra = []; } }
+  return [...extra, ...measures, ...projects];
 }
 
 function keptSummary(list) {
@@ -180,17 +188,20 @@ async function saveCommitments(db, user, { week, body, people }) {
     if (next !== (c.done || null)) plans.push({ type: 'done', c, next });
   }
 
-  const typed = body.c || {};
-  for (const p of people) {
-    const t = typed[`p${p.id}`];
-    if (!t || typeof t !== 'object' || !canActFor(user, p.id)) continue;
-    const text = cleanText(t.text, { max: 300, label: 'Commitment' });
-    if (text.error) { errors[p.id] = text.error; continue; }
-    const moves = String(t.moves ?? '').trim() || null;
-    if (moves && !(await movesFor(db, p)).includes(moves)) { errors[p.id] = 'Pick what it moves from the list.'; continue; }
-    const by = String(t.by ?? '').trim() || null;
-    if (by && !isRealDate(by)) { errors[p.id] = 'By when: pick a real date.'; continue; }
-    plans.push({ type: 'commit', person: p, text: text.value, moves, by });
+  for (const [slot, key] of Object.entries(SLOT_KEYS)) {
+    const typed = body[key] || {};
+    for (const p of people) {
+      const t = typed[`p${p.id}`];
+      if (!t || typeof t !== 'object' || !canActFor(user, p.id)) continue;
+      const ek = slot === '1' ? p.id : `${p.id}s2`;
+      const text = cleanText(t.text, { max: 300, label: 'Commitment' });
+      if (text.error) { errors[ek] = text.error; continue; }
+      const moves = String(t.moves ?? '').trim() || null;
+      if (moves && !(await movesFor(db, p)).includes(moves)) { errors[ek] = 'Pick what it moves from the list.'; continue; }
+      const by = String(t.by ?? '').trim() || null;
+      if (by && !isRealDate(by)) { errors[ek] = 'By when: pick a real date.'; continue; }
+      plans.push({ type: 'commit', person: p, slot: Number(slot), text: text.value, moves, by });
+    }
   }
   if (Object.keys(errors).length) return { errors };
 
@@ -203,8 +214,8 @@ async function saveCommitments(db, user, { week, body, people }) {
         saved++;
         continue;
       }
-      const key = `HQ ${week} ${plan.person.name}`;
-      const before = (await tx.query('SELECT * FROM hq_commitments WHERE week_start = $1 AND person_id = $2', [week, plan.person.id])).rows[0];
+      const key = `HQ ${week} ${plan.person.name}${plan.slot === 2 ? ' (2)' : ''}`;
+      const before = (await tx.query('SELECT * FROM hq_commitments WHERE week_start = $1 AND person_id = $2 AND slot = $3', [week, plan.person.id, plan.slot])).rows[0];
       if (!plan.text) {
         if (before) {
           await tx.query('DELETE FROM hq_commitments WHERE id = $1', [before.id]);
@@ -216,10 +227,10 @@ async function saveCommitments(db, user, { week, body, people }) {
       const next = { commitment: plan.text, moves: plan.moves, by_when: plan.by };
       if (before && before.commitment === next.commitment && (before.moves ?? null) === next.moves && (before.by_when ?? null) === next.by_when) continue;
       await tx.query(
-        `INSERT INTO hq_commitments (week_start, person_id, commitment, moves, by_when, created_by) VALUES ($1, $2, $3, $4, $5, $6)
-         ON CONFLICT (week_start, person_id) DO UPDATE SET commitment = EXCLUDED.commitment, moves = EXCLUDED.moves,
+        `INSERT INTO hq_commitments (week_start, person_id, slot, commitment, moves, by_when, created_by) VALUES ($1, $2, $7, $3, $4, $5, $6)
+         ON CONFLICT (week_start, person_id, slot) DO UPDATE SET commitment = EXCLUDED.commitment, moves = EXCLUDED.moves,
            by_when = EXCLUDED.by_when, created_by = EXCLUDED.created_by, updated_at = now()`,
-        [week, plan.person.id, next.commitment, next.moves, next.by_when, user.id]);
+        [week, plan.person.id, next.commitment, next.moves, next.by_when, user.id, plan.slot]);
       await audit(tx, user, before ? 'update' : 'insert', 'hq_commitments', key,
         before ? { commitment: before.commitment, moves: before.moves, by_when: before.by_when } : null, next);
       saved++;
@@ -324,6 +335,8 @@ async function teamSummary(db, { week, today }) {
       daily: tasks.length ? dailyWeekSummary({ tasks, ticks, weekStart: week, through }) : null,
       lastCommitment: last.find((c) => c.person_id === p.id) || null,
       thisCommitment: now.find((c) => c.person_id === p.id) || null,
+      lastCommitments: last.filter((c) => c.person_id === p.id),
+      thisCommitments: now.filter((c) => c.person_id === p.id),
     });
   }
   const projects = await loadProjects(db);

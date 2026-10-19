@@ -106,7 +106,7 @@ function wigRoutes(db, { now, trackerStart }) {
     }
     const thisWeek = calc.weekStart(ctx.today);
     res.status(extra.status || 200).render('hq-update', {
-      title: 'Weekly update with branch managers', ...ctx, fmt, rows, actions, lastActions,
+      title: 'Weekly Branch Manager Meeting', ...ctx, fmt, rows, actions, lastActions,
       lastSummary: wig.actionSummary(lastActions), people: await wig.hqPeople(db), branches,
       statuses: wig.ACTION_STATUSES, weekEnd: calc.addDays(ctx.week, 6),
       canEdit: req.user.role === 'admin' || ctx.week >= calc.addDays(thisWeek, -14),
@@ -117,14 +117,14 @@ function wigRoutes(db, { now, trackerStart }) {
 
   router.get('/hq/update', async (req, res, next) => {
     try {
-      if (!canSeeUpdate(req.user)) return message(res, 403, 'HQ only', 'The weekly update meeting page is for the CEO, Alia, Hanin, Iman and admin.');
+      if (!canSeeUpdate(req.user)) return message(res, 403, 'HQ only', 'The Weekly Branch Manager Meeting page is for the CEO, Alia, Hanin, Iman and admin.');
       await renderUpdate(req, res, await updateContext(req));
     } catch (err) { next(err); }
   });
 
   router.post('/hq/update', async (req, res, next) => {
     try {
-      if (!canSeeUpdate(req.user)) return message(res, 403, 'HQ only', 'The weekly update meeting page is for HQ and admin.');
+      if (!canSeeUpdate(req.user)) return message(res, 403, 'HQ only', 'The Weekly Branch Manager Meeting page is for HQ and admin.');
       const ctx = await updateContext(req);
       if (!ctx.weeks.includes(req.body.week)) return message(res, 400, 'Can’t save', 'That week isn’t one that can be changed.');
       const r = await wig.saveActionsAtMeeting(db, req.user, ctx.week, req.body);

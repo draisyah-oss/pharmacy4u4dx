@@ -58,6 +58,9 @@ async function backfillNewSettings(db, seed, log) {
   await addHqTaskOnce(db, 'Alia', 'Zakat orders from the branches placed today', 'alia_zakat_task_v1', log);
   await ensureSetting(db, 'wiki_approver', seed.hq && seed.hq.wiki_approver, log);
   await wigWeekOnce(db, seed, log);
+  await ensureSetting(db, 'inventory_team', seed.hq && seed.hq.inventory_team, log);
+  await ensureSetting(db, 'hq_extra_moves', seed.hq && seed.hq.extra_moves, log);
+  await addBranchPersonOnce(db, 'Ampang', { name: 'Anis', job: 'Intern' }, 'ampang_anis_v1', log);
   const ct = await db.query('SELECT 1 FROM company_month_targets LIMIT 1');
   if (!ct.rows.length && seed.company.monthly_sales_target) {
     for (const [month, target] of Object.entries(seed.company.monthly_sales_target)) {
@@ -223,6 +226,17 @@ async function wigWeekOnce(db, seed, log) {
   });
 }
 
+// Add a person (with a staff login, PIN set in Admin → People) to a branch once.
+async function addBranchPersonOnce(db, code, person, flag, log) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const branch = (await db.query('SELECT * FROM branches WHERE code = $1', [code])).rows[0];
+  if (branch && !(await db.query('SELECT 1 FROM people WHERE branch_id = $1 AND lower(name) = lower($2)', [branch.id, person.name])).rows.length) {
+    const r = await require('../admin/people').addPerson(db, { branch, body: { name: person.name, job: person.job, login_role: 'branch_staff' }, user: null });
+    log(r.error ? `Could not add ${person.name} to ${code}: ${r.error}` : `${r.ok} (${code})`);
+  }
+  await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+}
+
 // 16 Oct: the company wiki checklist (64 pages) for Iman and Hanin, added once.
 async function wikiChecklistOnce(db, seed, log) {
   if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'wiki_checklist_v1'")).rows.length) return;
@@ -370,4 +384,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { wigOnMonday, wigWeekOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

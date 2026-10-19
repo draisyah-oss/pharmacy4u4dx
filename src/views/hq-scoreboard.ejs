@@ -30,8 +30,8 @@
           <tr>
             <th scope="row"><span class="t-label"><%= r.person.name %></span><span class="t-meta"><%= r.person.role || '' %></span></th>
             <td><% if (!d) { %><span class="muted">No daily tasks</span><% } else { %><a class="<%= d.pct === null ? '' : d.pct >= 0.95 ? 's-on_track' : d.pct >= 0.855 ? 's-watch' : 's-off_track' %>" href="/hq/today?person=<%= r.person.id %>&date=<%= board.weekEnd < today ? board.weekEnd : today %>"><%= d.fullDays %> of <%= d.workingDays %> days</a><% } %></td>
-            <td><% if (!lc) { %><span class="muted">–</span><% } else { %><span class="<%= lc.done ? doneClass[lc.done] : '' %>"><%= lc.done ? doneText[lc.done] : 'Not marked' %></span><span class="t-meta"><%= lc.commitment %></span><% } %></td>
-            <td><% if (!tc) { %><span class="muted">Not written yet</span><% } else { %><%= tc.commitment %><% } %></td>
+            <td><% if (!lc) { %><span class="muted">–</span><% } else { r.lastCommitments.forEach(function (c) { %><span class="<%= c.done ? doneClass[c.done] : '' %>"><%= c.done ? doneText[c.done] : 'Not marked' %></span><span class="t-meta"><%= c.commitment %></span><% }) } %></td>
+            <td><% if (!tc) { %><span class="muted">Not written yet</span><% } else { r.thisCommitments.forEach(function (c, i) { %><%= i ? ' · ' : '' %><%= c.commitment %><% }) } %></td>
           </tr>
         <% }) %>
       </tbody>

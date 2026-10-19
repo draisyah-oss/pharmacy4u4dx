@@ -399,7 +399,8 @@
       "people": [
         {"name": "Mazlina", "role": "Branch Manager / Pharmacist"},
         {"name": "Hidayah", "role": "Supervisor"},
-        {"name": "Aishah", "role": "Sales Assistant"}
+        {"name": "Aishah", "role": "Sales Assistant"},
+        {"name": "Anis", "role": "Intern"}
       ],
       "wig": "Walk-in customers from 20 to 44 a day, and walk-in sales from RM 790 to RM 1,650 a day, by 31 Dec 2026",
       "wig_detail": "Sales steps: Oct RM 1,080 · Nov RM 1,360 · Dec RM 1,650 a day; customers ≈ 29 · 36 · 44 a day at RM 37.50 a basket. Branch total: Oct RM 33k · Nov RM 42.2k · Dec RM 51.5k. Ampang's gap is people through the door, so the leads bring people in (health checks at the shopfront, reviews so people searching nearby find us).",
@@ -837,6 +838,8 @@
       "Hanin": ["Today's roster checked – every shift fully staffed", "Any gap covered or swapped before opening", "Branch managers' issues answered the same day", "Training or SOP work moved forward today", "Company wiki: pages waiting for my approval checked today"]
     },
     "wiki_approver": "Hanin",
+    "inventory_team": ["Alia", "Syarafana", "Fariz"],
+    "extra_moves": {"Dr Aisyah": ["Remove bottlenecks for staff"]},
     "wiki_checklist_due": {"P1": "2026-11-15", "P2": "2026-12-31", "P3": "2027-03-31"},
     "wiki_checklist": [
       {"area": "About Pharmacy4U", "owner": "Iman", "priority": "P1", "title": "Vision, mission and values"},

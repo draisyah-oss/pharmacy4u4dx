@@ -14,7 +14,7 @@
 %>
 <main class="page wk upd-page">
   <header class="board-head">
-    <h1>Weekly update with branch managers <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
+    <h1>Weekly Branch Manager Meeting <span class="board-week">week <%= fmt.weekLabel(week, weekEnd) %></span></h1>
     <p class="muted">Monday 4 pm, online · 5 managers + CEO, Alia, Hanin · ≈8 minutes a branch. Updates received: <b><%= rows.filter(function (r) { return r.g.checkedIn; }).length %> of <%= rows.length %></b>.</p>
   </header>
 
@@ -44,7 +44,7 @@
       <p class="small"><b>Wins:</b> <% wins.forEach(function (r, i) { %><%= i ? ' · ' : '' %><%= r.code %> – <%= r.g.win %><% }) %></p>
     <% } %>
     <% const late = rows.filter(function (r) { return r.oos.late.length; }); if (late.length) { %>
-      <p class="small"><b class="s-off_track">Late out-of-stock items:</b> <% late.forEach(function (r) { r.oos.late.forEach(function (l, i) { %> <%= r.code %>: <%= l.item %> (<%= l.days %> days<%= l.customers ? ', ' + l.customers + ' asking' : '' %>, <%= l.why || 'was due ' + fmtDate(l.due) %>) ·<% }) }) %> <a href="/oos/inbox">inbox →</a></p>
+      <p class="small"><b class="s-off_track">Late out-of-stock items:</b> <% late.forEach(function (r) { r.oos.late.forEach(function (l, i) { %> <%= r.code %>: <%= l.item %> (<%= l.days %> days<%= l.customers ? ', ' + l.customers + ' asking' : '' %>, <%= l.why || 'was due ' + fmtDate(l.due) %>) ·<% }) }) %> <% if (user.role === 'admin' || user.inventory) { %><a href="/oos/inbox">inbox →</a><% } %></p>
     <% } %>
   </section>
 

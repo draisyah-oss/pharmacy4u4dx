@@ -5,7 +5,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## Who uses it
 - **Branch staff** (5 branches: WM, JH, BR, Bangi, Ampang): enter the daily log at closing, mostly on a phone.
 - **Branch managers**: weekly update to HQ (Monday 4 pm meeting) and the branch WIG session with their team on **Tuesday** (18 Oct: HQ WIG Monday 10 am → managers' update Monday 4 pm → branch WIG Tuesday; see "Weekly WIG rhythm").
-- **HQ – full access (Alia, Hanin, Iman)**: read every branch, HQ input, answer OOS items; Iman fills in for everyone. Password login.
+- **HQ – full access (Alia, Hanin, Iman)**: read every branch, HQ input; Iman fills in for everyone. Password login. The out-of-stock inbox and transfers are for the inventory team only (Alia, Syarafana, Fariz).
 - **HQ staff (Syarafana, Fariz, Azwani)**: group scoreboard, HQ scoreboard, their own KPIs, daily tasks, commitments and project milestones only. PIN login.
 - Dr Aisyah (CEO) has her own HQ measure but logs in as admin.
 - **CEO / admin**: sees everything; edits targets, people and measures.
@@ -151,6 +151,14 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - All 64 checklist pages owned by Iman (seed + older databases via wigWeekOnce). Iman marks a page Checking ("send to Hanin", hq_wiki_items.checking_at); only the approver (app_settings wiki_approver = seed hq.wiki_approver "Hanin") or admin can mark Approved or take a page out of Approved. Wiki timestamps use the app clock.
 - Measures: `wiki` (Iman) = pages sent to Hanin that week; `wikisop` (Hanin) = pages approved that week (all pages). Targets 7 / 6 / 5 a week Oct / Nov / Dec (28 P1 by 15 Nov, 30 P2 by 31 Dec) – applied to older databases only where the old 4/4/2 and 3/3/4 were unchanged. Hanin's daily task: "Company wiki: pages waiting for my approval checked today".
 - **Classroom** starts in November: HQ measure `classroom` (Iman, lessons published a week, 1 from Nov, Oct none). The Classroom content itself is still to be built.
+
+## 19 Oct changes
+- **Menu groups** (partials/nav.ejs): **Inventory** – Out-of-stock inbox + Transfers to send – only for the inventory team (app_settings inventory_team = seed hq.inventory_team: Alia, Syarafana, Fariz) and admin; the pages and the answer/transfer actions are limited the same way (req.user.inventory set in src/app.js; oos canAnswer/canSend). Hanin and Iman no longer get the inbox. **Projects** – Projects, with Wiki checklist as a sub-item – HQ team only (HQ staff see Projects; the wiki checklist stays full HQ + admin).
+- **HQ WIG session = HQ input + focus & commitments**: one menu item (/hq); both pages carry the steps "1 · Numbers for last week (HQ input)" → "2 · Focus & commitments this week" (partials/hq-wig-steps.ejs).
+- **Up to 2 focuses and 2 commitments** per HQ person a week (migration 017: hq_focus / hq_commitments slot 1–2; form keys f/f2, c/c2). Both show on HQ day and the HQ scoreboard.
+- Dr Aisyah's commitments can move **"Remove bottlenecks for staff"** (app_settings hq_extra_moves = seed hq.extra_moves; only offered to her).
+- Menu name: **Weekly Branch Manager Meeting** (/hq/update, the Monday 4 pm meeting).
+- Ampang: **Anis (Intern)** added with a staff login (username anis – set her PIN in Admin → People); older databases once (ampang_anis_v1). Ayuni stays at Bangi.
 
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").

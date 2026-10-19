@@ -70,8 +70,18 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
 
   app.use(requireLogin);
 
-  // Inventory's out-of-stock count, shown as a red badge in the side menu.
+  // The inventory team (app_settings inventory_team: Alia, Syarafana, Fariz) sees the Inventory
+  // menu – out-of-stock inbox and transfers – plus its red count badge.
   app.use(async (req, res, next) => {
+    try {
+      if (req.user.person_id && ['hq', 'hq_staff'].includes(req.user.role)) {
+        const r = (await db.query(
+          `SELECT p.name, s.value FROM people p LEFT JOIN app_settings s ON s.key = 'inventory_team' WHERE p.id = $1`, [req.user.person_id])).rows[0];
+        let team = [];
+        try { team = JSON.parse(r && r.value ? r.value : '[]'); } catch { team = []; }
+        req.user.inventory = Boolean(r && team.includes(r.name));
+      }
+    } catch (err) { console.error('Inventory team:', err.message); }
     try {
       if (req.method === 'GET' && oosData.canAnswer(req.user)) {
         res.locals.oosCount = await oosData.countToAnswer(db);
