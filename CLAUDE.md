@@ -181,6 +181,9 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## WM: no TikTok (22 Oct)
 - WM can't go ahead with a TikTok seller account. Hazera's TikTok orders shipped (Z3, ttship) and TikTok sales (Z7, tt) are removed from seed.json and retired on older databases (wmTiktokOffOnce, flag wm_tiktok_off_v1; history kept). TikTok sales no longer count in WM's total or online sales (total_sales_fields walkin, zakat, wa, grab). WM's month total targets (60.9k / 73k / 85k) are unchanged; instead the **walk-in WIG (T1) goes up by about RM 65 a day (RM 2,000 a month)**: Oct 1,795 · Nov 1,980 · Dec 2,165 a day (was 1,730 / 1,910 / 2,100; WIG now "RM 1,542 → 2,165/day by 31 Dec"). Older databases once via wmWalkinUpOnce (flag wm_walkin_up_v1), only months still at the old target. JH's TikTok (WIG 2) is not affected.
 
+## JH: no Grab menu items (22 Oct)
+- JH's "Grab menu items added/fixed" (Nabihah, N3, field grabmenu, 15/10/5 a week) removed from seed.json and retired on older databases (retireBranchItemsOnce, flag jh_grabmenu_off_v1; history kept). WM, BR, Bangi and Ampang keep theirs.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

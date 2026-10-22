@@ -14,6 +14,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await importDailyOnce(db, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', log);
     await wmTiktokOffOnce(db, log);
     await wmWalkinUpOnce(db, readSeed(), log);
+    await retireBranchItemsOnce(db, 'JH', { fields: ['grabmenu'], measures: ['N3'] }, 'jh_grabmenu_off_v1', 'JH: Grab menu items added/fixed removed (22 Oct)', log);
     return { seeded: false };
   }
 
@@ -272,6 +273,21 @@ async function wmTiktokOffOnce(db, log) {
   });
 }
 
+// Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
+async function retireBranchItemsOnce(db, code, { fields = [], measures = [] }, flag, note, log) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const b = (await tx.query('SELECT id FROM branches WHERE code = $1', [code])).rows[0];
+    if (b) {
+      await tx.query('UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = ANY($2)', [b.id, fields]);
+      await tx.query('UPDATE measures SET active = false WHERE branch_id = $1 AND code = ANY($2)', [b.id, measures]);
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', $1, NULL)", [note]);
+      log(note);
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+}
+
 // 22 Oct: WM's month totals stay the same without TikTok, so the walk-in WIG (T1) goes up by about
 // RM 65 a day (RM 2,000 a month): 1,795 / 1,980 / 2,165. Only months still at the old target change.
 async function wmWalkinUpOnce(db, seed, log) {
@@ -498,4 +514,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

@@ -193,3 +193,17 @@ test('22 Oct: WM walk-in target raised by ~RM 65/day once (old targets only); mo
   assert.deepEqual(m, [60900, 73000, 85000]);
   await old.close();
 });
+
+test('22 Oct: JH no longer has "Grab menu items added/fixed" (N3); other branches keep theirs', async () => {
+  const { retireBranchItemsOnce } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  await old.query("DELETE FROM app_settings WHERE key = 'jh_grabmenu_off_v1'");
+  await retireBranchItemsOnce(old, 'JH', { fields: ['grabmenu'], measures: ['N3'] }, 'jh_grabmenu_off_v1', 'test', () => {});
+  const active = async (code) => (await old.query("SELECT f.active FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = $1 AND f.key = 'grabmenu'", [code])).rows[0].active;
+  assert.equal(await active('JH'), false);
+  assert.equal(await active('BR'), true);
+  assert.ok(!readSeed().branches.find((b) => b.code === 'JH').daily_fields.some((f) => f.key === 'grabmenu'));
+  await old.close();
+});
