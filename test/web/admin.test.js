@@ -76,7 +76,7 @@ test('only admin can open or change anything under /admin', async () => {
   assert.equal((await mgr.get('/admin/export/WM.xlsx')).status, 403);
   const t1 = await measureId('WM', 'T1');
   assert.equal((await mgr.post('/admin/targets', { branch: 'WM', [`t[m${t1}][2026-11]`]: '1' })).status, 403);
-  assert.equal((await target('WM', 'T1', '2026-11')).target, 1910);
+  assert.equal((await target('WM', 'T1', '2026-11')).target, 1980);
 });
 
 // ───────────── Targets ─────────────
@@ -94,7 +94,7 @@ test('targets: change a month, a % target and a weekend target – scoreboard us
   assert.match(decodeURIComponent(r.location), /Saved 3 targets/);
   assert.deepEqual(await target('WM', 'T1', '2026-10'), { target: 1800, weekend_target: 2200 });
   assert.equal((await target('WM', 'L3', '2026-10')).target, 0.5);
-  assert.deepEqual(await lastAudit('WM T1 2026-10 target'), { action: 'update', record_key: 'WM T1 2026-10 target', old_value: 1730, new_value: 1800, username: 'admin' });
+  assert.deepEqual(await lastAudit('WM T1 2026-10 target'), { action: 'update', record_key: 'WM T1 2026-10 target', old_value: 1795, new_value: 1800, username: 'admin' });
 
   // the scoreboard picks it up: 12–18 Oct = 5 × 1,800 + 2 × 2,200
   const board = await buildScoreboard(db, { branch: await loadBranch(db, 'WM'), weekStart: '2026-10-12', today: TODAY, trackerStart: '2026-10-12' });

@@ -64,8 +64,8 @@ test('sample week matches the calculation tests', async () => {
   assert.equal(b.asOf, '2026-10-18'); // finished week: Monday to Sunday
   const t1 = row(b, 'T1');
   assert.equal(t1.week.actual, 12365);
-  near(t1.week.target, 12110);
-  assert.equal(t1.week.status, 'on_track');
+  near(t1.week.target, 12565);
+  assert.equal(t1.week.status, 'watch');
   const l3 = row(b, 'L3');
   near(l3.week.actual, 179 / 408);
   assert.equal(l3.week.status, 'watch');
@@ -73,7 +73,7 @@ test('sample week matches the calculation tests', async () => {
   assert.equal(row(b, 'Z2').week.actual, 18);
   near(row(b, 'W5').week.target, 140000 / 31);
   // October MTD counts from 12 Oct, so it equals the week here
-  near(row(b, 'T1').mtd.target, 12110);
+  near(row(b, 'T1').mtd.target, 12565);
 });
 
 test('WIG and the branch\'s leads go on top; the rest is grouped by person', async () => {
@@ -108,7 +108,7 @@ test('this week counts only closed days: yesterday until today\'s numbers are in
   await db.query('INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, $2, $3, $4)', [wm.id, '2026-10-19', 'walkin', 1900]);
   let b = await board('2026-10-19');
   assert.equal(b.asOf, '2026-10-19');
-  near(row(b, 'T1').week.target, 1730); // one day, not seven
+  near(row(b, 'T1').week.target, 1795); // one day, not seven
   await db.query('INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, $2, $3, $4)', [wm.id, TODAY, 'walkin', 1600]);
   b = await board('2026-10-19');
   assert.equal(b.asOf, TODAY);
@@ -154,8 +154,8 @@ test('manager sees the scoreboard with clickable numbers', async () => {
   const r = await get('/scoreboard?week=2026-10-12');
   assert.equal(r.status, 200);
   assert.match(r.html, /RM 12,365/);
-  assert.match(r.html, /of RM 12,110/);
-  assert.match(r.html, /102%/);
+  assert.match(r.html, /of RM 12,565/);
+  assert.match(r.html, /98%/);
   assert.match(r.html, /href="\/scoreboard\/trace\?type=measure&amp;code=T1&amp;from=2026-10-12&amp;to=2026-10-18"/);
   assert.match(r.html, /WIG and lead measures/);
   assert.match(r.html, /Chronic database total/);

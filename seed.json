@@ -50,8 +50,8 @@
       "code": "WM",
       "name": "Wangsa Maju",
       "people": [{"name": "Hafizah", "role": "Branch Manager"}, {"name": "Hazera", "role": "Supervisor"}, {"name": "Zawiyah", "role": "Sales Assistant"}],
-      "wig": "Walk-in sales from RM 1,542/day to RM 2,100/day by 31 Dec 2026",
-      "wig_detail": "Steps: Oct RM 1,730 · Nov RM 1,910 · Dec RM 2,100 a day ≈ 70 customers a day at RM 30 a basket. Branch total incl. zakat & online: Oct RM 60.9k · Nov RM 73k · Dec RM 85k. WM's problem is customers who don't come back, so the leads focus on retention and basket size.",
+      "wig": "Walk-in sales from RM 1,542/day to RM 2,165/day by 31 Dec 2026",
+      "wig_detail": "Steps: Oct RM 1,795 · Nov RM 1,980 · Dec RM 2,165 a day ≈ 72 customers a day at RM 30 a basket (raised 22 Oct by about RM 65 a day to cover the TikTok sales WM no longer has). Branch total incl. zakat & online: Oct RM 60.9k · Nov RM 73k · Dec RM 85k. WM's problem is customers who don't come back, so the leads focus on retention and basket size.",
       "monthly_total_target": {"2026-10": 60900, "2026-11": 73000, "2026-12": 85000},
       "total_sales_fields": ["walkin", "zakat", "wa", "grab"],
       "online_sales_fields": ["wa", "grab"],
@@ -89,7 +89,7 @@
         {"key": "grab", "label": "Grab sales (RM)", "owner": "Zawiyah", "type": "money"}
       ],
       "measures": [
-        {"id": "T1", "owner": "Team", "label": "Walk-in sales (branch WIG)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1730, "2026-11": 1910, "2026-12": 2100}, "numerator_field": "walkin", "denominator_field": null, "note": "4DX plan: RM 1,542 → 2,100/day by 31 Dec."},
+        {"id": "T1", "owner": "Team", "label": "Walk-in sales (branch WIG)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1795, "2026-11": 1980, "2026-12": 2165}, "numerator_field": "walkin", "denominator_field": null, "note": "4DX plan: RM 1,542 → 2,100/day by 31 Dec. 22 Oct: + about RM 65 a day (RM 2,000 a month) to cover the TikTok sales WM no longer has – month totals unchanged."},
         {"id": "L3", "owner": "Team", "label": "Transactions with 3+ items (LEAD 3 – add-on, Hafizah checks)", "kind": "Lead", "unit": "% of transactions", "target_per": "day", "calc": "ratio_percent", "targets": {"2026-10": 0.45, "2026-11": 0.45, "2026-12": 0.45}, "numerator_field": "two", "denominator_field": "tx", "note": "Added 12 Oct. 45% = the JH/Bangi add-on standard – edit if WM needs another number."},
         {"id": "T2", "owner": "Team", "label": "PWP units sold", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 5, "2026-11": 5, "2026-12": 5}, "numerator_field": "pwp", "denominator_field": null, "note": "4DX plan: 5 PWP units/day per branch."},
         {"id": "P1", "owner": "Team", "label": "Target product: Proponeem", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p1", "denominator_field": null, "note": "Oct list set 12 Oct. Units PROPOSED 2/day – confirm with Mr Mohamed."},

@@ -177,3 +177,19 @@ test('22 Oct: WM TikTok retired once on older databases; TikTok no longer in WM 
   assert.ok((await q("SELECT 1 FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'JH' AND m.active AND m.label ILIKE '%tiktok%'")).length > 0, 'JH keeps TikTok');
   await old.close();
 });
+
+test('22 Oct: WM walk-in target raised by ~RM 65/day once (old targets only); month totals unchanged', async () => {
+  const { wmWalkinUpOnce } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  const t1 = (await old.query("SELECT m.id FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.code = 'T1'")).rows[0].id;
+  await old.query("UPDATE measure_targets SET target = 1950 WHERE measure_id = $1 AND month = '2026-11'", [t1]); // edited in Admin – kept
+  await old.query("DELETE FROM app_settings WHERE key = 'wm_walkin_up_v1'");
+  await wmWalkinUpOnce(old, readSeed(), () => {});
+  const t = Object.fromEntries((await old.query('SELECT month, target FROM measure_targets WHERE measure_id = $1', [t1])).rows.map((r) => [r.month, Number(r.target)]));
+  assert.deepEqual([t['2026-10'], t['2026-11'], t['2026-12']], [1795, 1950, 2165]);
+  const m = (await old.query("SELECT month, total_sales_target FROM branch_month_targets bt JOIN branches b ON b.id = bt.branch_id WHERE b.code = 'WM' ORDER BY month")).rows.map((r) => Number(r.total_sales_target));
+  assert.deepEqual(m, [60900, 73000, 85000]);
+  await old.close();
+});

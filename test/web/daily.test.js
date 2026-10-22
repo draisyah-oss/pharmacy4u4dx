@@ -268,7 +268,7 @@ test('hints: daily target, week so far, month so far, ratio, storefront day, tra
   const hint = (key, type = 'count') => buildHint({ key, type }, wm, entries, '2026-10-20', '2026-10-12');
 
   assert.deepEqual(
-    { kind: hint('walkin', 'money').kind, target: hint('walkin', 'money').target }, { kind: 'day', target: 1730 });
+    { kind: hint('walkin', 'money').kind, target: hint('walkin', 'money').target }, { kind: 'day', target: 1795 });
 
   const reviews = hint('reviews');                 // 2 a week, week of Mon 19 Oct
   assert.equal(reviews.kind, 'period');

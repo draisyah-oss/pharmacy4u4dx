@@ -13,6 +13,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await addAdminLoginsOnce(db, readSeed(), log);
     await importDailyOnce(db, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', log);
     await wmTiktokOffOnce(db, log);
+    await wmWalkinUpOnce(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -271,6 +272,30 @@ async function wmTiktokOffOnce(db, log) {
   });
 }
 
+// 22 Oct: WM's month totals stay the same without TikTok, so the walk-in WIG (T1) goes up by about
+// RM 65 a day (RM 2,000 a month): 1,795 / 1,980 / 2,165. Only months still at the old target change.
+async function wmWalkinUpOnce(db, seed, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'wm_walkin_up_v1'")).rows.length) return;
+  const wm = seed.branches.find((b) => b.code === 'WM');
+  const t1 = wm && wm.measures.find((m) => m.id === 'T1');
+  const old = { '2026-10': 1730, '2026-11': 1910, '2026-12': 2100 };
+  await db.transaction(async (tx) => {
+    const m = (await tx.query("SELECT m.id FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.code = 'T1'")).rows[0];
+    let changed = 0;
+    if (m && t1) {
+      for (const [month, was] of Object.entries(old)) {
+        const r = await tx.query('UPDATE measure_targets SET target = $3 WHERE measure_id = $1 AND month = $2 AND target = $4 RETURNING 1', [m.id, month, t1.targets[month], was]);
+        changed += r.rows.length;
+      }
+      await tx.query("UPDATE branches SET wig = $1, wig_detail = $2 WHERE code = 'WM' AND wig LIKE '%2,100/day%'", [wm.wig, wm.wig_detail]);
+      await tx.query("UPDATE measures SET note = $2 WHERE id = $1", [m.id, t1.note]);
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measure_targets', 'WM T1 walk-in +RM 65/day (TikTok gone, 22 Oct)', $1)", [JSON.stringify({ months_changed: changed })]);
+    }
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('wm_walkin_up_v1', $1)", [new Date().toISOString()]);
+    log(`WM walk-in target raised for ${changed} month(s) to cover the TikTok sales.`);
+  });
+}
+
 // 22 Oct: daily numbers a branch kept in its own tracker (src/db/imports/*.json, made from the
 // branch's Excel "Daily Log") copied into daily_entries once. Only empty boxes are filled – a number
 // already in the app (typed or from the sales sheet) is kept, and the difference is noted in the
@@ -473,4 +498,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

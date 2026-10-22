@@ -54,12 +54,12 @@ test('targets: daily as is, weekly ÷ 7, monthly ÷ days in that month', () => {
 
 // ───────────── Sum measures, sample week ─────────────
 
-test('WM walk-in (WIG, RM 1,730/day): 12,365 vs 12,110 = 102.1% ✔', () => {
+test('WM walk-in (WIG, RM 1,795/day since 22 Oct): 12,365 vs 12,565 = 98.4% ▲', () => {
   const r = wmWeek('T1');
   assert.equal(r.actual, 12365);       // 1650+1820+1700+1905+1780+2010+1500
-  near(r.target, 12110);               // 7 × 1730
-  near(r.pct, 12365 / 12110);          // 1.02106
-  assert.equal(r.status, 'on_track');
+  near(r.target, 12565);               // 7 × 1795
+  near(r.pct, 12365 / 12565);          // 0.984
+  assert.equal(r.status, 'watch');
   assert.equal(r.daysEntered, 7);
 });
 
@@ -174,8 +174,8 @@ test('blank target = track only: Bangi first-visit vouchers shows the actual, no
 
 test('week 26 Oct – 1 Nov uses each day\'s own month target', () => {
   const span = { from: '2026-10-26', to: '2026-11-01', trackerStart: START, entries: NO_ENTRIES };
-  // WM walk-in: 6 × 1,730 (Oct) + 1 × 1,910 (Nov) = 12,290
-  near(calc.evaluateMeasure({ measure: measure('WM', 'T1'), ...span }).target, 12290);
+  // WM walk-in: 6 × 1,795 (Oct) + 1 × 1,980 (Nov) = 12,750
+  near(calc.evaluateMeasure({ measure: measure('WM', 'T1'), ...span }).target, 12750);
   // WM WhatsApp: 6 × 1,000/31 + 2,000/30 = 260.215…
   near(calc.evaluateMeasure({ measure: measure('WM', 'Z0'), ...span }).target, 6000 / 31 + 2000 / 30);
   // WM Grab menu (weekly 15 in Oct, 10 in Nov): 6 × 15/7 + 10/7 = 100/7
@@ -197,11 +197,11 @@ test('week from a track-only month into a month with a target compares like with
 });
 
 test('October MTD measure targets count from 12 Oct only', () => {
-  // WM walk-in MTD to 18 Oct: target 7 × 1,730 = 12,110 (not 18 × 1,730)
+  // WM walk-in MTD to 18 Oct: target 7 × 1,795 = 12,565 (not 18 × 1,795)
   const r = calc.evaluateMeasure({
     measure: measure('WM', 'T1'), entries: wm, from: '2026-10-01', to: '2026-10-18', trackerStart: START,
   });
-  near(r.target, 12110);
+  near(r.target, 12565);
   assert.equal(r.actual, 12365);
   assert.equal(r.daysCounted, 7);
 });
