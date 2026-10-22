@@ -138,3 +138,26 @@ test('16 Oct: WIG sessions all on Monday – older databases get the new wording
   assert.match(JSON.stringify(readSeed()), /branch Tuesday/);
   await old.close();
 });
+
+test('22 Oct: JH tracker numbers (12–21 Oct) imported once – empty boxes only, sheet fields left alone', async () => {
+  const { importDailyOnce } = require('../../src/db/setup');
+  const db2 = await createDb({ url: '', localDir: 'memory' });
+  await migrate(db2);
+  await loadSeed(db2, readSeed(), { adminPassword: 'admin-pass-1' });
+  const jh = (await db2.query("SELECT id FROM branches WHERE code = 'JH'")).rows[0].id;
+  // Something already typed in the app is kept
+  await db2.query("INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, '2026-10-13', 'reviews', 9)", [jh]);
+  const logs = [];
+  await importDailyOnce(db2, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', (m) => logs.push(m));
+  const v = async (d, k) => { const r = (await db2.query('SELECT value FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = $3', [jh, d, k])).rows[0]; return r ? Number(r.value) : null; };
+  assert.equal(await v('2026-10-12', 'two'), 27, '59 transactions × 46.43% with 3+ items');
+  assert.equal(await v('2026-10-18', 'ttfol'), 8);
+  assert.equal(await v('2026-10-13', 'zkrm'), 3221.28);
+  assert.equal(await v('2026-10-13', 'reviews'), 9, 'the app’s number is kept');
+  assert.equal(await v('2026-10-12', 'walkin'), null, 'walk-in comes from the sales sheet, not the tracker');
+  assert.match(logs.join(' '), /differ/);
+  const again = [];
+  await importDailyOnce(db2, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', (m) => again.push(m));
+  assert.equal(again.length, 0, 'only once');
+  await db2.close();
+});

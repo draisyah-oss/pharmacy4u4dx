@@ -11,6 +11,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     log('Seed already loaded – using the data in the database.');
     await backfillNewSettings(db, readSeed(), log);
     await addAdminLoginsOnce(db, readSeed(), log);
+    await importDailyOnce(db, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', log);
     return { seeded: false };
   }
 
@@ -250,6 +251,38 @@ async function projectStepsOnce(db, seed, log) {
   if (added.length) log(`Added project steps: ${added.join(', ')}.`);
 }
 
+// 22 Oct: daily numbers a branch kept in its own tracker (src/db/imports/*.json, made from the
+// branch's Excel "Daily Log") copied into daily_entries once. Only empty boxes are filled – a number
+// already in the app (typed or from the sales sheet) is kept, and the difference is noted in the
+// audit log. Fields the sales sheet fills (walk-in, transactions, zakat, Grab) are never in the file.
+async function importDailyOnce(db, file, flag, log) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const data = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'imports', file), 'utf8'));
+  const branch = (await db.query('SELECT id, code FROM branches WHERE code = $1', [data.branch])).rows[0];
+  if (!branch) return;
+  const fields = new Set((await db.query('SELECT key FROM daily_fields WHERE branch_id = $1 AND active', [branch.id])).rows.map((r) => r.key));
+  const result = { added: 0, kept: 0, differ: [] };
+  await db.transaction(async (tx) => {
+    for (const [date, values] of Object.entries(data.days)) {
+      for (const [key, value] of Object.entries(values)) {
+        if (!fields.has(key)) continue;
+        const before = (await tx.query('SELECT value FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = $3', [branch.id, date, key])).rows[0];
+        if (before) {
+          result.kept++;
+          if (Number(before.value) !== Number(value)) result.differ.push(`${date} ${key}: app ${Number(before.value)}, tracker ${value}`);
+          continue;
+        }
+        await tx.query('INSERT INTO daily_entries (branch_id, entry_date, field_key, value, source) VALUES ($1, $2, $3, $4, $5)', [branch.id, date, key, value, 'app']);
+        result.added++;
+      }
+    }
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('import', 'daily_entries', $1, $2)",
+      [`${branch.code} – ${data.source}`, JSON.stringify(result)]);
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+  log(`Imported ${branch.code}'s tracker: ${result.added} numbers added, ${result.kept} already in the app${result.differ.length ? ` (${result.differ.length} differ – see the audit log)` : ''}.`);
+}
+
 // 19 Oct: extra admin logins (seed hq.admin_logins – Iman, Hanin) next to the super admin.
 // No password yet: the super admin sets it in Admin → People & logins → HQ.
 async function addAdminLoginsOnce(db, seed, log) {
@@ -420,4 +453,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
