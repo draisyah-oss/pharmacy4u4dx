@@ -217,17 +217,17 @@ test('every result lists the daily rows behind it (for click-through)', () => {
 const WM = branch('WM');
 const WM_BASELINE = { baseline_end_date: '2026-10-11', sales_before_start: WM.before_tracker.sales_1_to_11_oct };
 
-test('WM branch total sales for the week = walk-in + zakat + WA + TikTok + Grab = 16,715', () => {
+test('WM branch total sales for the week = walk-in + zakat + WA + Grab = 16,365 (TikTok dropped 22 Oct)', () => {
   const r = calc.branchSales({ entries: wm, fields: WM.total_sales_fields, ...WEEK });
-  assert.equal(r.total, 16715);        // 12,365 + 3,500 + 250 + 350 + 250
+  assert.equal(r.total, 16365);        // 12,365 + 3,500 + 250 + 250
   assert.equal(r.days[0].total, 1690); // Mon: 1,650 walk-in + 40 Grab
 });
 
-test('WM October MTD to 18 Oct adds the 1–11 Oct sales: 19,900 + 16,715 = 36,615', () => {
+test('WM October MTD to 18 Oct adds the 1–11 Oct sales: 19,900 + 16,365 = 36,265', () => {
   const r = calc.mtdSales({ entries: wm, fields: WM.total_sales_fields, asOf: '2026-10-18', baseline: WM_BASELINE });
   assert.equal(r.beforeTracker, 19900);
-  assert.equal(r.tracked, 16715);
-  assert.equal(r.total, 36615);
+  assert.equal(r.tracked, 16365);
+  assert.equal(r.total, 36265);
 });
 
 test('November MTD does not add the October baseline', () => {
@@ -235,11 +235,11 @@ test('November MTD does not add the October baseline', () => {
   assert.equal(r.total, 0);
 });
 
-test('WM required sales/day after 18 Oct: (60,900 − 36,615) ÷ 13 days = RM 1,868.08', () => {
-  const r = calc.requiredPerDay({ monthTarget: WM.monthly_total_target['2026-10'], mtdActual: 36615, asOf: '2026-10-18' });
+test('WM required sales/day after 18 Oct: (60,900 − 36,265) ÷ 13 days = RM 1,895', () => {
+  const r = calc.requiredPerDay({ monthTarget: WM.monthly_total_target['2026-10'], mtdActual: 36265, asOf: '2026-10-18' });
   assert.equal(r.daysLeft, 13);        // 19–31 Oct
-  assert.equal(r.remaining, 24285);
-  near(r.perDay, 24285 / 13);          // 1,868.0769…
+  assert.equal(r.remaining, 24635);
+  near(r.perDay, 24635 / 13);          // 1,895
 });
 
 test('required sales/day: 0 once the target is hit, none on the last day', () => {

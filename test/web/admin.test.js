@@ -263,5 +263,5 @@ test('group export: summary per branch with a company total, weekly sheet, every
   const rows = wb.getWorksheet('Group summary').getSheetValues().filter(Boolean).slice(2);
   assert.equal(rows.length, 6);
   assert.equal(rows[5][1], 'Company total');
-  assert.equal(rows[0][4], 36615);       // WM October sales so far (12–18 Oct entries + 1–11 Oct figure)
+  assert.equal(rows[0][4], 36265);       // WM October sales so far (12–18 Oct entries + 1–11 Oct figure)
 });

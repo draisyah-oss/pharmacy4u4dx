@@ -178,6 +178,9 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## JH tracker import (22 Oct)
 - JH kept filling its own Excel tracker (Drive: JH_4DX_Tracker_Q4_2026.xlsx, "Daily Log"). Its 12–21 Oct numbers are in src/db/imports/jh-tracker-2026-10-21.json and copied into daily_entries once on start (importDailyOnce, flag import_jh_tracker_20261021): only empty boxes are filled, numbers already in the app are kept and differences are listed in the audit log (action import). Mapping: 3+ items % × POS transactions → two (count); PWP units → pwp; Androchi/Digezmune p1, Loyuric/Stella p2, Biorelief p3, Hydrocyn/Dermacyn p4, Shine p5; Google reviews; New TikTok followers (whole-team column, else Yaya's) → ttfol; zakat RFQ (first number of "bid / total") → zkrfq, approved → zkrfqok, claims # → zkc, claims RM → zkrm; TikTok content, lives, affiliate commission; WhatsApp follow-ups → fu; Grab cancelled orders → grabcx. Not imported: walk-in, transactions, zakat sales, Grab orders/sales (the sales sheet fills them), Grab active inventory %, cancelled RM, "against approved quotation" columns (no field in the app).
 
+## WM: no TikTok (22 Oct)
+- WM can't go ahead with a TikTok seller account. Hazera's TikTok orders shipped (Z3, ttship) and TikTok sales (Z7, tt) are removed from seed.json and retired on older databases (wmTiktokOffOnce, flag wm_tiktok_off_v1; history kept). TikTok sales no longer count in WM's total or online sales (total_sales_fields walkin, zakat, wa, grab). WM's month total targets (60.9k / 73k / 85k) are unchanged. JH's TikTok (WIG 2) is not affected.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

@@ -115,7 +115,7 @@ test('16 Oct: an older database gets the WM changes, 3+ items everywhere and Ali
   for (const c of ['Z6', 'W6', 'W2']) assert.ok(!wmMeasures.includes(c), `${c} retired`);
   const wmFields = await active("SELECT f.key AS k FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'WM' AND f.active");
   for (const k of ['ttlive', 'ttship24', 'zko', 'zko2w', 'grabon']) assert.ok(!wmFields.includes(k), `${k} retired`);
-  assert.ok(wmFields.includes('ttship'));
+  assert.ok(wmFields.includes('chronic'));
   assert.equal((await old.query("SELECT count(*)::int AS n FROM measures WHERE label LIKE '%2+ items%'")).rows[0].n, 0);
   assert.equal((await old.query("SELECT count(*)::int AS n FROM daily_fields WHERE active AND label LIKE '%3+ items%'")).rows[0].n, 5);
   assert.equal((await old.query("SELECT count(*)::int AS n FROM branches WHERE lead_measures::text LIKE '%2+ items%'")).rows[0].n, 0);
@@ -160,4 +160,20 @@ test('22 Oct: JH tracker numbers (12–21 Oct) imported once – empty boxes onl
   await importDailyOnce(db2, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', (m) => again.push(m));
   assert.equal(again.length, 0, 'only once');
   await db2.close();
+});
+
+test('22 Oct: WM TikTok retired once on older databases; TikTok no longer in WM sales', async () => {
+  const { wmTiktokOffOnce } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  await old.query("DELETE FROM app_settings WHERE key = 'wm_tiktok_off_v1'");
+  await wmTiktokOffOnce(old, () => {});
+  const q = async (sql) => (await old.query(sql)).rows;
+  assert.deepEqual(await q("SELECT m.code FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.active AND m.code IN ('Z3', 'Z7')"), []);
+  assert.deepEqual(await q("SELECT f.key FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'WM' AND f.active AND f.key IN ('tt', 'ttship')"), []);
+  const b = (await q("SELECT total_sales_fields, online_sales_fields FROM branches WHERE code = 'WM'"))[0];
+  assert.ok(!b.total_sales_fields.includes('tt') && !b.online_sales_fields.includes('tt'));
+  assert.ok((await q("SELECT 1 FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'JH' AND m.active AND m.label ILIKE '%tiktok%'")).length > 0, 'JH keeps TikTok');
+  await old.close();
 });

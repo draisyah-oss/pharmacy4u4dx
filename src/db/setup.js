@@ -12,6 +12,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await backfillNewSettings(db, readSeed(), log);
     await addAdminLoginsOnce(db, readSeed(), log);
     await importDailyOnce(db, 'jh-tracker-2026-10-21.json', 'import_jh_tracker_20261021', log);
+    await wmTiktokOffOnce(db, log);
     return { seeded: false };
   }
 
@@ -251,6 +252,25 @@ async function projectStepsOnce(db, seed, log) {
   if (added.length) log(`Added project steps: ${added.join(', ')}.`);
 }
 
+// 22 Oct: WM can't go ahead with a TikTok seller account – TikTok orders shipped (Z3) and TikTok
+// sales (Z7) and their daily boxes (ttship, tt) are retired (history kept) and TikTok sales no
+// longer count in WM's total or online sales. The month total targets are unchanged.
+async function wmTiktokOffOnce(db, log) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'wm_tiktok_off_v1'")).rows.length) return;
+  await db.transaction(async (tx) => {
+    const b = (await tx.query("SELECT id, total_sales_fields, online_sales_fields FROM branches WHERE code = 'WM'")).rows[0];
+    if (b) {
+      await tx.query("UPDATE measures SET active = false WHERE branch_id = $1 AND code IN ('Z3', 'Z7')", [b.id]);
+      await tx.query("UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key IN ('ttship', 'tt')", [b.id]);
+      const drop = (list) => JSON.stringify((Array.isArray(list) ? list : []).filter((k) => k !== 'tt'));
+      await tx.query('UPDATE branches SET total_sales_fields = $2, online_sales_fields = $3 WHERE id = $1', [b.id, drop(b.total_sales_fields), drop(b.online_sales_fields)]);
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'WM: TikTok removed (22 Oct)', NULL)");
+      log('WM: TikTok measures and boxes retired (no TikTok seller at WM).');
+    }
+    await tx.query("INSERT INTO app_settings (key, value) VALUES ('wm_tiktok_off_v1', $1)", [new Date().toISOString()]);
+  });
+}
+
 // 22 Oct: daily numbers a branch kept in its own tracker (src/db/imports/*.json, made from the
 // branch's Excel "Daily Log") copied into daily_entries once. Only empty boxes are filled – a number
 // already in the app (typed or from the sales sheet) is kept, and the difference is noted in the
@@ -453,4 +473,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

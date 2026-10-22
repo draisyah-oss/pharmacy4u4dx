@@ -95,11 +95,11 @@ test('running totals: chronic database 18 of 200, Google reviews 143 of 159', as
   assert.equal(b.running.find((r) => r.code === 'GR').total, 143);
 });
 
-test('branch sales: week RM 16,715, October so far RM 36,615, RM 1,868.08 a day needed', async () => {
+test('branch sales: week RM 16,365, October so far RM 36,265, RM 1,895 a day needed', async () => {
   const s = (await board()).sales;
-  assert.equal(s.weekTotal, 16715);
-  assert.equal(s.mtd, 36615);
-  near(s.perDay, 24285 / 13);
+  assert.equal(s.weekTotal, 16365);
+  assert.equal(s.mtd, 36265);
+  near(s.perDay, 24635 / 13);
   near(s.paceTarget, 60900 * 18 / 31);  // RM 35,361 needed by 18 Oct
   assert.equal(s.status, 'on_track');    // ahead of pace even though only 60% of the month
 });

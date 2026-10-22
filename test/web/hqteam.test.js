@@ -127,11 +127,11 @@ test('admin can move someone between HQ staff and full HQ (new PIN or password n
 
 test('branch month sales are on the HQ/admin home page and on each branch’s daily entry', async () => {
   const home = (await (await admin()).get('/')).html;
-  assert.match(home, /Wangsa Maju[\s\S]*October sales so far[\s\S]*RM 36,615/);
+  assert.match(home, /Wangsa Maju[\s\S]*October sales so far[\s\S]*RM 36,265/);
   assert.match(home, /Needed per day/);
   const staffDaily = (await (await as('pin', 'hazera', '1111')).get('/daily')).html;
   assert.match(staffDaily, /October sales so far/);
-  assert.match(staffDaily, /RM 36,615/);
+  assert.match(staffDaily, /RM 36,265/);
   assert.match(staffDaily, /href="\/scoreboard\/trace\?type=sales/, '19 Oct: staff can open their own branch’s numbers');
   const mgrDaily = (await (await as('password', 'hafizah', 'manager-pass-1')).get('/daily')).html;
   assert.match(mgrDaily, /href="\/scoreboard\/trace\?type=sales/);

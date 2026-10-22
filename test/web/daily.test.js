@@ -175,7 +175,7 @@ test('save today: numbers stored, who/when recorded, audit log written', async (
   const b = await pinLogin('hazera', '1111');
   const csrf = await b.csrf();
   const r = await b.post('/daily', {
-    _csrf: csrf, date: '2026-10-20', 'f[walkin]': '1,880', 'f[tx]': '62', 'f[two]': '25', 'f[wagrp]': '1', 'f[ttship]': '5', 'f[zkc]': '5', 'f[zkc7d]': '5',
+    _csrf: csrf, date: '2026-10-20', 'f[walkin]': '1,880', 'f[tx]': '62', 'f[two]': '25', 'f[wagrp]': '1', 'f[chronic]': '5', 'f[zkc]': '5', 'f[zkc7d]': '5',
   });
   assert.equal(r.status, 302);
   assert.equal(r.location, '/daily?date=2026-10-20&saved=7');
