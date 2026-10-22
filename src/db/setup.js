@@ -76,6 +76,7 @@ async function backfillNewSettings(db, seed, log) {
   await ensureSetting(db, 'wiki_approver', seed.hq && seed.hq.wiki_approver, log);
   await wigWeekOnce(db, seed, log);
   await ensureSetting(db, 'inventory_team', seed.hq && seed.hq.inventory_team, log);
+  await ensureSetting(db, 'oos_needs_off', seed.hq && seed.hq.oos_needs_off, log);
   await ensureSetting(db, 'hq_extra_moves', seed.hq && seed.hq.extra_moves, log);
   await addBranchPersonOnce(db, 'Ampang', { name: 'Anis', job: 'Intern' }, 'ampang_anis_v1', log);
   await projectStepsOnce(db, seed, log);

@@ -194,6 +194,9 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Staff read the % in the Grab merchant app and type it as shown (45 = 45%; 100 at most; a % sign shows in the box). New daily field type **percent** and calc **average_percent** (migration 020): the week / month = average of the days it was typed (blank days don't count), ÷ 100, vs 50%. Trace page: "Average of n days typed". Daily entry: "Target above 50%", green at 50% or more. Admin → Measures offers both.
 - Older databases once via grabInventoryOnce (flag grab_inventory_v1): grabinv + GI added in the old box's place, grabmenu boxes/measures retired (history kept), targets 0.5 Oct–Dec.
 
+## Alia: out-of-stock not in Needs you (22 Oct)
+- Alia stays in the inventory team – Inventory menu (Out-of-stock inbox, Transfers to send), sees and answers every item – but OOS reports and transfers no longer appear in her **Needs you** list (app_settings oos_needs_off = seed hq.oos_needs_off ["Alia"]; req.user.oosQuiet in src/app.js). Syarafana and Fariz still get them.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

@@ -118,7 +118,7 @@ async function buildNeeds(db, user, { at }) {
   const items = [];
   const add = (level, count, title, sub, href) => items.push({ level, count, title, sub, href });
   if (user.role === 'admin' || user.inventory) {
-    if (user.inventory) await forInventory(db, at, add);
+    if (user.inventory && !user.oosQuiet) await forInventory(db, at, add);
   }
   if (user.role === 'admin' && user.is_super) await forCeo(db, today, add);
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);

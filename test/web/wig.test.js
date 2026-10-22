@@ -281,7 +281,15 @@ test('19 Oct: "Needs you" at the top of the menu – counts per person, fixed ti
   assert.match(ceo, /Needs you[\s\S]*Focuses waiting for your approval/);
   assert.match(ceo, />Group scoreboard</);
   const al = (await (await alia()).get('/hq/today')).html;
-  assert.match(al, /Needs you[\s\S]*(Out-of-stock reports|Daily tasks to tick)/);
+  assert.match(al, /Needs you/);
+  // 22 Oct: Alia keeps the Inventory menu (sees and answers OOS) but OOS isn't in her Needs you.
+  assert.match(al, /href="\/oos\/inbox"/);
+  const { buildNeeds } = require('../../src/lib/needs');
+  const open = (await db.query("SELECT count(*)::int AS n FROM oos_items WHERE status = 'Open' AND answer IS NULL")).rows[0].n;
+  const titles = async (u) => (await buildNeeds(db, u, { at: new Date('2026-10-22T03:00:00Z') })).items.map((i) => i.title).join(' | ');
+  assert.doesNotMatch(await titles({ role: 'hq', inventory: true, oosQuiet: true }), /Out-of-stock|Transfers/);
+  if (open) assert.match(await titles({ role: 'hq_staff', inventory: true, oosQuiet: false }), /Out-of-stock/);
+  assert.equal(JSON.parse((await db.query("SELECT value FROM app_settings WHERE key = 'oos_needs_off'")).rows[0].value)[0], 'Alia');
   const st = (await (await staff()).get('/daily')).html;
   assert.match(st, />Daily entry</);
   assert.match(st, />WM scoreboard</);
