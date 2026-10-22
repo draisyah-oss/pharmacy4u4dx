@@ -2,8 +2,8 @@
 <%- include('../partials/topbar') %>
 <%- include('../partials/admin-nav', { active: '/admin/measures' }) %>
 <%
-  const calcText = { sum: 'Add up the field', ratio_percent: '% – field ÷ another field', ratio_per_day: 'Per day – field ÷ days marked in another field' };
-  const typeText = { money: 'Money (RM)', count: 'Number', yes_no: 'Yes / no' };
+  const calcText = { sum: 'Add up the field', ratio_percent: '% – field ÷ another field', ratio_per_day: 'Per day – field ÷ days marked in another field', average_percent: '% – average of the days typed (e.g. Grab active inventory)' };
+  const typeText = { money: 'Money (RM)', count: 'Number', yes_no: 'Yes / no', percent: 'Percent (type 45 for 45%)' };
   const activeFields = data.fields.filter(function (f) { return f.active; });
   function measureForm(m, isNew) { %>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">

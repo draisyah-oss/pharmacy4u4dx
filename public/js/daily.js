@@ -69,6 +69,13 @@
       };
     }
 
+    if (h.kind === 'pct') {
+      if (v === null) return { state: '', text: '', fill: 0 };
+      if (v > 100) return { state: 'error', text: 'A % – 100 at most (type 45 for 45%).', fill: 0 };
+      var okPct = v / 100 >= h.target - 1e-9;
+      return { state: okPct ? 'good' : 'short', text: v + '%' + (okPct ? ' – on target' : ' – target ' + Math.round(h.target * 100) + '%'), fill: v / 100 / h.target };
+    }
+
     if (h.kind === 'perday') {
       var gate = valueOf(h.gate);
       if (gate !== 1) {

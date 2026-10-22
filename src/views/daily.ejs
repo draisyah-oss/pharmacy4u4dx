@@ -15,6 +15,7 @@
     const show = (n) => h.money ? money(n) : num(n);
     if (h.kind === 'track') return 'No target this month';
     if (h.kind === 'ratio') return 'Target ' + Math.round(h.target * 100) + '%';
+    if (h.kind === 'pct') return 'Target above ' + Math.round(h.target * 100) + '%';
     if (h.kind === 'perday') return 'Target ' + num(h.target) + ' on storefront days';
     if (h.kind === 'day' && h.target === 0) return 'Weekend target – any today is extra';
     if (h.kind === 'day') return f.type === 'yes_no' ? 'Every day' : 'Target ' + show(h.target);
@@ -117,8 +118,8 @@
                 <label class="yn yn-no"><input type="radio" name="f[<%= f.key %>]" value="0"<%= String(f.value) === '0' ? ' checked' : '' %><%= editable ? '' : ' disabled' %>><span>No</span></label>
               </div>
             <% } else { %>
-              <div class="num-wrap<%= f.type === 'money' ? ' is-money' : '' %>">
-                <% if (f.type === 'money') { %><span class="prefix" aria-hidden="true">RM</span><% } %>
+              <div class="num-wrap<%= f.type === 'money' ? ' is-money' : '' %><%= f.type === 'percent' ? ' is-pct' : '' %>">
+                <% if (f.type === 'money') { %><span class="prefix" aria-hidden="true">RM</span><% } %><% if (f.type === 'percent') { %><span class="suffix" aria-hidden="true">%</span><% } %>
                 <input class="num" id="<%= id %>" name="f[<%= f.key %>]" type="text" inputmode="decimal"
                        enterkeyhint="next" autocomplete="off" value="<%= f.value === null ? '' : f.value %>"
                        placeholder="<%= f.fromSheet ? 'Not in the sheet yet' : '–' %>"<%= editable && !f.fromSheet ? '' : ' disabled' %><%= f.fromSheet ? ' data-from-sheet' : '' %><%= err ? ' aria-invalid="true"' : '' %>
@@ -141,6 +142,6 @@
     <% } %>
   </form>
 </main>
-<script src="/js/daily.js?v=5" defer></script>
+<script src="/js/daily.js?v=6" defer></script>
 </body>
 </html>

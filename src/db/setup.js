@@ -25,6 +25,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
       ["UPDATE daily_fields SET label = 'WhatsApp customer follow-ups' WHERE key = 'fu' AND branch_id = (SELECT id FROM branches WHERE code = 'JH') AND label LIKE 'WhatsApp blasts%'"],
       ["UPDATE measures SET label = 'WhatsApp customer follow-ups (LEAD 2)' WHERE code = 'N1' AND branch_id = (SELECT id FROM branches WHERE code = 'JH') AND label LIKE 'WhatsApp blasts%'"],
     ]);
+    await grabInventoryOnce(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -292,6 +293,52 @@ async function relabelOnce(db, flag, statements) {
   });
 }
 
+// 22 Oct: every branch's Grab lead is now Grab active inventory % (above 50%) – box `grabinv`
+// (type percent, typed as the Grab merchant app shows it) and measure GI (average_percent),
+// owned like the old "Grab menu items added/fixed" (WM Zawiyah, JH Nabihah, BR Qushairi, Bangi Ayuni,
+// Ampang Aishah). The grabmenu boxes and measures are retired (history kept). Added from seed.json,
+// in the old one's place; branches that already have GI are left alone.
+async function grabInventoryOnce(db, seed, log) {
+  const flag = 'grab_inventory_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const done = [];
+    for (const sb of seed.branches) {
+      const f = (sb.daily_fields || []).find((x) => x.key === 'grabinv');
+      const m = (sb.measures || []).find((x) => x.numerator_field === 'grabinv');
+      const b = (await tx.query('SELECT id FROM branches WHERE code = $1', [sb.code])).rows[0];
+      if (!b || !f || !m) continue;
+      if ((await tx.query('SELECT 1 FROM measures WHERE branch_id = $1 AND code = $2', [b.id, m.id])).rows.length) continue;
+      const person = async (name) => (await tx.query('SELECT id FROM people WHERE branch_id = $1 AND name = $2 AND active', [b.id, name])).rows[0]?.id || null;
+      const oldF = (await tx.query("SELECT sort_order FROM daily_fields WHERE branch_id = $1 AND key = 'grabmenu' AND active", [b.id])).rows[0];
+      const fOrder = oldF ? oldF.sort_order
+        : ((await tx.query("SELECT sort_order FROM daily_fields WHERE branch_id = $1 AND key = 'grabon'", [b.id])).rows[0]?.sort_order
+          ?? (await tx.query('SELECT COALESCE(max(sort_order), 0) + 1 AS n FROM daily_fields WHERE branch_id = $1', [b.id])).rows[0].n);
+      const oldM = (await tx.query("SELECT sort_order FROM measures WHERE branch_id = $1 AND numerator_field = 'grabmenu' AND active ORDER BY sort_order LIMIT 1", [b.id])).rows[0];
+      const mOrder = oldM ? oldM.sort_order
+        : (await tx.query('SELECT COALESCE(max(sort_order), 0) + 1 AS n FROM measures WHERE branch_id = $1', [b.id])).rows[0].n;
+      await tx.query("UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = 'grabmenu'", [b.id]);
+      await tx.query("UPDATE measures SET active = false WHERE branch_id = $1 AND numerator_field = 'grabmenu'", [b.id]);
+      await tx.query(`INSERT INTO daily_fields (branch_id, key, label, owner_name, person_id, type, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)
+        ON CONFLICT (branch_id, key) DO UPDATE SET label = EXCLUDED.label, type = EXCLUDED.type, active = true`,
+        [b.id, f.key, f.label, f.owner, await person(f.owner), f.type, fOrder]);
+      const mid = (await tx.query(`INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per,
+          calc, numerator_field, denominator_field, note, sort_order, score_by)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+        [b.id, m.id, m.owner, await person(m.owner), m.label, m.kind, m.unit, m.target_per, m.calc,
+          m.numerator_field, m.denominator_field, m.note, mOrder, m.score_by || 'week'])).rows[0].id;
+      const months = (await tx.query('SELECT DISTINCT t.month FROM measure_targets t JOIN measures x ON x.id = t.measure_id WHERE x.branch_id = $1', [b.id])).rows.map((r) => r.month.trim());
+      for (const month of new Set([...months, ...Object.keys(m.targets || {})])) {
+        await tx.query('INSERT INTO measure_targets (measure_id, month, target) VALUES ($1,$2,$3)', [mid, month, (m.targets || {})[month] ?? null]);
+      }
+      done.push(sb.code);
+    }
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Grab menu items → Grab active inventory % above 50% (22 Oct)', $1)", [JSON.stringify({ branches: done })]);
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+    if (done.length) log(`Grab active inventory % added for ${done.join(', ')}.`);
+  });
+}
+
 // Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
 async function retireBranchItemsOnce(db, code, { fields = [], measures = [] }, flag, note, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -533,4 +580,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

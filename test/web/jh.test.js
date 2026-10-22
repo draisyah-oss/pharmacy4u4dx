@@ -215,3 +215,53 @@ test('22 Oct: Ampang target product Oat → Eldon strip; JH WhatsApp is customer
   assert.equal(jh.daily_fields.find((f) => f.key === 'fu').label, 'WhatsApp customer follow-ups');
   assert.ok(!jh.daily_fields.some((f) => f.key === 'waord' || f.key === 'wadays'));
 });
+
+test('22 Oct: every branch tracks Grab active inventory % (above 50%) instead of Grab menu items', async () => {
+  const s = readSeed();
+  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Qushairi', Bangi: 'Ayuni', Ampang: 'Aishah' };
+  for (const b of s.branches) {
+    const f = b.daily_fields.find((x) => x.key === 'grabinv');
+    const m = b.measures.find((x) => x.id === 'GI');
+    assert.equal(f.type, 'percent', b.code);
+    assert.equal(m.calc, 'average_percent');
+    assert.equal(m.owner, owners[b.code]);
+    assert.deepEqual(Object.values(m.targets), [0.5, 0.5, 0.5]);
+    assert.ok(!b.daily_fields.some((x) => x.key === 'grabmenu'), b.code);
+  }
+  // Average of the days typed (45, 55, 62 → 54%), blank days don't count; shown as a %.
+  const put = (date, value) => db.query('INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1,$2,$3,$4)', [jh.id, date, 'grabinv', value]);
+  await put('2026-10-12', 45); await put('2026-10-14', 55); await put('2026-10-16', 62);
+  const board = await buildScoreboard(db, { branch: jh, weekStart: START, today: '2026-10-19', trackerStart: START });
+  const gi = row(board, 'GI');
+  near(gi.week.actual, 0.54); near(gi.week.target, 0.5);
+  assert.equal(gi.week.status, 'on_track');
+  const fmt = require('../../src/scoreboard/format');
+  assert.equal(fmt.value(gi, gi.week.actual), '54%');
+});
+
+test('22 Oct: a % box refuses more than 100', async () => {
+  const { saveDailyEntries } = require('../../src/daily/data');
+  const user = (await db.query("SELECT u.*, p.name FROM users u LEFT JOIN people p ON p.id = u.person_id WHERE u.role = 'admin' LIMIT 1")).rows[0];
+  const r = await saveDailyEntries(db, { branch: jh, date: '2026-10-20', user, input: { grabinv: '140' } });
+  assert.ok(r.errors && r.errors.grabinv, 'over 100 refused');
+});
+
+test('22 Oct: older databases swap Grab menu items for Grab active inventory % once', async () => {
+  const { grabInventoryOnce } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  await old.query("DELETE FROM app_settings WHERE key = 'ampang_aishah_v1'");
+  await renameBranchPersonOnce(old, 'Ampang', 'Aisyah', 'Aishah', 'ampang_aishah_v1', () => {}); // runs earlier on start
+  await grabInventoryOnce(old, readSeed(), () => {});
+  await grabInventoryOnce(old, readSeed(), () => {}); // second run does nothing
+  const q = async (sql) => (await old.query(sql)).rows;
+  const gi = await q("SELECT b.code, m.calc, m.active, m.person_id FROM measures m JOIN branches b ON b.id = m.branch_id WHERE m.code = 'GI' ORDER BY b.code");
+  assert.deepEqual(gi.map((r) => r.code), ['Ampang', 'BR', 'Bangi', 'JH', 'WM']);
+  assert.ok(gi.every((r) => r.active && r.calc === 'average_percent' && r.person_id));
+  const oldOn = await q("SELECT count(*)::int AS n FROM measures WHERE numerator_field = 'grabmenu' AND active");
+  assert.equal(oldOn[0].n, 0);
+  const t = await q("SELECT t.month, t.target FROM measure_targets t JOIN measures m ON m.id = t.measure_id JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.code = 'GI' AND t.month = '2026-10'");
+  assert.equal(Number(t[0].target), 0.5);
+  await old.close();
+});

@@ -26,7 +26,7 @@
             <td><%- dayLink(row.date) %></td>
             <td class="n"><%= row.numerator === null ? 'not entered' : show(row.numerator) %></td>
             <% if (t.denominatorLabel) { %><td class="n"><%= row.denominator === null ? 'not entered' : fmt.number(row.denominator, 2) %></td><% } %>
-            <td class="n"><%= row.target === null ? '–' : (t.calc === 'ratio_percent' ? fmt.number(row.target * 100, 1) + '%' : show(row.target)) %></td>
+            <td class="n"><%= row.target === null ? '–' : ((t.calc === 'ratio_percent' || t.calc === 'average_percent') ? fmt.number(row.target * 100, 1) + '%' : show(row.target)) %></td>
             <td><%= row.enteredBy || '' %><%= row.counted ? '' : ' (not counted – no storefront)' %></td>
           </tr>
         <% }) %>
@@ -46,6 +46,8 @@
         Actual <b><%= show(t.result.actual) %></b><% if (t.result.target !== null) { %> vs target <b><%= show(t.result.target) %></b> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>.
       <% } else if (t.calc === 'ratio_percent') { %>
         <%= show(t.result.numerator) %> ÷ <%= fmt.number(t.result.denominator, 2) %> = <b><%= fmt.value({ calc: t.calc }, t.result.actual) %></b><% if (t.result.target !== null) { %> vs target <%= fmt.value({ calc: t.calc }, t.result.target) %> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>.
+      <% } else if (t.calc === 'average_percent') { %>
+        Average of <%= fmt.number(t.result.denominator, 0) %> day<%= t.result.denominator === 1 ? '' : 's' %> typed = <b><%= fmt.value({ calc: t.calc }, t.result.actual) %></b><% if (t.result.target !== null) { %> vs target <%= fmt.value({ calc: t.calc }, t.result.target) %> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>. Days left blank don’t count.
       <% } else { %>
         <%= show(t.result.numerator) %> ÷ <%= fmt.number(t.result.denominator, 0) %> storefront days = <b><%= fmt.value({ calc: t.calc }, t.result.actual) %></b> a day<% if (t.result.target !== null) { %> vs target <%= fmt.number(t.result.target, 1) %> = <b class="s-<%= t.result.status %>"><%= fmt.pct(t.result.pct) %> <%= fmt.symbol(t.result.status) %></b><% } %>.
       <% } %>

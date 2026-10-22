@@ -82,7 +82,7 @@ async function branchWorkbook(db, code, { now = () => new Date() } = {}) {
   for (const w of ctx.weeks) {
     const board = await buildScoreboard(db, { branch, weekStart: w, today: ctx.today, trackerStart: ctx.start });
     for (const r of [...board.top, ...board.groups.flatMap((g) => g.rows)]) {
-      const pctLike = r.calc === 'ratio_percent';
+      const pctLike = r.calc === 'ratio_percent' || r.calc === 'average_percent';
       sb.push({
         week: weekLabel(board.weekStart, board.weekEnd), counted: board.asOf, code: r.code, label: r.label,
         owner: r.owner, top: r.top ? 'Yes' : '',

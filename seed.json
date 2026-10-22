@@ -84,7 +84,7 @@
         {"key": "zakat", "label": "Zakat sales (RM)", "owner": "Zawiyah", "type": "money"},
         {"key": "zkc", "label": "Zakat claims submitted", "owner": "Zawiyah", "type": "count"},
         {"key": "zkc7d", "label": "…of which within 7 days", "owner": "Zawiyah", "type": "count"},
-        {"key": "grabmenu", "label": "Grab menu items added/fixed", "owner": "Zawiyah", "type": "count"},
+        {"key": "grabinv", "label": "Grab active inventory (%)", "owner": "Zawiyah", "type": "percent"},
         {"key": "graord", "label": "Grab orders (#)", "owner": "Zawiyah", "type": "count"},
         {"key": "grab", "label": "Grab sales (RM)", "owner": "Zawiyah", "type": "money"}
       ],
@@ -105,7 +105,7 @@
         {"id": "Z0", "owner": "Hazera", "label": "WhatsApp order sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2000, "2026-12": 3000}, "numerator_field": "wa", "denominator_field": null, "note": "NEW – proposed. Baseline assumed RM 0."},
         {"id": "W5", "owner": "Zawiyah", "label": "Zakat sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 20000, "2026-11": 20000, "2026-12": 20000}, "numerator_field": "zakat", "denominator_field": null, "note": "4DX plan: RM 20,000/month. Owner Zawiyah from 12 Oct."},
         {"id": "W7", "owner": "Zawiyah", "label": "Zakat claims submitted within 7 days of customer receiving medicine", "kind": "Lead", "unit": "% on time", "target_per": "week", "calc": "ratio_percent", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "zkc7d", "denominator_field": "zkc", "note": "4DX plan: 100%."},
-        {"id": "W3", "owner": "Zawiyah", "label": "Grab menu items added / fixed (photo, price, stock)", "kind": "Lead", "unit": "items", "target_per": "week", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 10, "2026-12": 5}, "numerator_field": "grabmenu", "denominator_field": null, "note": "NEW – proposed."},
+        {"id": "GI", "owner": "Zawiyah", "label": "Grab active inventory % (above 50%)", "kind": "Lead", "unit": "%", "target_per": "week", "calc": "average_percent", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "grabinv", "denominator_field": null, "note": "22 Oct: replaces Grab menu items added/fixed at every branch. Read the active inventory % in the Grab merchant app and type it as shown (45 = 45%); the week is the average of the days typed. Target more than 50%."},
         {"id": "W0", "owner": "Zawiyah", "label": "Grab sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2500, "2026-12": 4500}, "numerator_field": "grab", "denominator_field": null, "note": "NEW – proposed. Baseline assumed RM 0."}
       ],
       "running_totals": [
@@ -165,6 +165,7 @@
           {"key": "ttcom", "label": "TikTok affiliate commission (RM)", "owner": "Yaya", "type": "money"},
           {"key": "fu", "label": "WhatsApp customer follow-ups", "owner": "Nabihah", "type": "count"},
           {"key": "grabon", "label": "Grab online all hours? (1/0)", "owner": "Nabihah", "type": "yes_no"},
+          {"key": "grabinv", "label": "Grab active inventory (%)", "owner": "Nabihah", "type": "percent"},
           {"key": "graord", "label": "Grab orders (#)", "owner": "Nabihah", "type": "count"},
           {"key": "grabcx", "label": "Grab cancelled orders (#)", "owner": "Nabihah", "type": "count"},
           {"key": "grab", "label": "Grab sales (RM)", "owner": "Nabihah", "type": "money"}
@@ -193,6 +194,7 @@
           {"id": "Y3", "owner": "Yaya", "label": "New TikTok followers", "kind": "Lead", "unit": "followers", "target_per": "month", "calc": "sum", "targets": {"2026-10": 50, "2026-11": 50, "2026-12": 50}, "numerator_field": "ttfol", "denominator_field": null, "note": "Set 14 Oct: 762 followers today, 1,000 by 31 Dec → 238 more over the 81 days from 12 Oct ≈ 21 a week. JH 15 Oct: 50 new followers a month, ongoing standard. At 50 a month JH reaches about 894 by 31 Dec, short of the 1,000 WIG target – needs ~90 a month."},
           {"id": "N1", "owner": "Nabihah", "label": "WhatsApp customer follow-ups (LEAD 2)", "kind": "Lead", "unit": "customers", "target_per": "day", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 15, "2026-12": 15}, "numerator_field": "fu", "denominator_field": null, "note": "4DX plan JH lead 2: 10 customers a day (Nabihah). JH 15 Oct: daily blasting to LH customers, 15 a day. A WhatsApp customer database needs consistent stock – revisit next year; focus on fulfilment days and the OOS log first."},
           {"id": "N2", "owner": "Nabihah", "label": "Grab store online for all opening hours", "kind": "Routine", "unit": "days", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "grabon", "denominator_field": null, "note": "NEW – proposed. JH 15 Oct: a daily task for Nabihah – doesn’t move the result."},
+          {"id": "GI", "owner": "Nabihah", "label": "Grab active inventory % (above 50%)", "kind": "Lead", "unit": "%", "target_per": "week", "calc": "average_percent", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "grabinv", "denominator_field": null, "note": "22 Oct: replaces Grab menu items added/fixed at every branch. Read the active inventory % in the Grab merchant app and type it as shown (45 = 45%); the week is the average of the days typed. Target more than 50%."},
           {"id": "N0", "owner": "Nabihah", "label": "Grab sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2500, "2026-12": 4500}, "numerator_field": "grab", "denominator_field": null, "note": "NEW – PROPOSED, same ramp as WM. Baseline assumed RM 0 – edit if JH already sells on Grab. JH 15 Oct: to change to stock availability vs sales once there is a workable stock database."},
           {"id": "N4", "owner": "Nabihah", "label": "Grab cancelled orders", "kind": "Routine", "unit": "orders", "target_per": "week", "calc": "sum", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "grabcx", "denominator_field": null, "note": "JH 15 Oct: added. Track only."}
         ],
@@ -267,7 +269,7 @@
         {"key": "alpine", "label": "Alpine sales (RM)", "owner": "Alya", "type": "money"},
         {"key": "loyal", "label": "New loyalty members", "owner": "Qushairi", "type": "count"},
         {"key": "aframe", "label": "A-frame & bunting out? (1/0)", "owner": "Qushairi", "type": "yes_no"},
-        {"key": "grabmenu", "label": "Grabmart items added / fixed (stock, price, photo)", "owner": "Qushairi", "type": "count"},
+        {"key": "grabinv", "label": "Grab active inventory (%)", "owner": "Qushairi", "type": "percent"},
         {"key": "graord", "label": "Grabmart orders (#)", "owner": "Qushairi", "type": "count"},
         {"key": "grab", "label": "Grabmart sales (RM)", "owner": "Qushairi", "type": "money"}
       ],
@@ -295,7 +297,7 @@
         {"id": "Q3", "owner": "Ainur", "label": "Shopee voucher or campaign", "kind": "Lead", "unit": "campaigns", "target_per": "week", "calc": "sum", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "shvouch", "denominator_field": null, "note": "4DX plan: one every 2 weeks."},
         {"id": "Q4", "owner": "Qushairi", "label": "A-frame & bunting out", "kind": "Routine", "unit": "days", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "aframe", "denominator_field": null, "note": "4DX plan: daily routine (signboard up by 31 Oct)."},
         {"id": "G0", "owner": "Qushairi", "label": "Grabmart sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2500, "2026-12": 4500}, "numerator_field": "grab", "denominator_field": null, "note": "PROPOSED 14 Oct: same ramp as WM/JH/Bangi, baseline assumed RM 0. Part of the walk-in + Grabmart figure, so it doesn't change the month total. Qushairi runs Grabmart (items, stock, price matched to market, marketing)."},
-        {"id": "G1", "owner": "Qushairi", "label": "Grabmart items added / fixed (stock, price, photo)", "kind": "Lead", "unit": "items", "target_per": "week", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 10, "2026-12": 5}, "numerator_field": "grabmenu", "denominator_field": null, "note": "PROPOSED 14 Oct: same as the other branches – 15 a week in Oct, 10 in Nov, 5 in Dec."},
+        {"id": "GI", "owner": "Qushairi", "label": "Grab active inventory % (above 50%)", "kind": "Lead", "unit": "%", "target_per": "week", "calc": "average_percent", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "grabinv", "denominator_field": null, "note": "22 Oct: replaces Grab menu items added/fixed at every branch. Read the active inventory % in the Grab merchant app and type it as shown (45 = 45%); the week is the average of the days typed. Target more than 50%."},
         {"id": "AL", "owner": "Alya", "label": "Alpine sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 500, "2026-11": 500, "2026-12": 500}, "numerator_field": "alpine", "denominator_field": null, "note": "RM 500 a month, counted in total branch revenue (core JD revision 14 Oct). Alya also handles Alpine coins collection (9th/18th/27th)."}
       ],
       "running_totals": [{"id": "GR", "label": "Google reviews total (134 → 154 by 31 Dec)", "field": "reviews", "start_value": 145, "end_target": 154}],
@@ -351,7 +353,7 @@
         {"key": "online", "label": "Online posts – FB groups + WhatsApp updates", "owner": "Ayuni", "type": "count"},
         {"key": "vouch", "label": "First-visit vouchers redeemed", "owner": "Ayuni", "type": "count"},
         {"key": "grabon", "label": "Grab online all hours? (1/0)", "owner": "Ayuni", "type": "yes_no"},
-        {"key": "grabmenu", "label": "Grab menu items added/fixed", "owner": "Ayuni", "type": "count"},
+        {"key": "grabinv", "label": "Grab active inventory (%)", "owner": "Ayuni", "type": "percent"},
         {"key": "graord", "label": "Grab orders (#)", "owner": "Ayuni", "type": "count"},
         {"key": "grab", "label": "Grab sales (RM)", "owner": "Ayuni", "type": "money"}
       ],
@@ -376,7 +378,7 @@
         {"id": "Y5", "owner": "Ayuni", "label": "Online outreach posts – Facebook groups + WhatsApp updates (LEAD 2)", "kind": "Lead", "unit": "posts", "target_per": "day", "calc": "sum", "targets": {"2026-10": 6, "2026-11": 6, "2026-12": 6}, "numerator_field": "online", "denominator_field": null, "note": "Set 13 Oct: 6 a day (Ayuni)."},
         {"id": "Y2", "owner": "Ayuni", "label": "First-visit vouchers redeemed", "kind": "Result", "unit": "vouchers", "target_per": "week", "calc": "sum", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "vouch", "denominator_field": null, "note": "4DX plan: tracked to show outreach is working – no target."},
         {"id": "Y3", "owner": "Ayuni", "label": "Grab store online for all opening hours", "kind": "Lead", "unit": "days", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "grabon", "denominator_field": null, "note": "NEW – proposed."},
-        {"id": "Y4", "owner": "Ayuni", "label": "Grab menu items added / fixed (photo, price, stock)", "kind": "Lead", "unit": "items", "target_per": "week", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 10, "2026-12": 5}, "numerator_field": "grabmenu", "denominator_field": null, "note": "NEW – proposed."},
+        {"id": "GI", "owner": "Ayuni", "label": "Grab active inventory % (above 50%)", "kind": "Lead", "unit": "%", "target_per": "week", "calc": "average_percent", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "grabinv", "denominator_field": null, "note": "22 Oct: replaces Grab menu items added/fixed at every branch. Read the active inventory % in the Grab merchant app and type it as shown (45 = 45%); the week is the average of the days typed. Target more than 50%."},
         {"id": "Y0", "owner": "Ayuni", "label": "Grab sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 1000, "2026-11": 2500, "2026-12": 4500}, "numerator_field": "grab", "denominator_field": null, "note": "NEW – PROPOSED, same ramp as WM. Baseline assumed RM 0 – edit if Bangi already sells on Grab."}
       ],
       "running_totals": [{"id": "GR", "label": "Google reviews total (19 → 100 by 31 Dec)", "field": "reviews", "start_value": 21, "end_target": 100}],
@@ -434,7 +436,7 @@
         {"key": "shlist", "label": "Shopee listings new/improved", "owner": "Hidayah", "type": "count"},
         {"key": "shcamp", "label": "Shopee campaigns joined with voucher (#)", "owner": "Hidayah", "type": "count"},
         {"key": "grabon", "label": "Grab online all hours? (1/0)", "owner": "Aishah", "type": "yes_no"},
-        {"key": "grabmenu", "label": "Grab menu items added/fixed", "owner": "Aishah", "type": "count"},
+        {"key": "grabinv", "label": "Grab active inventory (%)", "owner": "Aishah", "type": "percent"},
         {"key": "graord", "label": "Grab orders (#)", "owner": "Aishah", "type": "count"},
         {"key": "grab", "label": "Grab sales (RM)", "owner": "Aishah", "type": "money"}
       ],
@@ -458,7 +460,7 @@
         {"id": "Y4", "owner": "Hidayah", "label": "Shopee listings new / improved", "kind": "Lead", "unit": "listings", "target_per": "week", "calc": "sum", "targets": {"2026-10": 3, "2026-11": 3, "2026-12": 3}, "numerator_field": "shlist", "denominator_field": null, "note": "4DX plan: 3 a week."},
         {"id": "Y5", "owner": "Hidayah", "label": "Shopee campaigns joined with a store voucher (11.11, 12.12…)", "kind": "Routine", "unit": "campaigns", "target_per": "week", "calc": "sum", "targets": {"2026-10": null, "2026-11": null, "2026-12": null}, "numerator_field": "shcamp", "denominator_field": null, "note": "4DX plan: every campaign – no fixed weekly number."},
         {"id": "A2", "owner": "Aishah", "label": "Grab store online for all opening hours", "kind": "Lead", "unit": "days", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1, "2026-11": 1, "2026-12": 1}, "numerator_field": "grabon", "denominator_field": null, "note": "NEW – proposed."},
-        {"id": "A3", "owner": "Aishah", "label": "Grab menu items added / fixed (photo, price, stock)", "kind": "Lead", "unit": "items", "target_per": "week", "calc": "sum", "targets": {"2026-10": 15, "2026-11": 10, "2026-12": 5}, "numerator_field": "grabmenu", "denominator_field": null, "note": "NEW – proposed."},
+        {"id": "GI", "owner": "Aishah", "label": "Grab active inventory % (above 50%)", "kind": "Lead", "unit": "%", "target_per": "week", "calc": "average_percent", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "grabinv", "denominator_field": null, "note": "22 Oct: replaces Grab menu items added/fixed at every branch. Read the active inventory % in the Grab merchant app and type it as shown (45 = 45%); the week is the average of the days typed. Target more than 50%."},
         {"id": "A0", "owner": "Aishah", "label": "Grab sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 500, "2026-11": 1000, "2026-12": 2000}, "numerator_field": "grab", "denominator_field": null, "note": "NEW – PROPOSED, smaller ramp than WM/Bangi for a smaller branch. Baseline assumed RM 0."}
       ],
       "running_totals": [{"id": "GR", "label": "Google reviews total (25 → 60 by 31 Dec)", "field": "reviews", "start_value": 30, "end_target": 60}],

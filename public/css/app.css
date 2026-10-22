@@ -205,6 +205,11 @@ p { margin: 0 0 12px; }
   position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
   color: var(--ink-soft); font-weight: 700; pointer-events: none;
 }
+.is-pct .num { padding-right: 44px; }
+.suffix {
+  position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+  color: var(--ink-soft); font-weight: 700; pointer-events: none;
+}
 .num:focus { border-color: var(--brand); background: #fff; outline: none; box-shadow: 0 0 0 3px rgba(0, 74, 173, 0.2); }
 .num:disabled { background: var(--page); color: var(--ink-soft); }
 .num::placeholder { color: #a6b1c4; font-weight: 400; }

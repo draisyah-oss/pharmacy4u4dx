@@ -7,8 +7,8 @@ const { mentionsSalary, SALARY_MESSAGE } = require('../privacy');
 
 const KINDS = ['WIG', 'Lead', 'Routine', 'Stream', 'Result'];
 const TARGET_PER = ['day', 'week', 'month'];
-const CALCS = ['sum', 'ratio_percent', 'ratio_per_day'];
-const FIELD_TYPES = ['money', 'count', 'yes_no'];
+const CALCS = ['sum', 'ratio_percent', 'ratio_per_day', 'average_percent'];
+const FIELD_TYPES = ['money', 'count', 'yes_no', 'percent'];
 const MEASURE_COLS = ['label', 'owner_name', 'kind', 'unit', 'target_per', 'calc', 'numerator_field', 'denominator_field', 'note'];
 
 async function loadMeasuresAdmin(db, branch) {
@@ -44,7 +44,7 @@ function readMeasureForm(body, fieldKeys, owners) {
   if (!TARGET_PER.includes(m.target_per)) errors.push('Pick whether the target is per day, week or month.');
   if (!CALCS.includes(m.calc)) errors.push('Pick how it is worked out.');
   if (!fieldKeys.includes(m.numerator_field)) errors.push('Pick the daily field it counts.');
-  if (m.calc === 'sum') m.denominator_field = null;
+  if (m.calc === 'sum' || m.calc === 'average_percent') m.denominator_field = null;
   else if (!m.denominator_field || !fieldKeys.includes(m.denominator_field)) errors.push('A % or per-day measure needs a second field to divide by.');
   else if (m.denominator_field === m.numerator_field) errors.push('The two fields must be different.');
   return { m, errors };
@@ -158,7 +158,7 @@ async function addField(db, { branch, body, user }) {
   if (ctx.fields.some((f) => f.key === key)) return { error: `${branch.code} already has a field “${key}”.` };
   if (!label) return { error: 'Type what staff will see (e.g. “Leaflets handed out”).' };
   if (!ctx.owners.includes(owner)) return { error: 'Pick an owner from the list.' };
-  if (!FIELD_TYPES.includes(type)) return { error: 'Pick money, count or yes/no.' };
+  if (!FIELD_TYPES.includes(type)) return { error: 'Pick money, count, yes/no or %.' };
   await db.transaction(async (tx) => {
     const order = (await tx.query('SELECT COALESCE(MAX(sort_order), 0) + 1 AS n FROM daily_fields WHERE branch_id = $1', [branch.id])).rows[0].n;
     await tx.query(

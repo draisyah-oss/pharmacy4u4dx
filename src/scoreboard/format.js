@@ -7,7 +7,7 @@ const grouped = (n, digits) => Number(n).toLocaleString('en-MY', { maximumFracti
 // A measure's actual or target in its own unit.
 function value(row, n) {
   if (n === null || n === undefined || Number.isNaN(n)) return '–';
-  if (row.calc === 'ratio_percent') return `${grouped(n * 100, 1)}%`;
+  if (row.calc === 'ratio_percent' || row.calc === 'average_percent') return `${grouped(n * 100, 1)}%`;
   if (row.calc === 'ratio_per_day') return grouped(n, 1);
   if (row.money) return `RM ${grouped(n, 0)}`;
   return grouped(n, 1);
@@ -27,6 +27,7 @@ function targetBasis(row) {
   const t = row.monthTarget;
   if (t === null || t === undefined) return 'No target – tracked only';
   if (row.calc === 'ratio_percent') return `Target ${grouped(t * 100, 1)}%`;
+  if (row.calc === 'average_percent') return `Target ${grouped(t * 100, 1)}% (average of the days typed)`;
   if (row.calc === 'ratio_per_day') return `${grouped(t, 1)} per storefront day`;
   const show = (n) => (row.money ? `RM ${grouped(n, 0)}` : grouped(n, 1));
   if (row.targetPer === 'day' && row.weekendTarget !== null && row.weekendTarget !== undefined) {

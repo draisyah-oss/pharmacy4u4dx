@@ -2,6 +2,8 @@
 //
 //   calc = sum            actual = sum of the field; target = sum of each day's target
 //   calc = ratio_percent  actual = sum(numerator) ÷ sum(denominator); target is a % (0.45)
+//   calc = average_percent  actual = average of the days typed (a % typed as 45) ÷ 100; days left
+//                         blank don't count. Target is a % (0.5). Grab active inventory (22 Oct).
 //   calc = ratio_per_day  actual = sum(numerator on storefront days) ÷ number of storefront
 //                         days; shown as a number (5.0 checks a day), not a %
 //
@@ -62,6 +64,12 @@ function evaluateMeasure({ measure, entries, from, to, trackerStart }) {
     actual = denominator > 0 ? numerator / denominator : null;
     // Ratio targets aren't added up – they're a rate. Average of the days' targets
     // (identical unless the period spans two months with different rates).
+    if (hasTarget) target = sum(days.map((d) => monthTarget(targets, d))) / days.length;
+  } else if (calc === 'average_percent') {
+    const typed = trace.filter((t) => t.numerator !== null);
+    numerator = sum(typed.map((t) => t.numerator));
+    denominator = typed.length;
+    actual = typed.length ? numerator / typed.length / 100 : null;
     if (hasTarget) target = sum(days.map((d) => monthTarget(targets, d))) / days.length;
   } else {
     throw new Error(`Unknown calc "${calc}"`);

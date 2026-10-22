@@ -4,7 +4,7 @@
 const { audit, parseOptional, num, sameNumber } = require('./common');
 
 // Percent measures are typed as 45 (%) and stored as 0.45.
-const isPercent = (m) => m.calc === 'ratio_percent';
+const isPercent = (m) => m.calc === 'ratio_percent' || m.calc === 'average_percent';
 const hqIsPercent = (m) => m.unit === '%';
 const toShown = (v, pct) => (v === null ? '' : String(Math.round((pct ? v * 100 : v) * 10000) / 10000));
 

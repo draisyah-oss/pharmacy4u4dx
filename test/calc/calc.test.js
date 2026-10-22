@@ -178,8 +178,8 @@ test('week 26 Oct – 1 Nov uses each day\'s own month target', () => {
   near(calc.evaluateMeasure({ measure: measure('WM', 'T1'), ...span }).target, 12750);
   // WM WhatsApp: 6 × 1,000/31 + 2,000/30 = 260.215…
   near(calc.evaluateMeasure({ measure: measure('WM', 'Z0'), ...span }).target, 6000 / 31 + 2000 / 30);
-  // WM Grab menu (weekly 15 in Oct, 10 in Nov): 6 × 15/7 + 10/7 = 100/7
-  near(calc.evaluateMeasure({ measure: measure('WM', 'W3'), ...span }).target, 100 / 7);
+  // WM Grab active inventory (22 Oct): a rate, 50% in both months – not added up
+  near(calc.evaluateMeasure({ measure: measure('WM', 'GI'), ...span }).target, 0.5);
 });
 
 test('week from a track-only month into a month with a target compares like with like', () => {

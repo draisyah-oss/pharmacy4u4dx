@@ -11,9 +11,9 @@ const { mentionsSalary } = require('../privacy');
 
 const SEED_PATH = path.resolve(__dirname, '..', '..', 'seed.json');
 
-const CALCS = ['sum', 'ratio_percent', 'ratio_per_day'];
+const CALCS = ['sum', 'ratio_percent', 'ratio_per_day', 'average_percent'];
 const TARGET_PER = ['day', 'week', 'month'];
-const FIELD_TYPES = ['money', 'count', 'yes_no'];
+const FIELD_TYPES = ['money', 'count', 'yes_no', 'percent'];
 const MONTH_RE = /^\d{4}-\d{2}$/;
 
 function readSeed(file = SEED_PATH) {
@@ -73,7 +73,7 @@ function validateSeed(seed) {
       if (!CALCS.includes(m.calc)) err(`${mat}: unknown calc "${m.calc}"`);
       if (!TARGET_PER.includes(m.target_per)) err(`${mat}: unknown target_per "${m.target_per}"`);
       needField(m.numerator_field, `measure ${m.id}`);
-      if (m.calc !== 'sum') {
+      if (m.calc !== 'sum' && m.calc !== 'average_percent') {
         if (!m.denominator_field) err(`${mat}: ${m.calc} needs a denominator_field`);
         needField(m.denominator_field, `measure ${m.id}`);
       }

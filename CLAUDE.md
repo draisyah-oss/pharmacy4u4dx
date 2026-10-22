@@ -50,6 +50,7 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - A daily measure can have `weekend_targets` (same month map): Saturdays and Sundays use that number instead. BR October walk-in: RM 1,250 weekdays, RM 1,650 weekends. BR POCT lead: 0 weekdays, 3 each weekend day (weekday tests are top-up). Stored in measure_targets.weekend_target (migration 003).
 - `calc = sum`: week actual = sum of the field; week target = sum of daily targets for days in the week.
 - `calc = ratio_percent`: actual = sum(numerator) ÷ sum(denominator); target is a % (e.g. 45% of transactions with 2+ items, 100% zakat on time).
+- `calc = average_percent` (22 Oct): a % typed per day (45 = 45%); actual = average of the days typed ÷ 100, target a % (0.5).
 - `calc = ratio_per_day`: same as ratio, shown as a number, not % (Ampang storefront: checks per day with 2 staff on duty). The numerator only counts on days where the denominator is > 0 (checks on a 1-staff day don't count).
 - Ratio targets are rates, not added up; a week spanning two months uses the average of its days' targets.
 - If only some days in a period have a target (track-only month next to a month with a target), actual and target both use only the days with a target.
@@ -187,6 +188,11 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## JH WhatsApp, Ampang Eldon strip (22 Oct)
 - JH: Nabihah's WhatsApp box is **"WhatsApp customer follow-ups"** (field fu; measure N1 "WhatsApp customer follow-ups (LEAD 2)", 15 a day). "WhatsApp orders fulfilled today" / "…total days those orders took" (waord, wadays) and N5 (average days to fulfil) removed (retireBranchItemsOnce flag jh_waorders_off_v1; labels via relabelOnce jh_fu_label_v1).
 - Ampang: target product P3 is **Eldon strip** (was Oat) – "Eldon strip units sold" / "Target product: Eldon strip", same field p3 and target 2 a day (relabelOnce ampang_eldon_v1). WM and Bangi keep Oat.
+
+## Grab active inventory % at every branch (22 Oct)
+- Each branch's Grab lead is now **Grab active inventory % – target above 50%** (measure GI, Lead; box `grabinv` "Grab active inventory (%)"), replacing "Grab menu items added/fixed" (W3, G1, Y4, A3 retired; JH's N3 already gone). Owners: WM Zawiyah, JH Nabihah, BR Qushairi, Bangi Ayuni, Ampang Aishah.
+- Staff read the % in the Grab merchant app and type it as shown (45 = 45%; 100 at most; a % sign shows in the box). New daily field type **percent** and calc **average_percent** (migration 020): the week / month = average of the days it was typed (blank days don't count), ÷ 100, vs 50%. Trace page: "Average of n days typed". Daily entry: "Target above 50%", green at 50% or more. Admin → Measures offers both.
+- Older databases once via grabInventoryOnce (flag grab_inventory_v1): grabinv + GI added in the old box's place, grabmenu boxes/measures retired (history kept), targets 0.5 Oct–Dec.
 
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").

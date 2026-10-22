@@ -41,6 +41,7 @@ function buildHint(field, measures, entries, date, trackerStart) {
   if (target === null) return { ...base, kind: 'track' };
 
   if (m.calc === 'ratio_percent') return { ...base, kind: 'ratio', den: m.denominator_field, target };
+  if (m.calc === 'average_percent') return { ...base, kind: 'pct', target };
   if (m.calc === 'ratio_per_day') return { ...base, kind: 'perday', gate: m.denominator_field, target };
 
   if (m.target_per === 'day') return { ...base, kind: 'day', target: calc.dailyTarget(m.targets, 'day', date, m.weekend_targets) };
@@ -156,6 +157,7 @@ function parseEntries(fields, input, maxOf) {
     if (n < 0) { errors[f.key] = 'Can’t be below 0.'; continue; }
     if (n > MAX_VALUE) { errors[f.key] = 'That number looks too big.'; continue; }
     if (f.type === 'yes_no' && n !== 0 && n !== 1) { errors[f.key] = 'Choose yes or no.'; continue; }
+    if (f.type === 'percent' && n > 100) { errors[f.key] = 'A % – 100 at most (type 45 for 45%).'; continue; }
     if (f.type !== 'money' && Math.round(n * 100) !== n * 100) { errors[f.key] = 'Use up to 2 decimals.'; continue; }
     values[f.key] = f.type === 'money' ? Math.round(n * 100) / 100 : n;
   }
