@@ -27,8 +27,6 @@ test.before(async () => {
     await put(d, 'tx', tx); await put(d, 'zakat', zakat);
   }
   await put('2026-10-13', 'zkrfq', 4); await put('2026-10-13', 'zkrfqok', 3);
-  await put('2026-10-13', 'waord', 2); await put('2026-10-13', 'wadays', 5);
-  await put('2026-10-14', 'waord', 1); await put('2026-10-14', 'wadays', 1);
 });
 test.after(async () => { await db.close(); });
 
@@ -38,7 +36,8 @@ test('seed.json is still valid and JH has the new measures and fields', async ()
   assert.deepEqual(validateSeed(readSeed()).errors, []);
   const b = readSeed().branches.find((x) => x.code === 'JH');
   const codes = b.measures.map((m) => m.id);
-  for (const c of ['T5', 'T6', 'T7', 'F9', 'N4', 'N5']) assert.ok(codes.includes(c), c);
+  for (const c of ['T5', 'T6', 'T7', 'F9', 'N4']) assert.ok(codes.includes(c), c);
+  assert.ok(!codes.includes('N5'), '22 Oct: WhatsApp days to fulfil removed');
   assert.match(b.measures.find((m) => m.id === 'P2').label, /gout/i);
   assert.ok(!b.daily_fields.some((f) => f.key === 'zkc7d'), 'the 7-day claim box is gone');
 });
@@ -54,7 +53,6 @@ test('JH scoreboard: zakat scored month to date only; walk-ins vs 60 a day; RFQ 
   assert.equal(t5.week.actual, 59 + 50 + 57);
   near(t5.week.target, 180, '60 a day × 3 days');
   near(row(board, 'F9').week.actual, 0.75);
-  near(row(board, 'N5').week.actual, 2, '6 days ÷ 3 orders');
   assert.equal(row(board, 'Y1').monthTarget, 4);
   assert.equal(row(board, 'N1').monthTarget, 15);
   assert.equal(row(board, 'Y0').week.status, 'track_only');
@@ -206,4 +204,14 @@ test('22 Oct: JH no longer has "Grab menu items added/fixed" (N3); other branche
   assert.equal(await active('BR'), true);
   assert.ok(!readSeed().branches.find((b) => b.code === 'JH').daily_fields.some((f) => f.key === 'grabmenu'));
   await old.close();
+});
+
+test('22 Oct: Ampang target product Oat → Eldon strip; JH WhatsApp is customer follow-ups only', async () => {
+  const s = readSeed();
+  const amp = s.branches.find((b) => b.code === 'Ampang');
+  assert.ok(amp.measures.some((m) => m.label === 'Target product: Eldon strip'));
+  assert.ok(s.branches.find((b) => b.code === 'WM').measures.some((m) => m.label === 'Target product: Oat'), 'other branches keep Oat');
+  const jh = s.branches.find((b) => b.code === 'JH');
+  assert.equal(jh.daily_fields.find((f) => f.key === 'fu').label, 'WhatsApp customer follow-ups');
+  assert.ok(!jh.daily_fields.some((f) => f.key === 'waord' || f.key === 'wadays'));
 });

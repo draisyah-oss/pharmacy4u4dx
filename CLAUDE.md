@@ -184,6 +184,10 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## JH: no Grab menu items (22 Oct)
 - JH's "Grab menu items added/fixed" (Nabihah, N3, field grabmenu, 15/10/5 a week) removed from seed.json and retired on older databases (retireBranchItemsOnce, flag jh_grabmenu_off_v1; history kept). WM, BR, Bangi and Ampang keep theirs.
 
+## JH WhatsApp, Ampang Eldon strip (22 Oct)
+- JH: Nabihah's WhatsApp box is **"WhatsApp customer follow-ups"** (field fu; measure N1 "WhatsApp customer follow-ups (LEAD 2)", 15 a day). "WhatsApp orders fulfilled today" / "…total days those orders took" (waord, wadays) and N5 (average days to fulfil) removed (retireBranchItemsOnce flag jh_waorders_off_v1; labels via relabelOnce jh_fu_label_v1).
+- Ampang: target product P3 is **Eldon strip** (was Oat) – "Eldon strip units sold" / "Target product: Eldon strip", same field p3 and target 2 a day (relabelOnce ampang_eldon_v1). WM and Bangi keep Oat.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

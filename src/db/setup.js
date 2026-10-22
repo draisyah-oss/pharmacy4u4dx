@@ -15,6 +15,16 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await wmTiktokOffOnce(db, log);
     await wmWalkinUpOnce(db, readSeed(), log);
     await retireBranchItemsOnce(db, 'JH', { fields: ['grabmenu'], measures: ['N3'] }, 'jh_grabmenu_off_v1', 'JH: Grab menu items added/fixed removed (22 Oct)', log);
+    await retireBranchItemsOnce(db, 'JH', { fields: ['waord', 'wadays'], measures: ['N5'] }, 'jh_waorders_off_v1', 'JH: WhatsApp orders / days to fulfil removed – WhatsApp customer follow-ups only (22 Oct)', log);
+    await relabelOnce(db, 'ampang_eldon_v1', [
+      ["UPDATE daily_fields SET label = 'Eldon strip units sold' WHERE key = 'p3' AND branch_id = (SELECT id FROM branches WHERE code = 'Ampang') AND label = 'Oat units sold'"],
+      ["UPDATE measures SET label = 'Target product: Eldon strip' WHERE code = 'P3' AND branch_id = (SELECT id FROM branches WHERE code = 'Ampang') AND label = 'Target product: Oat'"],
+      ["INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Ampang: target product Oat → Eldon strip (22 Oct)', NULL)"],
+    ]);
+    await relabelOnce(db, 'jh_fu_label_v1', [
+      ["UPDATE daily_fields SET label = 'WhatsApp customer follow-ups' WHERE key = 'fu' AND branch_id = (SELECT id FROM branches WHERE code = 'JH') AND label LIKE 'WhatsApp blasts%'"],
+      ["UPDATE measures SET label = 'WhatsApp customer follow-ups (LEAD 2)' WHERE code = 'N1' AND branch_id = (SELECT id FROM branches WHERE code = 'JH') AND label LIKE 'WhatsApp blasts%'"],
+    ]);
     return { seeded: false };
   }
 
@@ -270,6 +280,15 @@ async function wmTiktokOffOnce(db, log) {
       log('WM: TikTok measures and boxes retired (no TikTok seller at WM).');
     }
     await tx.query("INSERT INTO app_settings (key, value) VALUES ('wm_tiktok_off_v1', $1)", [new Date().toISOString()]);
+  });
+}
+
+// Run a few label updates once (flag in app_settings).
+async function relabelOnce(db, flag, statements) {
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    for (const [sql, args] of statements) await tx.query(sql, args || []);
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
   });
 }
 
