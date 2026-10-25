@@ -54,6 +54,9 @@
     <% oosItems.slice(0, 4).forEach(function (it) { %>
       <a class="oo-mini" href="<%= oosLink %>#oos-<%= it.id %>"><span class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></span>
         <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: new Date() }) %></span></a>
+      <% if (oosCanReport && (it.answer === 'hq_deliver' || it.answer === 'transfer') && it.sent_at) { %>
+        <form method="post" action="/oos/<%= it.id %>/received" class="oo-done-row"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/daily"><button class="button oo-good" type="submit">Accept – received <%= it.answer_qty || '' %></button></form>
+      <% } %>
     <% }) %>
     <% if (oosItems.length > 4) { %><a href="<%= oosLink %>">All <%= oosItems.length %> items ›</a><% } %>
     <% if (!oosItems.length) { %><p class="muted small">Nothing out of stock. Running low on something? Report it before it hits zero.</p><% } %>

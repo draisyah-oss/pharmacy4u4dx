@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <%- include('partials/nav', { navActive: 'oosinbox' }) %>
-<% const t = typed; const pick = t.answer || (item.answer || 'transfer'); %>
+<% const t = typed; const pick = t.answer || (item.answer || 'hq_deliver'); const isOpen = ['Open', 'Ordered', 'On the way', 'Substitute offered'].includes(item.status); %>
 <main class="page oo-page">
   <p><a href="/oos/inbox">‹ Inbox</a></p>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
@@ -11,14 +11,23 @@
     <% if (item.note) { %><p class="oo-note">“<%= item.note %>” – <%= item.reported_by_name %></p><% } %>
     <p class="oo-meta">Reported <%= of.when(item.reported_at, at) %><%= item.answer_due && !item.answered_at ? ' · answer by ' + of.when(item.answer_due, at) : '' %><%= history.length ? ' · ran out before: ' + history.map(function (h) { return of.when(h.reported_at, at); }).join(', ') : '' %></p>
     <% if (item.answer) { %><p class="oo-line">Current answer: <%- include('partials/oos-answer-line', { it: item, of: of, at: at }) %></p><% } %>
+    <%- include('partials/oos-steps', { it: item, of: of, at: at }) %>
+    <% if (isOpen) { %>
+      <form method="post" action="/oos/<%= item.id %>/done" class="oo-done">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/oos/<%= item.id %>">
+        <button class="button <%= item.answer ? 'oo-good' : 'secondary' %> wide" type="submit">Done – delivered / fulfilled</button>
+        <span class="muted small">Closes it now, e.g. you already sent it. The branch sees “closed by Inventory”.</span>
+      </form>
+    <% } %>
   </section>
 
+  <% if (isOpen) { %>
   <form method="post" action="/oos/<%= item.id %>/answer" class="oo-card oo-form" novalidate>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <fieldset class="oo-set">
       <legend>Your answer</legend>
       <div class="oo-answers">
-        <% [['transfer', 'Transfer', 'from a branch'], ['order', 'Order', 'from the supplier'], ['substitute', 'Substitute', 'offer another'], ['discontinue', 'Discontinue', 'stop stocking']].forEach(function (a) { %>
+        <% [['hq_deliver', 'HQ delivers', 'from the HQ warehouse'], ['transfer', 'Transfer', 'from another branch'], ['order', 'Order', 'from the supplier'], ['substitute', 'Substitute', 'offer another'], ['discontinue', 'Discontinue', 'stop stocking']].forEach(function (a) { %>
           <label class="oo-ans"><input type="radio" name="answer" value="<%= a[0] %>"<%= pick === a[0] ? ' checked' : '' %>><span><b><%= a[1] %></b><small><%= a[2] %></small></span></label>
         <% }) %>
       </div>
@@ -30,14 +39,15 @@
       </div>
     </fieldset>
     <div class="oo-two">
-      <label class="oo-label">Quantity <small class="muted">(transfer / order)</small><input name="qty" inputmode="numeric" class="num" value="<%= t.qty || item.answer_qty || '' %>" autocomplete="off"></label>
+      <label class="oo-label">Quantity <small class="muted">(deliver / transfer / order)</small><input name="qty" inputmode="numeric" class="num" value="<%= t.qty || item.answer_qty || '' %>" autocomplete="off"></label>
       <label class="oo-label">Arrives by<input type="date" name="expected_back" min="<%= today %>" value="<%= t.expected_back || item.expected_back || tomorrow %>"></label>
     </div>
     <label class="oo-label">Offer instead <small class="muted">(substitute)</small><input name="substitute" maxlength="160" value="<%= t.substitute || item.substitute || '' %>" placeholder="e.g. Androchi 60ml × 2"></label>
     <label class="oo-label">Note to the branch (optional)<input name="reason" maxlength="300" value="<%= t.reason || item.reason_for_delay || '' %>" placeholder="e.g. supplier out until Nov"></label>
-    <p class="muted small">Transfer: Fariz gets a job to send it within 24 hours. The branch sees your answer on Daily entry.</p>
-    <button class="button wide" type="submit">Send answer</button>
+    <p class="muted small">HQ delivers / transfer: it goes on Deliveries to send (pick → send within 24 hours) and the branch taps Accept when it arrives. The branch sees every step on Daily entry.</p>
+    <button class="button wide" type="submit"><%= item.answer ? 'Change answer' : 'Send answer' %></button>
   </form>
+  <% } %>
 </main>
 </body>
 </html>

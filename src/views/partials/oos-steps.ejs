@@ -1,0 +1,9 @@
+<%# 25 Oct: where an out-of-stock item is – one line of steps. Input: it, of, at %>
+<ol class="oo-steps" aria-label="Progress">
+  <% of.steps(it).forEach(function (st) { %>
+    <li class="<%= st.done ? 'is-done' : '' %><%= st.current ? ' is-current' : '' %>"<%- st.current ? ' aria-current="step"' : '' %>>
+      <span class="oo-dot" aria-hidden="true"><%= st.done ? '✔' : '' %></span>
+      <span class="oo-step-l"><%= st.label %><% if (st.at) { %><small><%= of.when(st.at, at) %></small><% } %></span>
+    </li>
+  <% }) %>
+</ol>

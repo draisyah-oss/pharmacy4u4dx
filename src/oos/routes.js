@@ -70,7 +70,8 @@ function oosRoutes(db, { now, trackerStart }) {
       const item = await itemOr404(req, res); if (!item) return;
       if (!oos.canReport(req.user, { id: item.branch_id })) return forbid(res, 'Only the branch that reported it can close it.');
       await oos.markReceived(db, req.user, item, { now });
-      back(res, `/oos${many(req.user) ? `?branch=${encodeURIComponent(item.branch_code)}` : ''}`, `${item.item}: back in stock.`);
+      if (req.body.back === '/daily') return back(res, '/daily', `${item.item}: accepted – back in stock.`);
+      back(res, `/oos${many(req.user) ? `?branch=${encodeURIComponent(item.branch_code)}` : ''}`, `${item.item}: accepted – back in stock.`);
     } catch (err) { next(err); }
   });
 
@@ -119,7 +120,7 @@ function oosRoutes(db, { now, trackerStart }) {
       const item = await itemOr404(req, res); if (!item) return;
       const r = await oos.answerItem(db, req.user, item, req.body, { now });
       if (r.error) return renderAnswer(req, res, item, { status: 400, typed: req.body, err: r.error });
-      back(res, '/oos/inbox', `${item.item} (${item.branch_code}): answered.`);
+      back(res, '/oos/inbox', `${item.item} (${item.branch_code}): answered${oos.DELIVERS.includes(req.body.answer) ? ' – it’s on Deliveries to send' : ''}.`);
     } catch (err) { next(err); }
   });
 
@@ -128,7 +129,18 @@ function oosRoutes(db, { now, trackerStart }) {
     try {
       if (!oos.canSend(req.user)) return forbid(res, 'Transfers are for the inventory team (Alia, Syarafana, Fariz).');
       const t = await oos.loadTransfers(db, { now });
-      res.render('oos-transfers', { title: 'Transfers to send', ...t, fmt, of, ok: req.query.ok || null, at: now() });
+      res.render('oos-transfers', { title: 'Deliveries to send', ...t, fmt, of, ok: req.query.ok || null, err: req.query.err || null, at: now() });
+    } catch (err) { next(err); }
+  });
+
+  // 25 Oct: Inventory closes an item itself – delivered / fulfilled.
+  router.post('/oos/:id/done', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'Only the inventory team (Alia, Syarafana, Fariz) and admin can close an item for the branch.');
+      const item = await itemOr404(req, res); if (!item) return;
+      await oos.markDone(db, req.user, item, { now });
+      const to = ['/oos/transfers', '/oos/inbox', '/oos/inbox?tab=waiting', `/oos/${item.id}`].includes(req.body.back) ? req.body.back : '/oos/inbox';
+      back(res, to, `${item.item} (${item.branch_code}): done – delivered.`);
     } catch (err) { next(err); }
   });
 
@@ -139,7 +151,7 @@ function oosRoutes(db, { now, trackerStart }) {
       const item = await itemOr404(req, res); if (!item) return;
       const r = await oos.markTransfer(db, req.user, item, req.params.step, { now });
       if (r.error) return back(res, '/oos/transfers', r.error, 'err');
-      back(res, '/oos/transfers', `${item.item} → ${item.branch_code}: ${req.params.step}.`);
+      back(res, '/oos/transfers', `${item.item} → ${item.branch_code}: ${req.params.step === 'sent' ? 'on the way – the branch sees it' : 'picked – the branch sees it'}.`);
     } catch (err) { next(err); }
   });
 

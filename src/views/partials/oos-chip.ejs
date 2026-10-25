@@ -1,10 +1,13 @@
 <%# Status chip and one-line answer for an out-of-stock item. Input: it, of %>
 <%
+  const delivery = it.answer === 'hq_deliver' || it.answer === 'transfer';
   let chip = ['SENT TO INVENTORY', 'oc-info'];
-  if (it.status === 'Back in stock') chip = ['BACK IN STOCK', 'oc-good'];
+  if (it.status === 'Back in stock') chip = [it.closed_by_hq ? 'DONE – DELIVERED' : 'BACK IN STOCK', 'oc-good'];
   else if (it.status === 'Discontinued' || it.status === 'Discontinued / use substitute') chip = ['DISCONTINUED', 'oc-grey'];
   else if (it.late) chip = ['LATE', 'oc-warn'];
-  else if (it.status === 'On the way') chip = [it.sent_at ? 'ON THE WAY' : 'TRANSFER COMING', 'oc-good'];
+  else if (delivery && it.sent_at) chip = ['ON THE WAY – ACCEPT WHEN IT ARRIVES', 'oc-good'];
+  else if (delivery && it.picked_at) chip = ['PICKED – BEING PACKED', 'oc-good'];
+  else if (delivery) chip = [it.answer === 'hq_deliver' ? 'HQ WILL SEND' : 'TRANSFER COMING', 'oc-info'];
   else if (it.status === 'Ordered') chip = ['ORDERED', 'oc-info'];
   else if (it.status === 'Substitute offered') chip = ['SUBSTITUTE', 'oc-warn'];
   else if (it.overdueAnswer) chip = ['NOT ANSWERED YET', 'oc-bad'];

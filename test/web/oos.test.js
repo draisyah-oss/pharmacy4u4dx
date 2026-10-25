@@ -221,3 +221,60 @@ test('company wiki checklist: 64 pages, Iman writes, Hanin approves, approvals f
   const staff = await login('pin', 'hazera', '1111');
   assert.equal((await staff.get('/hq/wiki')).status, 403);
 });
+
+test('25 Oct: HQ delivers to Ampang – picked/on the way shown to the branch, branch accepts; Inventory can close it', async () => {
+  clock = new Date('2026-10-26T09:00:00+08:00');
+  await db.query('UPDATE users SET pin_hash = $1 WHERE username = $2', [bcrypt.hashSync('4444', 4), 'aishah']);
+  const amp = await login('pin', 'aishah', '4444');
+  await amp.post('/oos', { item: 'Eldon strip 10s', left: 'none', asking: '3+' });
+  await amp.post('/oos', { item: 'Oat 1kg', left: 'low', left_qty: '1', asking: '0' });
+  const id = async (name) => (await db.query('SELECT id FROM oos_items WHERE item = $1', [name])).rows[0].id;
+  const eldon = await id('Eldon strip 10s'); const oat = await id('Oat 1kg');
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  // "HQ delivers" is the first answer and the default; no branch to pick
+  const form = (await alia.get(`/oos/${eldon}`)).html;
+  assert.match(form, /value="hq_deliver" checked/);
+  assert.match(form, /Done – delivered \/ fulfilled/);
+  assert.equal((await alia.post(`/oos/${eldon}/answer`, { answer: 'hq_deliver', qty: '10', expected_back: '2026-10-27' })).status, 302);
+  let page = (await amp.get('/oos')).html;
+  assert.match(page, /HQ sends 10/);
+  assert.match(page, /HQ WILL SEND/);
+  assert.match(page, /aria-current="step"[^>]*>[\s\S]*?Picked at HQ/);
+  // Fariz picks: the branch sees it's picked, then on the way with an Accept button on Daily entry
+  const fariz = await login('pin', 'fariz', '1357');
+  const xf = (await fariz.get('/oos/transfers')).html;
+  assert.match(xf, /Deliveries to send/);
+  assert.match(xf, /<b>HQ<\/b> → <b>Ampang<\/b>/);
+  await fariz.post(`/oos/${eldon}/picked`, {});
+  assert.match((await amp.get('/oos')).html, /PICKED – BEING PACKED/);
+  await fariz.post(`/oos/${eldon}/sent`, {});
+  const daily = (await amp.get('/daily')).html;
+  assert.match(daily, /ON THE WAY – ACCEPT WHEN IT ARRIVES/);
+  assert.match(daily, /Accept – received 10/);
+  clock = new Date('2026-10-27T10:00:00+08:00');
+  const acc = await amp.post(`/oos/${eldon}/received`, { back: '/daily' });
+  assert.equal(acc.location.split('?')[0], '/daily');
+  assert.equal((await db.query('SELECT status, closed_by_hq FROM oos_items WHERE id = $1', [eldon])).rows[0].status, 'Back in stock');
+  assert.doesNotMatch((await fariz.get('/oos/transfers')).html, /Eldon strip/);
+  // Alia fulfilled the oat herself without answering: she can still close it ("Done")
+  assert.equal((await amp.post(`/oos/${oat}/done`, {})).status, 403, 'branch can’t use Inventory’s Done');
+  const done = await alia.post(`/oos/${oat}/done`, { back: '/oos/inbox' });
+  assert.equal(done.status, 302);
+  const row = (await db.query('SELECT status, closed_by_hq, answer, answered_at FROM oos_items WHERE id = $1', [oat])).rows[0];
+  assert.equal(row.status, 'Back in stock'); assert.equal(row.closed_by_hq, true); assert.equal(row.answer, 'hq_deliver'); assert.ok(row.answered_at);
+  assert.match((await amp.get('/oos')).html, /DONE – DELIVERED[\s\S]*closed by Inventory/);
+  // A closed item can't be answered again
+  const again = await alia.post(`/oos/${oat}/answer`, { answer: 'order', qty: '2', expected_back: '2026-10-30' });
+  assert.equal(again.status, 400);
+});
+
+test('25 Oct: a transfer the branch already accepted before it was sent leaves the send list', async () => {
+  clock = new Date('2026-10-28T09:00:00+08:00');
+  const staff = await login('pin', 'hazera', '1111');
+  await staff.post('/oos', { item: 'Biorelief spray', left: 'none', asking: '0' });
+  const it = (await db.query("SELECT id FROM oos_items WHERE item = 'Biorelief spray'")).rows[0].id;
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  await alia.post(`/oos/${it}/answer`, { answer: 'transfer', from: 'JH', qty: '2', expected_back: '2026-10-29' });
+  await staff.post(`/oos/${it}/received`, {});
+  assert.doesNotMatch((await alia.get('/oos/transfers')).html, /Biorelief spray/);
+});

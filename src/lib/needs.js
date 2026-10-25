@@ -17,12 +17,12 @@ async function forInventory(db, at, add) {
   const total = overdue + toAnswer;
   if (overdue) add('late', overdue, 'Out-of-stock reports overdue', `past the 11 am deadline · of ${total} open`, '/oos/inbox');
   if (toAnswer) add('today', toAnswer, 'Out-of-stock reports to answer', 'by 11 am the next working day', '/oos/inbox');
-  const xLate = await one(db, `SELECT count(*) AS n FROM oos_items WHERE answer = 'transfer' AND sent_at IS NULL
-    AND status IN ('Open', 'Ordered', 'On the way') AND answered_at < $1::timestamptz - interval '24 hours'`, [at]);
-  const xTodo = await one(db, `SELECT count(*) AS n FROM oos_items WHERE answer = 'transfer' AND sent_at IS NULL
-    AND status IN ('Open', 'Ordered', 'On the way') AND answered_at >= $1::timestamptz - interval '24 hours'`, [at]);
-  if (xLate) add('late', xLate, 'Transfers late', 'not sent within 24 hours', '/oos/transfers');
-  if (xTodo) add('today', xTodo, 'Transfers to send', 'within 24 hours of the answer', '/oos/transfers');
+  const xLate = await one(db, `SELECT count(*) AS n FROM oos_items WHERE answer IN ('hq_deliver', 'transfer') AND sent_at IS NULL
+    AND status = 'On the way' AND answered_at < $1::timestamptz - interval '24 hours'`, [at]);
+  const xTodo = await one(db, `SELECT count(*) AS n FROM oos_items WHERE answer IN ('hq_deliver', 'transfer') AND sent_at IS NULL
+    AND status = 'On the way' AND answered_at >= $1::timestamptz - interval '24 hours'`, [at]);
+  if (xLate) add('late', xLate, 'Deliveries late', 'not sent within 24 hours', '/oos/transfers');
+  if (xTodo) add('today', xTodo, 'Deliveries to send', 'HQ deliveries and transfers, within 24 hours', '/oos/transfers');
 }
 
 async function forHqPerson(db, user, today, add) {

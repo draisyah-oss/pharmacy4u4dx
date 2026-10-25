@@ -19,12 +19,12 @@
     <div class="oo-kpi"><span>Answered by <%= T.answer_by_hour %> am next working day · Inventory</span>
       <b class="s-<%= st(b.answered.pct, T.answer_on_time) %>"><%= pct(b.answered.pct) %> <%= fmt.symbol(st(b.answered.pct, T.answer_on_time)) %></b>
       <small><%= b.answered.done %> of <%= b.answered.total %> · target <%= fmt.pct(T.answer_on_time) %></small></div>
-    <div class="oo-kpi"><span>Transfers sent within <%= T.transfer_hours %> h · Fariz</span>
+    <div class="oo-kpi"><span>Deliveries &amp; transfers sent within <%= T.transfer_hours %> h</span>
       <b class="s-<%= st(b.transfers.pct, T.transfer_on_time) %>"><%= pct(b.transfers.pct) %> <%= fmt.symbol(st(b.transfers.pct, T.transfer_on_time)) %></b>
       <small><%= b.transfers.done %> of <%= b.transfers.total %> · target <%= fmt.pct(T.transfer_on_time) %></small></div>
     <div class="oo-kpi"><span>Average days to back in stock</span>
       <b class="s-<%= st(b.restock.all, T.restock_days, true) %>"><%= d1(b.restock.all) %> <%= fmt.symbol(st(b.restock.all, T.restock_days, true)) %></b>
-      <small>transfer <%= d1(b.restock.transfer) %> · order <%= d1(b.restock.order) %> · <%= b.restock.count %> back · target <%= T.restock_days %></small></div>
+      <small>delivery/transfer <%= d1(b.restock.transfer) %> · order <%= d1(b.restock.order) %> · <%= b.restock.count %> back · target <%= T.restock_days %></small></div>
     <div class="oo-kpi"><span>Open right now</span><b><%= b.open.total %></b>
       <small><%= b.open.toAnswer %> to answer · <%= b.open.late %> late</small></div>
   </div>

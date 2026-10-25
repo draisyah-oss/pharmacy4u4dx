@@ -7,6 +7,10 @@
 //     discontinue – with a quantity and the date it should arrive.
 //  3. A transfer becomes a job for Fariz (HQ staff): picked → sent, within 24 hours.
 //  4. The branch sees the answer on Daily entry and taps "Received – back in stock".
+// 25 Oct (second round): a fifth answer, **HQ delivers** (from the HQ warehouse) – the usual one, so
+// it comes first; like a transfer it goes picked → sent, and the branch sees each step (answered →
+// picked → on the way → received) and taps "Accept – received". Inventory can also close any open
+// item itself ("Done – delivered") when it was fulfilled outside these steps (closed_by_hq).
 // Targets come from app_settings 'oos_targets' (seed.json company.oos_targets).
 
 const calc = require('../calc');
@@ -16,11 +20,16 @@ const { isRealDate } = require('../lib/dates');
 
 const OPEN = ['Open', 'Ordered', 'On the way', 'Substitute offered'];
 const ANSWERS = {
+  hq_deliver: { status: 'On the way', label: 'HQ delivers' },
   transfer: { status: 'On the way', label: 'Transfer from a branch' },
   order: { status: 'Ordered', label: 'Order from the supplier' },
   substitute: { status: 'Substitute offered', label: 'Offer a substitute' },
   discontinue: { status: 'Discontinued', label: 'Discontinue' },
 };
+
+// Answers that are a delivery job for the inventory team (picked → sent → branch accepts).
+const DELIVERS = ['hq_deliver', 'transfer'];
+const isDelivery = (it) => DELIVERS.includes(it.answer);
 
 const canReport = (user, branch) => user.role === 'admin'
   || (['branch_staff', 'branch_manager'].includes(user.role) && user.branch_id === branch.id);
@@ -157,8 +166,8 @@ async function loadBranchItems(db, branch, { now }) {
 async function loadTransfers(db, { now }) {
   const at = now(); const today = mytDate(at); const t = await targets(db);
   const rows = (await db.query(
-    `${SELECT} WHERE o.answer = 'transfer' AND (o.sent_at IS NULL OR (o.received_at IS NULL AND o.status = 'On the way'))
-     ORDER BY o.sent_at NULLS FIRST, o.urgent DESC, o.answered_at`)).rows;
+    `${SELECT} WHERE o.answer = ANY($1) AND o.status = 'On the way'
+     ORDER BY o.sent_at NULLS FIRST, o.urgent DESC, o.answered_at`, [DELIVERS])).rows;
   for (const it of rows) {
     decorate(it, at, today);
     it.sendBy = new Date(new Date(it.answered_at).getTime() + t.transfer_hours * 3600 * 1000);
@@ -172,10 +181,11 @@ async function loadTransfers(db, { now }) {
 async function answerItem(db, user, item, body, { now }) {
   const at = now();
   const kind = String(body.answer || '');
-  if (!ANSWERS[kind]) return { error: 'Pick one of the four answers.' };
+  if (!ANSWERS[kind]) return { error: 'Pick one of the answers.' };
+  if (!OPEN.includes(item.status)) return { error: 'This item is already closed.' };
   const today = mytDate(now());
   const next = { answer: kind, status: ANSWERS[kind].status, answer_qty: null, from_branch_id: null, substitute: null, expected_back: null };
-  if (kind === 'transfer' || kind === 'order') {
+  if (DELIVERS.includes(kind) || kind === 'order') {
     const q = int(body.qty, { min: 1, max: 9999 });
     if (q.error || q.value === null) return { error: q.error || 'How many?' };
     next.answer_qty = q.value;
@@ -209,7 +219,7 @@ async function answerItem(db, user, item, body, { now }) {
          picked_at = CASE WHEN $${cols.length + 3} THEN picked_at END, sent_at = CASE WHEN $${cols.length + 3} THEN sent_at END,
          late_flagged_at = NULL, updated_at = $${cols.length + 4}
        WHERE id = $1`,
-      [item.id, ...cols.map((c) => next[c]), user.id, kind === 'transfer' && item.answer === 'transfer', at]);
+      [item.id, ...cols.map((c) => next[c]), user.id, DELIVERS.includes(kind) && item.answer === kind, at]);
     await audit(tx, user, 'update', `${item.branch_code} #${item.id} answer`,
       item.answer ? { answer: item.answer, status: item.status } : null, next);
   });
@@ -220,7 +230,8 @@ async function answerItem(db, user, item, body, { now }) {
 
 async function markTransfer(db, user, item, step, { now }) {
   const at = now();
-  if (item.answer !== 'transfer') return { error: 'That item isn’t a transfer.' };
+  if (!isDelivery(item)) return { error: 'That item isn’t a delivery or transfer.' };
+  if (!OPEN.includes(item.status)) return { error: 'That item is already closed.' };
   if (step === 'picked' && !item.picked_at) {
     await db.transaction(async (tx) => {
       await tx.query('UPDATE oos_items SET picked_at = $3, updated_by = $2, updated_at = $3 WHERE id = $1', [item.id, user.id, at]);
@@ -249,6 +260,24 @@ async function markReceived(db, user, item, { now }) {
   return { ok: true };
 }
 
+// Inventory closes an item itself: it was delivered / fulfilled (e.g. Alia sent it with the van and
+// the branch hasn't tapped Accept yet). An item never answered counts as "HQ delivers", answered now.
+async function markDone(db, user, item, { now }) {
+  const at = now();
+  if (!OPEN.includes(item.status)) return { ok: true, already: true };
+  await db.transaction(async (tx) => {
+    await tx.query(
+      `UPDATE oos_items SET status = 'Back in stock', closed_by_hq = true, received_at = $3, received_by = $2,
+         answer = COALESCE(answer, 'hq_deliver'), answered_at = COALESCE(answered_at, $3), answered_by = COALESCE(answered_by, $2),
+         sent_at = CASE WHEN COALESCE(answer, 'hq_deliver') = ANY($4) THEN COALESCE(sent_at, $3) ELSE sent_at END,
+         sent_by = CASE WHEN COALESCE(answer, 'hq_deliver') = ANY($4) THEN COALESCE(sent_by, $2) ELSE sent_by END,
+         updated_by = $2, updated_at = $3 WHERE id = $1`,
+      [item.id, user.id, at, DELIVERS]);
+    await audit(tx, user, 'update', `${item.branch_code} #${item.id} done by inventory`, item.status, 'Back in stock');
+  });
+  return { ok: true };
+}
+
 async function flagLate(db, user, item, { now }) {
   const at = now();
   await db.transaction(async (tx) => {
@@ -272,7 +301,7 @@ async function buildBoard(db, { week, now }) {
   const dueHere = all.filter((it) => inWeek(it.answer_due) && (it.answered_at || new Date(it.answer_due) <= at));
   const answeredOnTime = dueHere.filter((it) => it.answered_at && new Date(it.answered_at) <= new Date(it.answer_due)).length;
   // Transfers sent on time: transfers answered this week whose 24 h has passed (or were sent).
-  const xfers = all.filter((it) => it.answer === 'transfer' && inWeek(it.answered_at));
+  const xfers = all.filter((it) => isDelivery(it) && inWeek(it.answered_at));
   const xferDue = xfers.filter((it) => it.sent_at || new Date(it.answered_at).getTime() + t.transfer_hours * 3600e3 <= at.getTime());
   const xferOnTime = xferDue.filter((it) => it.sent_at && new Date(it.sent_at).getTime() <= new Date(it.answered_at).getTime() + t.transfer_hours * 3600e3).length;
   // Days to back in stock: items received this week.
@@ -308,7 +337,7 @@ async function buildBoard(db, { week, now }) {
     transfers: { done: xferOnTime, total: xferDue.length, pct: ratio(xferOnTime, xferDue.length) },
     restock: {
       all: avg(back), count: back.length,
-      transfer: avg(back.filter((it) => it.answer === 'transfer')), order: avg(back.filter((it) => it.answer === 'order')),
+      transfer: avg(back.filter((it) => isDelivery(it))), order: avg(back.filter((it) => it.answer === 'order')),
     },
     open: { total: open.length, toAnswer: open.filter((it) => it.unanswered).length, late: open.filter((it) => it.late || it.overdueAnswer).length },
     branches,
@@ -345,6 +374,6 @@ async function branchWeekSummary(db, { branchId, week, now }) {
 
 module.exports = {
   branchWeekSummary,
-  OPEN, ANSWERS, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
+  OPEN, ANSWERS, DELIVERS, isDelivery, markDone, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
   report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, buildBoard,
 };

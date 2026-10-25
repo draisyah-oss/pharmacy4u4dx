@@ -55,12 +55,14 @@
       <article class="oo-item<%= it.late ? ' is-late' : '' %><%= it.isOpen ? '' : ' is-closed' %>" id="oos-<%= it.id %>">
         <header class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></header>
         <p class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></p>
+        <%- include('partials/oos-steps', { it: it, of: of, at: at }) %>
         <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %>
-          <%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? ' · back ' + of.when(it.received_at, at) : '' %></p>
+          <%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? (it.closed_by_hq ? ' · closed by Inventory ' : ' · accepted ') + of.when(it.received_at, at) : '' %></p>
         <% if (canClose && it.isOpen) { %>
           <div class="oo-actions">
-            <% if (it.answer === 'transfer' || it.answer === 'order' || it.answer === 'substitute' || it.status === 'Open') { %>
-              <form method="post" action="/oos/<%= it.id %>/received"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button oo-good" type="submit">Received – back in stock</button></form>
+            <% const delivery = it.answer === 'hq_deliver' || it.answer === 'transfer'; %>
+            <% if (it.answer !== 'discontinue') { %>
+              <form method="post" action="/oos/<%= it.id %>/received"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button oo-good" type="submit"><%= delivery ? 'Accept – received' + (it.answer_qty ? ' ' + it.answer_qty : '') : it.answer === 'substitute' ? 'Done – sorted' : 'Received – back in stock' %></button></form>
             <% } %>
             <% if (it.late && !it.late_flagged_at) { %>
               <form method="post" action="/oos/<%= it.id %>/late"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-button" type="submit">Tell Inventory it’s late</button></form>

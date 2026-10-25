@@ -7,6 +7,7 @@
     <p class="muted">Urgent first, then the oldest. Answer each by 11 am the next working day.</p>
   </header>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
   <div class="oo-stats">
     <a href="/oos/inbox" class="oo-stat<%= tab === 'answer' ? ' is-current' : '' %>"><span>To answer</span><b class="<%= toAnswer.length ? 's-off_track' : '' %>"><%= toAnswer.length %></b></a>
     <a href="/oos/inbox?tab=waiting" class="oo-stat<%= tab === 'waiting' ? ' is-current' : '' %>"><span>Waiting for stock</span><b><%= waiting.length %></b></a>
@@ -32,9 +33,12 @@
         <% if (it.late_flagged_at) { %><span class="oo-due s-watch">Branch says it’s late (<%= of.when(it.late_flagged_at, at) %>)</span><% } %>
       <% } %>
     </a>
+    <% if (tab === 'waiting') { %>
+      <form method="post" action="/oos/<%= it.id %>/done" class="oo-done-row"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/oos/inbox?tab=waiting"><button class="button oo-good" type="submit">Done – delivered</button></form>
+    <% } %>
   <% }) %>
   </div>
-  <p class="wk-next"><a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Transfers →</a></p>
+  <p class="wk-next"><a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Deliveries to send →</a></p>
 </main>
 </body>
 </html>
