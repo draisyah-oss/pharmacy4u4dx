@@ -203,6 +203,18 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - **Inventory can close any open item** (POST /oos/:id/done, inventory team + admin): "Done – delivered / fulfilled" on the item page, "Done – delivered" under each item in Inbox → Waiting for stock, "Already delivered – done" / "Delivered – done" on Deliveries to send. Sets Back in stock + closed_by_hq (branch sees "closed by Inventory"); an item never answered becomes HQ delivers, answered now. Closed items can't be answered again.
 - Scoreboard: "Deliveries & transfers sent within 24 h" and days to restock count HQ deliveries with transfers. Needs you: "Deliveries to send / late". Inter-store transfers suggestion on /hq still counts branch transfers only.
 
+## Bangi changes (27 Oct, CEO)
+- **Siti** (Sales Assistant) added to Bangi (staff login siti – set her PIN in Admin → People) and owns every Bangi Grab box and measure (Grab online all hours Y3, Grab active inventory % GI, Grab orders, Grab sales Y0) – was Ayuni.
+- Bangi target products: P3 **Oat → Androchi**, P4 **Neem facial → Canberra** (same boxes p3 / p4 and targets, 2 a day; numbers already typed stay). WM keeps Oat and Neem facial.
+- **Neuropathy lead moved from Bangi to BR**: Bangi's A1 "New neuropathy customers" (Aimi) and box `neuro` retired (history kept); BR gets box `neuro` and measure **NP** (Lead, Amirah, 1 a day Oct–Dec).
+- Older databases once via bangiOct27Once (flags bangi_27oct_v1, bangi_siti_v1; addSeedItems adds seed boxes/measures to a branch); only changes what still matches the seed, so Admin edits are kept.
+
+## Out-of-stock questions & photos, new item requests (27 Oct, Alia's ask)
+- **Questions & photos** on every out-of-stock item (migration 022: photos, oos_messages; src/oos/chat.js; partials/oos-thread.ejs): Inventory asks the branch ("brg apa ni?"), the branch replies, both can add a photo. Shown on the branch's /oos item (opens by itself and tagged INVENTORY ASKED when Inventory spoke last), Daily entry ("Inventory asked a question – tap to reply"), the item page in the inbox (BRANCH REPLIED), and the inbox lists. Writing: that branch, the inventory team, admin; reading photos (/oos/photo/:id): that branch, inventory team, HQ, admin. The report form also takes a photo (oos_items.photo_id).
+- Photos are shrunk on the phone to a JPEG ≤ 1280 px (public/js/photo.js, FileReader + canvas – CSP allows data: images) and posted as a data URL in a hidden box; the server checks the type and file signature, max ~1.9 MB; /oos forms accept up to 3 MB.
+- **New item request** (/oos/new-items; tab next to Out of stock; button on Daily entry): an item a customer wants that **isn't listed in Dynamod** – item, brand / size / where seen, customers asking (1 / 2–3 / 4+), photo, note → item_requests status New. Inventory answers on /oos/new-items/:id (inbox tab "New item requests"): Need more info · Will list it · Listed – can order · Not listing (reason required); same questions & photos thread. Not counted as out of stock anywhere.
+- Needs you: branch – "Inventory asked about an item / a new item"; inventory team (Alia included) – "Branches replied", "New item requests".
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

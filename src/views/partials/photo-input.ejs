@@ -1,0 +1,9 @@
+<%# 27 Oct: optional photo. The phone shrinks it to a JPEG (public/js/photo.js) into the hidden box. Input: id, label %>
+<div class="ph-wrap" data-photo>
+  <label class="ph-pick" for="<%= id %>"><span aria-hidden="true">📷</span> <%= typeof label !== 'undefined' && label ? label : 'Add a photo' %></label>
+  <input type="file" id="<%= id %>" accept="image/*" capture="environment" class="ph-file">
+  <input type="hidden" name="photo" value="">
+  <img class="ph-preview" alt="Photo to send" hidden>
+  <button type="button" class="link-button ph-clear" hidden>Remove photo</button>
+  <span class="ph-msg muted small" aria-live="polite"></span>
+</div>

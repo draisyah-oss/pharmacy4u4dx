@@ -1,0 +1,66 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oos' }) %>
+<% if (branches.length) { %>
+<div class="daybar"><nav class="strip" aria-label="Choose a branch">
+  <% branches.forEach(function (b) { %><a href="/oos/new-items?branch=<%= encodeURIComponent(b.code) %>" class="strip-pill<%= b.code === branch.code ? ' is-current' : '' %>"><%= b.code %></a><% }) %>
+</nav></div>
+<% } %>
+<main class="page oo-page">
+  <nav class="strip oo-tabs" aria-label="Out of stock or new item">
+    <a href="/oos<%= bq %>" class="strip-pill">Out of stock</a>
+    <a href="/oos/new-items<%= bq %>" class="strip-pill is-current" aria-current="page">New item request</a>
+  </nav>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <% if (canReport) { const t = typed; %>
+  <section class="oo-card" aria-labelledby="new-h">
+    <h1 id="new-h">Request a new item</h1>
+    <p class="muted">For an item a customer wants that <b>isn’t listed in Dynamod</b>. Out of an item we normally sell? Use Out of stock instead.</p>
+    <form method="post" action="/oos/new-items<%= bq %>" class="oo-form" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">Item
+        <input name="item" maxlength="120" autocomplete="off" required value="<%= t.item || '' %>" placeholder="e.g. Bio-Oil 60ml"<%= errors.item ? ' aria-invalid="true"' : '' %>>
+        <% if (errors.item) { %><span class="wk-error"><%= errors.item %></span><% } %>
+      </label>
+      <label class="oo-label">Brand / size / where the customer saw it (optional)
+        <input name="details" maxlength="160" autocomplete="off" value="<%= t.details || '' %>" placeholder="e.g. Guardian, RM 39.90">
+        <% if (errors.details) { %><span class="wk-error"><%= errors.details %></span><% } %>
+      </label>
+      <fieldset class="oo-set">
+        <legend>How many customers asked?</legend>
+        <div class="yesno yesno-3">
+          <% [['1', '1'], ['2-3', '2–3'], ['4+', '4 or more']].forEach(function (o) { %>
+            <label class="yn yn-yes"><input type="radio" name="asking" value="<%= o[0] %>"<%= t.asking === o[0] ? ' checked' : '' %>><span><%= o[1] %></span></label>
+          <% }) %>
+        </div>
+      </fieldset>
+      <%- include('partials/photo-input', { id: 'ph-new', label: 'Add a photo of the item (helps Inventory find it)' }) %>
+      <% if (errors.photo) { %><span class="wk-error"><%= errors.photo %></span><% } %>
+      <label class="oo-label">Note (optional)
+        <input name="note" maxlength="300" autocomplete="off" value="<%= t.note || '' %>" placeholder="e.g. regular customer, will come back Friday">
+        <% if (errors.note) { %><span class="wk-error"><%= errors.note %></span><% } %>
+      </label>
+      <button class="button wide" type="submit">Send to Inventory</button>
+    </form>
+  </section>
+  <% } %>
+
+  <section aria-labelledby="ours-h">
+    <h2 id="ours-h"><%= canReport ? 'Our requests' : branch.name + ' – new item requests' %></h2>
+    <% if (!list.length) { %><p class="muted">No requests yet.</p><% } %>
+    <% list.forEach(function (r) { r.kindKey = 'r'; %>
+      <article class="oo-item<%= ['New', 'Need more info', 'Will list'].includes(r.status) ? '' : ' is-closed' %>" id="req-<%= r.id %>">
+        <header class="oo-top"><b><%= r.item %></b><%- include('partials/request-chip', { r: r }) %></header>
+        <% if (r.details) { %><p class="oo-line"><%= r.details %></p><% } %>
+        <% if (r.answer_note) { %><p class="oo-line"><b>Inventory:</b> “<%= r.answer_note %>”</p><% } %>
+        <p class="oo-meta">Asked <%= of.when(r.created_at, at) %> by <%= r.asked_by_name || '–' %><%= r.answered_at ? ' · answered ' + of.when(r.answered_at, at) + ' by ' + (r.answered_by_name || '–') : '' %></p>
+        <%- include('partials/oos-thread', { it: r, action: '/oos/new-items/' + r.id + '/message', back: '/oos/new-items' + bq + '#req-' + r.id, canTalk: canTalk, of: of, at: at, open: false }) %>
+      </article>
+    <% }) %>
+  </section>
+</main>
+<script src="/js/photo.js?v=1" defer></script>
+</body>
+</html>

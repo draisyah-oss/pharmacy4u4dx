@@ -16,8 +16,22 @@
   <nav class="strip oo-tabs" aria-label="Lists">
     <a href="/oos/inbox" class="strip-pill<%= tab === 'answer' ? ' is-current' : '' %>">To answer (<%= toAnswer.length %>)</a>
     <a href="/oos/inbox?tab=waiting" class="strip-pill<%= tab === 'waiting' ? ' is-current' : '' %>">Waiting for stock (<%= waiting.length %>)</a>
+    <a href="/oos/inbox?tab=new" class="strip-pill<%= tab === 'new' ? ' is-current' : '' %>">New item requests (<%= newItems.toAnswer %>)</a>
     <a href="/oos/inbox?tab=done" class="strip-pill<%= tab === 'done' ? ' is-current' : '' %>">Done lately</a>
   </nav>
+  <% if (tab === 'new') { %>
+    <p class="muted">Items a branch wants that aren’t in Dynamod yet. New first, then the oldest.</p>
+    <% if (!newItems.open.length) { %><p class="muted">No new item requests.</p><% } %>
+    <div class="oo-list">
+    <% newItems.open.concat(newItems.done).forEach(function (r) { %>
+      <a class="oo-item oo-link<%= ['New', 'Need more info', 'Will list'].includes(r.status) ? '' : ' is-closed' %>" href="/oos/new-items/<%= r.id %>">
+        <span class="oo-top"><b><%= r.item %></b><%- include('partials/request-chip', { r: r }) %></span>
+        <span class="oo-meta"><b><%= r.branch_code %></b><%= r.details ? ' · ' + r.details : '' %><%= r.customers_count ? ' · ' + (r.customers_count >= 4 ? '4+' : r.customers_count >= 2 ? '2–3' : '1') + ' customer(s) asking' : '' %><%= r.photo_id ? ' · 📷' : '' %> · <%= of.when(r.created_at, at) %></span>
+        <% if (r.awaitingHq) { %><span class="oo-due s-watch">💬 Branch replied</span><% } %>
+      </a>
+    <% }) %>
+    </div>
+  <% } else { %>
   <% const list = tab === 'answer' ? toAnswer : tab === 'waiting' ? waiting : done; %>
   <% if (!list.length) { %><p class="muted"><%= tab === 'answer' ? 'Nothing to answer – all caught up.' : 'Nothing here.' %></p><% } %>
   <div class="oo-list">
@@ -32,12 +46,14 @@
         <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></span>
         <% if (it.late_flagged_at) { %><span class="oo-due s-watch">Branch says it’s late (<%= of.when(it.late_flagged_at, at) %>)</span><% } %>
       <% } %>
+      <% if (it.awaitingHq) { %><span class="oo-due s-watch">💬 Branch replied</span><% } else if (it.awaitingBranch) { %><span class="oo-meta">💬 Waiting for the branch’s reply</span><% } %>
     </a>
     <% if (tab === 'waiting') { %>
       <form method="post" action="/oos/<%= it.id %>/done" class="oo-done-row"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/oos/inbox?tab=waiting"><button class="button oo-good" type="submit">Done – delivered</button></form>
     <% } %>
   <% }) %>
   </div>
+  <% } %>
   <p class="wk-next"><a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Deliveries to send →</a></p>
 </main>
 </body>

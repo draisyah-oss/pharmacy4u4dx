@@ -131,13 +131,13 @@ test('targets: branch month totals, running-total start values and HQ targets', 
 
 test('add a staff member, give them a PIN, and they can log in; the PIN is never logged', async () => {
   const a = await admin();
-  const r = await a.post('/admin/people', { branch: 'WM', name: 'Siti', job: 'Sales Assistant', login_role: 'branch_staff' });
-  assert.match(decodeURIComponent(r.location), /Added Siti \(username siti\)/);
-  const uid = await id("SELECT id FROM users WHERE username = 'siti'");
+  const r = await a.post('/admin/people', { branch: 'WM', name: 'Suraya', job: 'Sales Assistant', login_role: 'branch_staff' });
+  assert.match(decodeURIComponent(r.location), /Added Suraya \(username suraya\)/);
+  const uid = await id("SELECT id FROM users WHERE username = 'suraya'");
   assert.match(decodeURIComponent((await a.post(`/admin/users/${uid}/secret`, { branch: 'WM', secret: '1234' })).location), /harder to guess/);
   await a.post(`/admin/users/${uid}/secret`, { branch: 'WM', secret: '5826' });
-  assert.ok(await session('/login/pin', { username: 'siti', pin: '5826' }), 'Siti can log in with her PIN');
-  const log = (await db.query("SELECT action, old_value, new_value FROM audit_log WHERE record_key = 'siti' AND action = 'set_pin'")).rows[0];
+  assert.ok(await session('/login/pin', { username: 'suraya', pin: '5826' }), 'Suraya can log in with her PIN');
+  const log = (await db.query("SELECT action, old_value, new_value FROM audit_log WHERE record_key = 'suraya' AND action = 'set_pin'")).rows[0];
   assert.ok(log, 'setting the PIN is logged');
   assert.equal(log.new_value, null);
   assert.doesNotMatch(JSON.stringify((await db.query('SELECT * FROM audit_log')).rows), /5826/);
@@ -156,20 +156,20 @@ test('renaming someone carries over to the measures and daily fields they own', 
 
 test('removing someone stops their login and ends their session; bringing them back works', async () => {
   const a = await admin();
-  const pid = await id("SELECT p.id FROM people p WHERE p.name = 'Siti'");
-  const siti = await session('/login/pin', { username: 'siti', pin: '5826' });
+  const pid = await id("SELECT p.id FROM people p WHERE p.name = 'Suraya'");
+  const suraya = await session('/login/pin', { username: 'suraya', pin: '5826' });
   await a.post(`/admin/people/${pid}/active`, { branch: 'WM', active: 'false' });
-  assert.equal((await siti.get('/daily')).status, 302);                          // logged out
-  assert.equal(await session('/login/pin', { username: 'siti', pin: '5826' }), null);
+  assert.equal((await suraya.get('/daily')).status, 302);                          // logged out
+  assert.equal(await session('/login/pin', { username: 'suraya', pin: '5826' }), null);
   await a.post(`/admin/people/${pid}/active`, { branch: 'WM', active: 'true' });
-  assert.ok(await session('/login/pin', { username: 'siti', pin: '5826' }));
+  assert.ok(await session('/login/pin', { username: 'suraya', pin: '5826' }));
 });
 
 test('making a staff member a manager clears the PIN so they need a password; unlock resets wrong tries', async () => {
   const a = await admin();
-  const pid = await id("SELECT id FROM people WHERE name = 'Siti'");
-  await a.post(`/admin/people/${pid}`, { branch: 'WM', name: 'Siti', job: 'Supervisor', username: 'siti', login_role: 'branch_manager' });
-  const u = (await db.query("SELECT role, pin_hash, password_hash FROM users WHERE username = 'siti'")).rows[0];
+  const pid = await id("SELECT id FROM people WHERE name = 'Suraya'");
+  await a.post(`/admin/people/${pid}`, { branch: 'WM', name: 'Suraya', job: 'Supervisor', username: 'suraya', login_role: 'branch_manager' });
+  const u = (await db.query("SELECT role, pin_hash, password_hash FROM users WHERE username = 'suraya'")).rows[0];
   assert.deepEqual(u, { role: 'branch_manager', pin_hash: null, password_hash: null });
   await db.query("UPDATE users SET locked_until = now() + interval '10 minutes' WHERE username = 'hafizah'");
   const hid = await id("SELECT id FROM users WHERE username = 'hafizah'");

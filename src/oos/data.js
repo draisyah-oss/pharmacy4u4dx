@@ -17,6 +17,7 @@ const calc = require('../calc');
 const { cleanText } = require('../weekly/access');
 const { readSeed } = require('../db/seed');
 const { isRealDate } = require('../lib/dates');
+const chat = require('./chat');
 
 const OPEN = ['Open', 'Ordered', 'On the way', 'Substitute offered'];
 const ANSWERS = {
@@ -86,18 +87,21 @@ async function report(db, user, branch, body, { now }) {
   const asking = ({ 0: 0, '1-2': 2, '3+': 3 })[body.asking];
   const note = cleanText(body.note, { max: 200, label: 'Note' });
   if (note.error) errors.note = note.error;
+  const photo = chat.parsePhoto(body.photo);
+  if (photo.error) errors.photo = photo.error;
   if (Object.keys(errors).length) return { errors };
 
   const t = await targets(db);
   const at = now();
   const today = mytDate(at);
   return db.transaction(async (tx) => {
+    const photoId = await chat.savePhoto(tx, user, branch.id, photo.value);
     const { rows } = await tx.query(
       `INSERT INTO oos_items (branch_id, week_start, item, out_of_stock_since, customers_asking, created_by, updated_by,
-         reported_at, left_qty, customers_count, urgent, note, answer_due, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12, $7) RETURNING id`,
+         reported_at, left_qty, customers_count, urgent, note, answer_due, updated_at, photo_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12, $7, $13) RETURNING id`,
       [branch.id, calc.weekStart(today), item.value, today, asking ? `${body.asking} customers asking` : null, user.id,
-        at, left.value, asking ?? null, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour)]);
+        at, left.value, asking ?? null, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour), photoId]);
     await audit(tx, user, 'insert', `${branch.code} #${rows[0].id}`, null,
       { item: item.value, left: left.value, customers: asking ?? null, urgent: body.urgent === 'on' || body.urgent === '1' });
     return { id: rows[0].id };
@@ -115,7 +119,8 @@ const SELECT = `
 
 async function loadItem(db, id) {
   if (!/^\d{1,9}$/.test(String(id))) return null;
-  return (await db.query(`${SELECT} WHERE o.id = $1`, [id])).rows[0] || null;
+  const it = (await db.query(`${SELECT} WHERE o.id = $1`, [id])).rows[0] || null;
+  return it ? (await chat.attachThreads(db, [it], 'oos'))[0] : null;
 }
 
 // How many times the same item (same name, same branch) ran out in the 30 days before.
@@ -144,10 +149,11 @@ async function loadInbox(db, { now }) {
   const done = (await db.query(`${SELECT} WHERE NOT (o.status = ANY($1)) AND o.updated_at > $2::timestamptz - interval '14 days' ORDER BY o.updated_at DESC LIMIT 30`, [OPEN, at])).rows;
   await repeats(db, [...open, ...done], at);
   [...open, ...done].forEach((it) => decorate(it, at, today));
+  await chat.attachThreads(db, [...open, ...done], 'oos');
   const toAnswer = open.filter((it) => it.unanswered);
   const waiting = open.filter((it) => !it.unanswered)
     .sort((a, b) => Number(b.late || Boolean(b.late_flagged_at)) - Number(a.late || Boolean(a.late_flagged_at)) || String(a.expected_back || '').localeCompare(String(b.expected_back || '')));
-  return { toAnswer, waiting, done, overdue: open.filter((it) => it.overdueAnswer || it.late).length };
+  return { toAnswer, waiting, done, replies: open.filter((it) => it.awaitingHq).length, overdue: open.filter((it) => it.overdueAnswer || it.late).length };
 }
 
 async function countToAnswer(db) {
@@ -160,6 +166,7 @@ async function loadBranchItems(db, branch, { now }) {
   const rows = (await db.query(
     `${SELECT} WHERE o.branch_id = $1 AND (o.status = ANY($2) OR o.updated_at > $3::timestamptz - interval '7 days')
      ORDER BY (o.status = ANY($2)) DESC, o.reported_at DESC`, [branch.id, OPEN, at])).rows;
+  await chat.attachThreads(db, rows, 'oos');
   return rows.map((it) => decorate(it, at, today));
 }
 

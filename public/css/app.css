@@ -942,3 +942,21 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .oo-done { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
 .oo-done-row { margin: -4px 0 10px; display: flex; justify-content: flex-end; }
 .oo-form:not(:has(input[name="answer"][value="transfer"]:checked)) .oo-when-transfer { display: none; }
+
+/* 27 Oct: questions & photos on out-of-stock items / new item requests */
+.oo-thread { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 4px; }
+.oo-thread summary { cursor: pointer; font-weight: 600; color: var(--brand); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.oo-msgs { list-style: none; padding: 0; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
+.oo-msg { max-width: 88%; padding: 8px 10px; border-radius: 12px; display: flex; flex-direction: column; gap: 4px; }
+.oo-msg.is-hq { background: var(--brand-tint); align-self: flex-start; }
+.oo-msg.is-branch { background: var(--good-tint); align-self: flex-end; }
+.oo-msg-who { font-size: 0.78rem; color: var(--ink-soft); }
+.oo-msg img, .oo-msg-photo img { max-width: 220px; max-height: 220px; border-radius: 8px; display: block; }
+.oo-msg-photo { display: flex; flex-direction: column; gap: 4px; margin: 8px 0; }
+.oo-msg-form { display: flex; flex-direction: column; gap: 8px; }
+.oo-msg-form textarea { width: 100%; font: inherit; padding: 10px; border: 2px solid var(--line); border-radius: 10px; }
+.ph-wrap { display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.ph-file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.ph-pick { display: inline-flex; align-items: center; gap: 6px; padding: 10px 14px; border: 2px dashed var(--line); border-radius: 10px; cursor: pointer; font-weight: 600; color: var(--brand); }
+.ph-file:focus-visible + input + .ph-preview, .ph-wrap:focus-within .ph-pick { outline: 3px solid var(--focus); outline-offset: 2px; }
+.ph-preview { max-width: 160px; max-height: 160px; border-radius: 8px; }

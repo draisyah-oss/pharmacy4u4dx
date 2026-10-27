@@ -1,0 +1,34 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oosinbox' }) %>
+<% const isOpen = ['New', 'Need more info', 'Will list'].includes(r.status); %>
+<main class="page oo-page">
+  <p><a href="/oos/inbox?tab=new">‹ New item requests</a></p>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <section class="oo-card">
+    <header class="oo-top"><h1><%= r.item %></h1><%- include('partials/request-chip', { r: r }) %></header>
+    <p class="oo-meta"><b><%= r.branch_name %></b><%= r.details ? ' · ' + r.details : '' %><%= r.customers_count ? ' · ' + (r.customers_count >= 4 ? '4+' : r.customers_count >= 2 ? '2–3' : '1') + ' customer(s) asking' : '' %></p>
+    <% if (r.note) { %><p class="oo-note">“<%= r.note %>” – <%= r.asked_by_name %></p><% } %>
+    <p class="oo-meta">Asked <%= of.when(r.created_at, at) %> by <%= r.asked_by_name || '–' %><%= r.answered_at ? ' · last answer ' + of.when(r.answered_at, at) + ' by ' + (r.answered_by_name || '–') : '' %></p>
+    <% if (r.answer_note) { %><p class="oo-line">Your note: “<%= r.answer_note %>”</p><% } %>
+    <%- include('partials/oos-thread', { it: r, action: '/oos/new-items/' + r.id + '/message', back: '/oos/new-items/' + r.id, canTalk: true, of: of, at: at, open: true }) %>
+  </section>
+
+  <form method="post" action="/oos/new-items/<%= r.id %>/answer" class="oo-card oo-form" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <fieldset class="oo-set">
+      <legend>Your answer</legend>
+      <div class="oo-answers">
+        <% Object.keys(answers).forEach(function (k) { const a = answers[k]; %>
+          <label class="oo-ans"><input type="radio" name="answer" value="<%= k %>"<%= r.status === a.status ? ' checked' : '' %>><span><b><%= a.label %></b><small><%= a.hint %></small></span></label>
+        <% }) %>
+      </div>
+    </fieldset>
+    <label class="oo-label">Note to the branch<input name="answer_note" maxlength="300" value="<%= r.answer_note || '' %>" placeholder="e.g. listed as BIO-OIL 60ML, order with next PO"></label>
+    <button class="button wide" type="submit"><%= isOpen ? 'Send answer' : 'Change answer' %></button>
+  </form>
+</main>
+<script src="/js/photo.js?v=1" defer></script>
+</body>
+</html>

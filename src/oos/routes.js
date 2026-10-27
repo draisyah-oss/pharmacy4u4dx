@@ -8,6 +8,15 @@ const { loadBranch } = require('../daily/data');
 const { weekChoices, pickWeek } = require('../lib/weeks');
 const oos = require('./data');
 const of = require('./format');
+const chat = require('./chat');
+const requests = require('./requests');
+const { safePath } = require('../lib/safe-path');
+
+// Where a message / answer form may send the person back to: an out-of-stock page or Daily entry.
+const backTo = (p, fallback) => {
+  const s = safePath(p, fallback);
+  return /^\/(oos|daily)(\/|\?|#|$)/.test(s) ? s : fallback;
+};
 
 function oosRoutes(db, { now, trackerStart }) {
   const router = express.Router();
@@ -32,7 +41,8 @@ function oosRoutes(db, { now, trackerStart }) {
     const branches = many(req.user) ? (await db.query('SELECT code, name FROM branches WHERE active ORDER BY sort_order')).rows : [];
     res.status(extra.status || 200).render('oos-branch', {
       title: `${branch.name} – out of stock`, branch, branches, items, fmt, of, at: now(),
-      canReport: oos.canReport(req.user, branch), canClose: oos.canReport(req.user, branch),
+      canReport: oos.canReport(req.user, branch), canClose: oos.canReport(req.user, branch), canTalk: chat.canTalk(req.user, branch.id),
+      newCount: (await db.query("SELECT count(*)::int AS n FROM item_requests WHERE branch_id = $1 AND status = ANY($2)", [branch.id, requests.OPEN])).rows[0].n,
       bq: many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : '',
       typed: extra.typed || {}, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || req.query.err || null,
       targets: await oos.targets(db),
@@ -89,7 +99,8 @@ function oosRoutes(db, { now, trackerStart }) {
     try {
       if (!oos.canAnswer(req.user)) return forbid(res, 'The out-of-stock inbox is for the inventory team (Alia, Syarafana, Fariz) and admin.');
       const inbox = await oos.loadInbox(db, { now });
-      res.render('oos-inbox', { title: 'Out of stock – inbox', ...inbox, fmt, of, tab: ['waiting', 'done'].includes(req.query.tab) ? req.query.tab : 'answer', ok: req.query.ok || null, at: now() });
+      const newItems = await requests.loadInbox(db, { now });
+      res.render('oos-inbox', { title: 'Out of stock – inbox', ...inbox, newItems, fmt, of, tab: ['waiting', 'done', 'new'].includes(req.query.tab) ? req.query.tab : 'answer', ok: req.query.ok || null, err: req.query.err || null, at: now() });
     } catch (err) { next(err); }
   });
 
@@ -99,8 +110,9 @@ function oosRoutes(db, { now, trackerStart }) {
     const history = (await db.query(
       `SELECT reported_at, status, answer FROM oos_items WHERE branch_id = $1 AND lower(item) = lower($2) AND id <> $3 ORDER BY reported_at DESC LIMIT 3`,
       [item.branch_id, item.item, item.id])).rows;
+    item.forHq = true;
     res.status(extra.status || 200).render('oos-answer', {
-      title: `Answer – ${item.item}`, item, branches, history, fmt, of, today,
+      title: `Answer – ${item.item}`, item, ok: req.query.ok || null, qerr: req.query.err || null, branches, history, fmt, of, today,
       tomorrow: calc.addDays(today, 1), typed: extra.typed || {}, err: extra.err || null, at: now(),
     });
   }
@@ -141,6 +153,103 @@ function oosRoutes(db, { now, trackerStart }) {
       await oos.markDone(db, req.user, item, { now });
       const to = ['/oos/transfers', '/oos/inbox', '/oos/inbox?tab=waiting', `/oos/${item.id}`].includes(req.body.back) ? req.body.back : '/oos/inbox';
       back(res, to, `${item.item} (${item.branch_code}): done – delivered.`);
+    } catch (err) { next(err); }
+  });
+
+  // ─────────────── 27 Oct: questions & photos, new item requests ───────────────
+  router.get('/oos/photo/:id', async (req, res, next) => {
+    try {
+      const p = await chat.loadPhoto(db, req.params.id);
+      if (!p || !chat.canSeeBranch(req.user, p.branch_id)) return res.status(404).render('message', { title: 'Not found', message: 'That photo isn’t available.' });
+      res.setHeader('Content-Type', p.mime);
+      res.setHeader('Cache-Control', 'private, max-age=86400');
+      res.setHeader('Content-Disposition', 'inline');
+      res.end(p.data);
+    } catch (err) { next(err); }
+  });
+
+  router.post('/oos/:id/message', async (req, res, next) => {
+    try {
+      if (!/^\d{1,9}$/.test(req.params.id)) return next();
+      const item = await itemOr404(req, res); if (!item) return;
+      const fallback = oos.canAnswer(req.user) ? `/oos/${item.id}` : `/oos${many(req.user) ? `?branch=${encodeURIComponent(item.branch_code)}` : ''}`;
+      const to = backTo(req.body.back, fallback);
+      const r = await chat.addMessage(db, req.user, { kind: 'oos', id: item.id, branch_id: item.branch_id, branch_code: item.branch_code }, req.body, { now });
+      if (r.forbidden) return forbid(res, 'Only this branch and the inventory team can write here.');
+      if (r.error) return back(res, to, r.error, 'err');
+      back(res, to, `Sent – ${item.item}.`);
+    } catch (err) { next(err); }
+  });
+
+  async function renderNewItems(req, res, branch, extra = {}) {
+    const list = await requests.loadBranch(db, branch, { now });
+    const branches = many(req.user) ? (await db.query('SELECT code, name FROM branches WHERE active ORDER BY sort_order')).rows : [];
+    res.status(extra.status || 200).render('oos-new-items', {
+      title: `${branch.name} – new item requests`, branch, branches, list, fmt, of, at: now(),
+      canReport: oos.canReport(req.user, branch), canTalk: chat.canTalk(req.user, branch.id),
+      bq: many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : '',
+      typed: extra.typed || {}, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || req.query.err || null,
+    });
+  }
+
+  router.get('/oos/new-items', async (req, res, next) => {
+    try {
+      if (req.user.role === 'hq_staff' && req.user.inventory) return res.redirect('/oos/inbox?tab=new');
+      if (oos.canAnswer(req.user) && !req.query.branch) return res.redirect('/oos/inbox?tab=new');
+      const branch = await branchFor(req);
+      if (!branch) return res.redirect('/');
+      if (!many(req.user) && req.user.branch_id !== branch.id) return forbid(res, 'You can only open your own branch.');
+      await renderNewItems(req, res, branch);
+    } catch (err) { next(err); }
+  });
+
+  router.post('/oos/new-items', async (req, res, next) => {
+    try {
+      const branch = await branchFor(req);
+      if (!branch || !oos.canReport(req.user, branch)) return forbid(res, 'Only this branch’s staff can ask for a new item.');
+      const r = await requests.create(db, req.user, branch, req.body, { now });
+      if (r.errors) return renderNewItems(req, res, branch, { status: 400, errors: r.errors, typed: req.body, err: 'Not sent – check the boxes in red.' });
+      back(res, `/oos/new-items${many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : ''}`, `Sent to Inventory: ${String(req.body.item).trim()}.`);
+    } catch (err) { next(err); }
+  });
+
+  async function requestOr404(req, res) {
+    const r = await requests.load(db, req.params.rid);
+    if (!r) res.status(404).render('message', { title: 'Not found', message: 'That request isn’t on the list.' });
+    return r;
+  }
+
+  router.get('/oos/new-items/:rid', async (req, res, next) => {
+    try {
+      const r = await requestOr404(req, res); if (!r) return;
+      if (!oos.canAnswer(req.user)) {
+        if (!chat.canSeeBranch(req.user, r.branch_id)) return forbid(res, 'You can only open your own branch.');
+        return res.redirect(`/oos/new-items${many(req.user) ? `?branch=${encodeURIComponent(r.branch_code)}` : ''}#req-${r.id}`);
+      }
+      r.forHq = true; r.kindKey = 'r';
+      res.render('oos-new-item', { title: `New item – ${r.item}`, r, of, fmt, answers: requests.ANSWERS, at: now(), ok: req.query.ok || null, err: req.query.err || null });
+    } catch (err) { next(err); }
+  });
+
+  router.post('/oos/new-items/:rid/answer', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'Answering new item requests is for the inventory team and admin.');
+      const r = await requestOr404(req, res); if (!r) return;
+      const out = await requests.answer(db, req.user, r, req.body, { now });
+      if (out.error) return back(res, `/oos/new-items/${r.id}`, out.error, 'err');
+      back(res, '/oos/inbox?tab=new', `${r.item} (${r.branch_code}): ${requests.ANSWERS[req.body.answer].status}.`);
+    } catch (err) { next(err); }
+  });
+
+  router.post('/oos/new-items/:rid/message', async (req, res, next) => {
+    try {
+      const r = await requestOr404(req, res); if (!r) return;
+      const fallback = oos.canAnswer(req.user) ? `/oos/new-items/${r.id}` : `/oos/new-items${many(req.user) ? `?branch=${encodeURIComponent(r.branch_code)}` : ''}`;
+      const to = backTo(req.body.back, fallback);
+      const out = await chat.addMessage(db, req.user, { kind: 'request', id: r.id, branch_id: r.branch_id, branch_code: r.branch_code }, req.body, { now });
+      if (out.forbidden) return forbid(res, 'Only this branch and the inventory team can write here.');
+      if (out.error) return back(res, to, out.error, 'err');
+      back(res, to, `Sent – ${r.item}.`);
     } catch (err) { next(err); }
   });
 

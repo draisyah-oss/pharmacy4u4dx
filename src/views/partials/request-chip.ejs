@@ -1,0 +1,3 @@
+<%# 27 Oct: status chip for a new item request. Input: r %>
+<% const c = { 'New': ['NEW REQUEST', 'oc-info'], 'Need more info': ['NEED MORE INFO', 'oc-warn'], 'Will list': ['WILL LIST', 'oc-good'], 'Listed': ['LISTED – CAN ORDER', 'oc-good'], 'Not listing': ['NOT LISTING', 'oc-grey'] }[r.status] || [r.status, 'oc-info']; %>
+<span class="oo-chip <%= c[1] %>"><%= c[0] %></span>

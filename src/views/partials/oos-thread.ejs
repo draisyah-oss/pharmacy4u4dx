@@ -1,0 +1,24 @@
+<%# 27 Oct: questions & photos between the branch and Inventory. Input: it (with .messages), action, back, canTalk, of, at, open %>
+<% const msgs = it.messages || []; %>
+<details class="oo-thread"<%= open || it.awaitingBranch && !it.forHq || it.awaitingHq && it.forHq ? ' open' : '' %>>
+  <summary>💬 Questions &amp; photos<%= msgs.length ? ' (' + msgs.length + ')' : '' %><% if (it.awaitingBranch && !it.forHq) { %> <span class="oo-chip oc-warn">INVENTORY ASKED</span><% } %><% if (it.awaitingHq && it.forHq) { %> <span class="oo-chip oc-warn">BRANCH REPLIED</span><% } %></summary>
+  <% if (it.photo_id) { %><p class="oo-msg-photo"><a href="/oos/photo/<%= it.photo_id %>" target="_blank" rel="noopener"><img src="/oos/photo/<%= it.photo_id %>" alt="Photo from the report" loading="lazy"></a><small class="muted">Photo with the report</small></p><% } %>
+  <ol class="oo-msgs">
+    <% msgs.forEach(function (m) { %>
+      <li class="oo-msg<%= m.from_branch ? ' is-branch' : ' is-hq' %>">
+        <span class="oo-msg-who"><b><%= m.display_name || '–' %></b> · <%= m.from_branch ? 'branch' : 'Inventory' %> · <%= of.when(m.created_at, at) %></span>
+        <% if (m.body) { %><span class="oo-msg-body"><%= m.body %></span><% } %>
+        <% if (m.photo_id) { %><a href="/oos/photo/<%= m.photo_id %>" target="_blank" rel="noopener"><img src="/oos/photo/<%= m.photo_id %>" alt="Photo" loading="lazy"></a><% } %>
+      </li>
+    <% }) %>
+  </ol>
+  <% if (!msgs.length) { %><p class="muted small">No questions yet.</p><% } %>
+  <% if (canTalk) { %>
+    <form method="post" action="<%= action %>" class="oo-msg-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="<%= back %>">
+      <label class="oo-label"><span class="sr-only">Message</span><textarea name="message" rows="2" maxlength="500" placeholder="<%= it.forHq ? 'Ask the branch, e.g. which brand / size? can you send a photo?' : 'Reply or ask Inventory' %>"></textarea></label>
+      <%- include('photo-input', { id: 'ph-m-' + (it.kindKey || 'o') + it.id }) %>
+      <button class="button secondary" type="submit">Send</button>
+    </form>
+  <% } %>
+</details>

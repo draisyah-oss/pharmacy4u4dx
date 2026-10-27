@@ -25,6 +25,14 @@ async function forInventory(db, at, add) {
   if (xTodo) add('today', xTodo, 'Deliveries to send', 'HQ deliveries and transfers, within 24 hours', '/oos/transfers');
 }
 
+async function forInventoryChat(db, add) {
+  const chat = require('../oos/chat');
+  const w = await chat.waitingCounts(db, { forHq: true });
+  if (w.oos) add('today', w.oos, 'Branches replied', 'out-of-stock questions & photos', '/oos/inbox?tab=waiting');
+  const fresh = await one(db, "SELECT count(*) AS n FROM item_requests WHERE status = 'New'", []);
+  if (fresh || w.req) add('todo', fresh + w.req, 'New item requests', fresh ? `${fresh} new${w.req ? ` · ${w.req} replied` : ''}` : 'branches replied', '/oos/inbox?tab=new');
+}
+
 async function forHqPerson(db, user, today, add) {
   const pid = user.person_id;
   const acts = (await db.query(`SELECT a.due_date, a.issue, b.code FROM hq_actions a LEFT JOIN branches b ON b.id = a.branch_id
@@ -87,6 +95,10 @@ async function forBranch(db, user, today, at, add) {
   const yesterday = calc.addDays(today, -1);
   const entered = await one(db, 'SELECT count(*) AS n FROM daily_entries WHERE branch_id = $1 AND entry_date = $2', [branchId, yesterday]);
   if (!entered) add('today', 1, 'Yesterday’s numbers not entered', fmtDay(yesterday), `/daily?date=${yesterday}`);
+  // 27 Oct: Inventory asked a question about one of our items / requests.
+  const w = await require('../oos/chat').waitingCounts(db, { branchId });
+  if (w.oos) add('today', w.oos, 'Inventory asked about an item', 'out of stock – reply or send a photo', '/oos');
+  if (w.req) add('today', w.req, 'Inventory asked about a new item', 'reply or send a photo', '/oos/new-items');
   if (user.role === 'branch_manager') {
     const sent = await one(db, 'SELECT count(*) AS n FROM weekly_checkins WHERE branch_id = $1 AND week_start = $2', [branchId, prev]);
     if (!sent && dow(today) >= 1 && dow(today) <= 2) {
@@ -119,6 +131,9 @@ async function buildNeeds(db, user, { at }) {
   const add = (level, count, title, sub, href) => items.push({ level, count, title, sub, href });
   if (user.role === 'admin' || user.inventory) {
     if (user.inventory && !user.oosQuiet) await forInventory(db, at, add);
+    // 27 Oct: branch replies to Inventory's questions and new item requests – for the whole
+    // inventory team (Alia too: she asks the questions).
+    if (user.inventory) await forInventoryChat(db, add);
   }
   if (user.role === 'admin' && user.is_super) await forCeo(db, today, add);
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);

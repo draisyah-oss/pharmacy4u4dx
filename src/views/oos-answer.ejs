@@ -5,6 +5,8 @@
 <main class="page oo-page">
   <p><a href="/oos/inbox">‹ Inbox</a></p>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (qerr) { %><p class="alert alert-bad" role="alert"><%= qerr %></p><% } %>
   <section class="oo-card">
     <header class="oo-top"><h1><%= item.item %></h1><%- include('partials/oos-chip', { it: item, of: of }) %></header>
     <p class="oo-meta"><b><%= item.branch_name %></b> · <%= item.left_qty === 0 ? 'none left' : item.left_qty ? item.left_qty + ' left' : '' %><%= item.customers_count ? ' · ' + (item.customers_count >= 3 ? '3+' : '1–2') + ' customers asking' : '' %><%= item.urgent ? ' · urgent' : '' %></p>
@@ -12,6 +14,7 @@
     <p class="oo-meta">Reported <%= of.when(item.reported_at, at) %><%= item.answer_due && !item.answered_at ? ' · answer by ' + of.when(item.answer_due, at) : '' %><%= history.length ? ' · ran out before: ' + history.map(function (h) { return of.when(h.reported_at, at); }).join(', ') : '' %></p>
     <% if (item.answer) { %><p class="oo-line">Current answer: <%- include('partials/oos-answer-line', { it: item, of: of, at: at }) %></p><% } %>
     <%- include('partials/oos-steps', { it: item, of: of, at: at }) %>
+    <%- include('partials/oos-thread', { it: item, action: '/oos/' + item.id + '/message', back: '/oos/' + item.id, canTalk: true, of: of, at: at, open: true }) %>
     <% if (isOpen) { %>
       <form method="post" action="/oos/<%= item.id %>/done" class="oo-done">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/oos/<%= item.id %>">
@@ -49,5 +52,6 @@
   </form>
   <% } %>
 </main>
+<script src="/js/photo.js?v=1" defer></script>
 </body>
 </html>

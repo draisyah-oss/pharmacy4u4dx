@@ -49,11 +49,12 @@
   <section class="oo-strip" aria-labelledby="oos-strip-h">
     <div class="oo-strip-top">
       <h2 id="oos-strip-h">Out of stock<%= oosItems.length ? ' · ' + oosItems.length + ' open' : '' %></h2>
-      <% if (oosCanReport) { %><a class="button small-button" href="<%= oosLink %>">Report out of stock</a><% } %>
+      <% if (oosCanReport) { %><a class="button small-button" href="<%= oosLink %>">Report out of stock</a> <a class="button small-button secondary" href="/oos/new-items">New item request</a><% } %>
     </div>
     <% oosItems.slice(0, 4).forEach(function (it) { %>
       <a class="oo-mini" href="<%= oosLink %>#oos-<%= it.id %>"><span class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></span>
-        <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: new Date() }) %></span></a>
+        <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: new Date() }) %></span>
+        <% if (it.awaitingBranch) { %><span class="oo-due s-watch">💬 Inventory asked a question – tap to reply</span><% } %></a>
       <% if (oosCanReport && (it.answer === 'hq_deliver' || it.answer === 'transfer') && it.sent_at) { %>
         <form method="post" action="/oos/<%= it.id %>/received" class="oo-done-row"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/daily"><button class="button oo-good" type="submit">Accept – received <%= it.answer_qty || '' %></button></form>
       <% } %>

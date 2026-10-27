@@ -7,6 +7,10 @@
 </nav></div>
 <% } %>
 <main class="page oo-page">
+  <nav class="strip oo-tabs" aria-label="Out of stock or new item">
+    <a href="/oos<%= bq %>" class="strip-pill is-current" aria-current="page">Out of stock</a>
+    <a href="/oos/new-items<%= bq %>" class="strip-pill">New item request<%= newCount ? ' (' + newCount + ')' : '' %></a>
+  </nav>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
@@ -37,6 +41,8 @@
           <% }) %>
         </div>
       </fieldset>
+      <%- include('partials/photo-input', { id: 'ph-report', label: 'Add a photo (optional)' }) %>
+      <% if (errors.photo) { %><span class="wk-error"><%= errors.photo %></span><% } %>
       <label class="oo-urgent"><input type="checkbox" name="urgent" value="1"<%= t.urgent ? ' checked' : '' %>> Urgent – chronic patient waiting</label>
       <label class="oo-label">Note (optional)
         <input name="note" maxlength="200" autocomplete="off" value="<%= t.note || '' %>" placeholder="e.g. patient collects every 2 weeks">
@@ -58,6 +64,7 @@
         <%- include('partials/oos-steps', { it: it, of: of, at: at }) %>
         <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %>
           <%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? (it.closed_by_hq ? ' · closed by Inventory ' : ' · accepted ') + of.when(it.received_at, at) : '' %></p>
+        <%- include('partials/oos-thread', { it: it, action: '/oos/' + it.id + '/message', back: '/oos' + bq + '#oos-' + it.id, canTalk: canTalk, of: of, at: at, open: false }) %>
         <% if (canClose && it.isOpen) { %>
           <div class="oo-actions">
             <% const delivery = it.answer === 'hq_deliver' || it.answer === 'transfer'; %>
@@ -73,5 +80,6 @@
     <% }) %>
   </section>
 </main>
+<script src="/js/photo.js?v=1" defer></script>
 </body>
 </html>

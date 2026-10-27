@@ -29,6 +29,8 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.disable('x-powered-by');
 
   app.use(express.static(path.join(__dirname, '..', 'public'), { maxAge: '1h' }));
+  // 27 Oct: out-of-stock forms can carry a photo (shrunk on the phone, sent as a data URL).
+  app.use('/oos', express.urlencoded({ extended: true, limit: '3mb' }));
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');

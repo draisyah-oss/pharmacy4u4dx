@@ -218,7 +218,7 @@ test('22 Oct: Ampang target product Oat → Eldon strip; JH WhatsApp is customer
 
 test('22 Oct: every branch tracks Grab active inventory % (above 50%) instead of Grab menu items', async () => {
   const s = readSeed();
-  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Qushairi', Bangi: 'Ayuni', Ampang: 'Aishah' };
+  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Qushairi', Bangi: 'Siti', Ampang: 'Aishah' }; // 27 Oct: Siti took Bangi's Grab
   for (const b of s.branches) {
     const f = b.daily_fields.find((x) => x.key === 'grabinv');
     const m = b.measures.find((x) => x.id === 'GI');
@@ -258,10 +258,42 @@ test('22 Oct: older databases swap Grab menu items for Grab active inventory % o
   const q = async (sql) => (await old.query(sql)).rows;
   const gi = await q("SELECT b.code, m.calc, m.active, m.person_id FROM measures m JOIN branches b ON b.id = m.branch_id WHERE m.code = 'GI' ORDER BY b.code");
   assert.deepEqual(gi.map((r) => r.code), ['Ampang', 'BR', 'Bangi', 'JH', 'WM']);
-  assert.ok(gi.every((r) => r.active && r.calc === 'average_percent' && r.person_id));
+  assert.ok(gi.every((r) => r.active && r.calc === 'average_percent' && (r.person_id || r.code === 'Bangi')), 'Bangi’s owner Siti is added by bangiOct27Once');
   const oldOn = await q("SELECT count(*)::int AS n FROM measures WHERE numerator_field = 'grabmenu' AND active");
   assert.equal(oldOn[0].n, 0);
   const t = await q("SELECT t.month, t.target FROM measure_targets t JOIN measures m ON m.id = t.measure_id JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.code = 'GI' AND t.month = '2026-10'");
   assert.equal(Number(t[0].target), 0.5);
+  await old.close();
+});
+
+test('27 Oct: Bangi – Siti on Grab, Androchi / Canberra, neuropathy lead moved to BR (Amirah)', async () => {
+  const s = readSeed();
+  const bangi = s.branches.find((b) => b.code === 'Bangi');
+  const br = s.branches.find((b) => b.code === 'BR');
+  assert.ok(bangi.people.some((p) => p.name === 'Siti'));
+  assert.ok(bangi.measures.some((m) => m.label === 'Target product: Androchi'));
+  assert.ok(bangi.measures.some((m) => m.label === 'Target product: Canberra'));
+  assert.ok(!bangi.measures.some((m) => m.numerator_field === 'neuro'));
+  assert.equal(br.measures.find((m) => m.id === 'NP').owner, 'Amirah');
+  // An older database gets it once
+  const { bangiOct27Once } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-wm-16oct.json'), { adminPassword: 'admin-pass-1' });
+  await old.query("UPDATE daily_fields SET owner_name = 'Ayuni' WHERE key IN ('grabon', 'grab', 'graord') AND branch_id = (SELECT id FROM branches WHERE code = 'Bangi')");
+  await bangiOct27Once(old, s, () => {});
+  await bangiOct27Once(old, s, () => {});
+  const q = async (sql) => (await old.query(sql)).rows;
+  const siti = await q("SELECT p.id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = 'Bangi' AND p.name = 'Siti'");
+  assert.equal(siti.length, 1);
+  assert.ok((await q("SELECT username FROM users WHERE person_id = " + siti[0].id)).length, 'Siti has a login');
+  const grab = await q("SELECT f.owner_name, f.person_id FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'Bangi' AND f.key = 'grabon'");
+  assert.equal(grab[0].owner_name, 'Siti'); assert.equal(grab[0].person_id, siti[0].id);
+  const labels = (await q("SELECT m.label FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'Bangi' AND m.active")).map((r) => r.label);
+  assert.ok(labels.includes('Target product: Androchi') && labels.includes('Target product: Canberra'));
+  assert.ok(!labels.includes('New neuropathy customers'));
+  const np = await q("SELECT m.owner_name, m.person_id, t.target FROM measures m JOIN branches b ON b.id = m.branch_id JOIN measure_targets t ON t.measure_id = m.id WHERE b.code = 'BR' AND m.code = 'NP' AND t.month = '2026-11'");
+  assert.equal(np[0].owner_name, 'Amirah'); assert.ok(np[0].person_id); assert.equal(Number(np[0].target), 1);
+  assert.equal((await q("SELECT count(*)::int AS n FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'BR' AND f.key = 'neuro' AND f.active"))[0].n, 1);
   await old.close();
 });

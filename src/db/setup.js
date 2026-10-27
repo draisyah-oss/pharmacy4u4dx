@@ -26,6 +26,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
       ["UPDATE measures SET label = 'WhatsApp customer follow-ups (LEAD 2)' WHERE code = 'N1' AND branch_id = (SELECT id FROM branches WHERE code = 'JH') AND label LIKE 'WhatsApp blasts%'"],
     ]);
     await grabInventoryOnce(db, readSeed(), log);
+    await bangiOct27Once(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -340,6 +341,74 @@ async function grabInventoryOnce(db, seed, log) {
   });
 }
 
+// Add daily boxes and measures from seed.json to a branch that doesn't have them yet (by key /
+// code), at the end of its lists, with the seed's targets. Used for one-time moves (27 Oct).
+async function addSeedItems(tx, seed, code, { fields = [], measures = [] }) {
+  const sb = seed.branches.find((b) => b.code === code);
+  const b = (await tx.query('SELECT id FROM branches WHERE code = $1', [code])).rows[0];
+  if (!sb || !b) return 0;
+  const person = async (name) => (await tx.query('SELECT id FROM people WHERE branch_id = $1 AND name = $2 AND active', [b.id, name])).rows[0]?.id || null;
+  let added = 0;
+  for (const key of fields) {
+    const f = sb.daily_fields.find((x) => x.key === key);
+    if (!f) continue;
+    const order = (await tx.query('SELECT COALESCE(max(sort_order), 0) + 1 AS n FROM daily_fields WHERE branch_id = $1', [b.id])).rows[0].n;
+    await tx.query(`INSERT INTO daily_fields (branch_id, key, label, owner_name, person_id, type, sort_order) VALUES ($1,$2,$3,$4,$5,$6,$7)
+      ON CONFLICT (branch_id, key) DO UPDATE SET label = EXCLUDED.label, owner_name = EXCLUDED.owner_name, person_id = EXCLUDED.person_id, active = true`,
+      [b.id, f.key, f.label, f.owner, await person(f.owner), f.type, order]);
+    added++;
+  }
+  for (const id of measures) {
+    const m = sb.measures.find((x) => x.id === id);
+    if (!m || (await tx.query('SELECT 1 FROM measures WHERE branch_id = $1 AND code = $2', [b.id, m.id])).rows.length) continue;
+    const order = (await tx.query('SELECT COALESCE(max(sort_order), 0) + 1 AS n FROM measures WHERE branch_id = $1', [b.id])).rows[0].n;
+    const mid = (await tx.query(`INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per,
+        calc, numerator_field, denominator_field, note, sort_order, score_by)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+      [b.id, m.id, m.owner, await person(m.owner), m.label, m.kind, m.unit, m.target_per, m.calc,
+        m.numerator_field, m.denominator_field, m.note, order, m.score_by || 'week'])).rows[0].id;
+    const months = (await tx.query('SELECT DISTINCT t.month FROM measure_targets t JOIN measures x ON x.id = t.measure_id WHERE x.branch_id = $1', [b.id])).rows.map((r) => r.month.trim());
+    for (const month of new Set([...months, ...Object.keys(m.targets || {})])) {
+      await tx.query('INSERT INTO measure_targets (measure_id, month, target) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [mid, month, (m.targets || {})[month] ?? null]);
+    }
+    added++;
+  }
+  return added;
+}
+
+// 27 Oct (CEO): Bangi – Siti added (Sales Assistant) and owns every Grab box and measure (was Ayuni);
+// target products Oat → Androchi, Neem facial → Canberra (same boxes p3 / p4, numbers kept); the
+// neuropathy lead moves to BR (Amirah, NP, 1 a day) – Bangi's A1 and its box retired, history kept.
+// Only changes what still looks like the seed (owner Ayuni, the old labels), so Admin edits stay.
+async function bangiOct27Once(db, seed, log) {
+  const flag = 'bangi_27oct_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await addBranchPersonOnce(db, 'Bangi', { name: 'Siti', job: 'Sales Assistant' }, 'bangi_siti_v1', log);
+  await db.transaction(async (tx) => {
+    const bangi = (await tx.query("SELECT id FROM branches WHERE code = 'Bangi'")).rows[0];
+    if (bangi) {
+      const siti = (await tx.query("SELECT id FROM people WHERE branch_id = $1 AND lower(name) = 'siti' AND active", [bangi.id])).rows[0];
+      const grab = ['grabon', 'grabinv', 'graord', 'grab'];
+      if (siti) {
+        await tx.query("UPDATE daily_fields SET owner_name = 'Siti', person_id = $2 WHERE branch_id = $1 AND key = ANY($3) AND owner_name IN ('Ayuni', 'Siti')", [bangi.id, siti.id, grab]);
+        await tx.query("UPDATE measures SET owner_name = 'Siti', person_id = $2 WHERE branch_id = $1 AND numerator_field = ANY($3) AND owner_name IN ('Ayuni', 'Siti')", [bangi.id, siti.id, grab]);
+      }
+      const relabel = [['p3', 'Oat units sold', 'Androchi units sold', 'Target product: Oat', 'Target product: Androchi'],
+        ['p4', 'Neem facial units sold', 'Canberra units sold', 'Target product: Neem facial', 'Target product: Canberra']];
+      for (const [key, of, nf, om, nm] of relabel) {
+        await tx.query('UPDATE daily_fields SET label = $3 WHERE branch_id = $1 AND key = $2 AND label = $4', [bangi.id, key, nf, of]);
+        await tx.query('UPDATE measures SET label = $3 WHERE branch_id = $1 AND numerator_field = $2 AND label = $4', [bangi.id, key, nm, om]);
+      }
+      await tx.query("UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = 'neuro'", [bangi.id]);
+      await tx.query("UPDATE measures SET active = false WHERE branch_id = $1 AND numerator_field = 'neuro'", [bangi.id]);
+    }
+    await addSeedItems(tx, seed, 'BR', { fields: ['neuro'], measures: ['NP'] });
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Bangi: Siti owns Grab; Oat → Androchi, Neem facial → Canberra; neuropathy lead moved to BR (27 Oct)', NULL)");
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+  log('Bangi 27 Oct changes applied (Siti on Grab, Androchi / Canberra, neuropathy lead → BR).');
+}
+
 // Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
 async function retireBranchItemsOnce(db, code, { fields = [], measures = [] }, flag, note, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -581,4 +650,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

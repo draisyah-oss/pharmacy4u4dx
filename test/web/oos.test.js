@@ -278,3 +278,55 @@ test('25 Oct: a transfer the branch already accepted before it was sent leaves t
   await staff.post(`/oos/${it}/received`, {});
   assert.doesNotMatch((await alia.get('/oos/transfers')).html, /Biorelief spray/);
 });
+
+test('27 Oct: questions & photos on an out-of-stock item; new item requests (not in Dynamod)', async () => {
+  clock = new Date('2026-10-27T10:00:00+08:00');
+  const jpeg = `data:image/jpeg;base64,${Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 0xff, 0xd9]).toString('base64')}`;
+  const staff = await login('pin', 'hazera', '1111');
+  // Report with a photo
+  assert.equal((await staff.post('/oos', { item: 'Ubat batuk hijau', left: 'none', asking: '1-2', photo: jpeg })).status, 302);
+  const it = (await db.query("SELECT id, photo_id FROM oos_items WHERE item = 'Ubat batuk hijau'")).rows[0];
+  assert.ok(it.photo_id);
+  assert.equal((await staff.post('/oos', { item: 'Bad photo', left: 'none', asking: '0', photo: 'data:image/jpeg;base64,AAAA' })).status, 400, 'not a photo');
+  // Alia asks the branch what it is
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  const ask = await alia.post(`/oos/${it.id}/message`, { message: 'Brg apa ni? Brand apa?', back: `/oos/${it.id}` });
+  assert.equal(ask.location.split('?')[0], `/oos/${it.id}`);
+  // The branch sees the question (thread open), on Daily entry and in Needs you
+  const page = (await staff.get('/oos')).html;
+  assert.match(page, /<details class="oo-thread" open>[\s\S]*INVENTORY ASKED[\s\S]*Brg apa ni\? Brand apa\?/);
+  assert.match((await staff.get('/daily')).html, /Inventory asked a question/);
+  assert.match((await staff.get('/daily')).html, /Inventory asked about an item/);
+  // The photo: this branch and Inventory can open it, another branch can't
+  assert.equal((await staff.get(`/oos/photo/${it.photo_id}`)).status, 200);
+  assert.equal((await alia.get(`/oos/photo/${it.photo_id}`)).status, 200);
+  const jhStaff = await login('pin', 'yaya', '2222');
+  assert.equal((await jhStaff.get(`/oos/photo/${it.photo_id}`)).status, 404);
+  assert.equal((await jhStaff.post(`/oos/${it.id}/message`, { message: 'hi' })).status, 403);
+  // The branch replies with a photo; Inventory sees "Branch replied"
+  await staff.post(`/oos/${it.id}/message`, { message: 'Ini dia, Ubat Batuk Cap Ibu & Anak 120ml', photo: jpeg, back: '/oos' });
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM oos_messages WHERE oos_id = $1', [it.id])).rows[0].n, 2);
+  assert.match((await alia.get('/oos/inbox')).html, /Branch replied/);
+  assert.match((await alia.get(`/oos/${it.id}`)).html, /Cap Ibu &amp; Anak[\s\S]*\/oos\/photo\/\d+/);
+  assert.equal((await staff.post(`/oos/${it.id}/message`, { message: '' })).status, 302, 'empty → message, nothing saved');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM oos_messages WHERE oos_id = $1', [it.id])).rows[0].n, 2);
+
+  // New item request – not out of stock, a new item for Dynamod
+  const r = await staff.post('/oos/new-items', { item: 'Bio-Oil 60ml', details: 'Guardian RM 39.90', asking: '2-3', photo: jpeg });
+  assert.equal(r.status, 302);
+  const req = (await db.query("SELECT * FROM item_requests WHERE item = 'Bio-Oil 60ml'")).rows[0];
+  assert.equal(req.status, 'New'); assert.ok(req.photo_id); assert.equal(req.customers_count, 3);
+  const inbox = (await alia.get('/oos/inbox?tab=new')).html;
+  assert.match(inbox, /Bio-Oil 60ml[\s\S]*NEW REQUEST/);
+  assert.match(inbox, /New item requests \(1\)/);
+  assert.equal((await staff.post(`/oos/new-items/${req.id}/answer`, { answer: 'will' })).status, 403);
+  assert.match(decodeURIComponent((await alia.post(`/oos/new-items/${req.id}/answer`, { answer: 'no' })).location), /Say why/);
+  await alia.post(`/oos/new-items/${req.id}/message`, { message: 'Saiz 60ml atau 125ml?' });
+  await alia.post(`/oos/new-items/${req.id}/answer`, { answer: 'listed', answer_note: 'Listed as BIO-OIL 60ML – order with next PO' });
+  const mine = (await staff.get('/oos/new-items')).html;
+  assert.match(mine, /LISTED – CAN ORDER[\s\S]*BIO-OIL 60ML/);
+  assert.match(mine, /Saiz 60ml atau 125ml\?/);
+  // New item requests don't count as out-of-stock items
+  const wm = (await db.query("SELECT id FROM branches WHERE code = 'WM'")).rows[0].id;
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM oos_items WHERE item = 'Bio-Oil 60ml' AND branch_id = $1", [wm])).rows[0].n, 0);
+});
