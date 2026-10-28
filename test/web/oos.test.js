@@ -46,6 +46,7 @@ async function login(kind, username, secret) {
   let csrf = null;
   return {
     get: (p) => req('GET', p),
+    raw: (p) => fetch(base + p, { redirect: 'manual', headers: { cookie } }),
     post: async (p, body) => {
       if (!csrf) csrf = ((await req('GET', '/sales')).html.match(/name="_csrf" value="([^"]+)"/) || (await req('GET', '/daily')).html.match(/name="_csrf" value="([^"]+)"/) || [])[1];
       return req('POST', p, { _csrf: csrf, ...body });
@@ -430,4 +431,36 @@ test('28 Oct: table – "Ask branch to clarify" goes to the person who reported 
   await db.query('UPDATE users SET pin_hash = $1 WHERE username = $2', [bcrypt.hashSync('3333', 4), 'zawiyah']);
   const other = await login('pin', 'zawiyah', '3333');
   assert.doesNotMatch((await other.get('/daily')).html, /Inventory asked you to clarify/);
+});
+
+test('28 Oct: Download Excel – open items by branch + B2B, notes column, links; inventory team only', async () => {
+  const ExcelJS = require('exceljs');
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  assert.match((await alia.get('/oos/inbox')).html, /href="\/oos\/inbox.xlsx"/);
+  const r = await alia.raw('/oos/inbox.xlsx');
+  assert.equal(r.status, 200);
+  assert.match(r.headers.get('content-type'), /spreadsheetml/);
+  assert.match(r.headers.get('content-disposition'), /Pharmacy4U-out-of-stock-\d{4}-\d{2}-\d{2}\.xlsx/);
+  const wb = new ExcelJS.Workbook();
+  await wb.xlsx.load(Buffer.from(await r.arrayBuffer()));
+  const names = wb.worksheets.map((w) => w.name);
+  assert.equal(names[0], 'Open items');
+  assert.ok(names.includes('Done – 14 days') && names.includes('New item requests'));
+  const ws = wb.getWorksheet('Open items');
+  const head = ws.getRow(3).values;
+  assert.ok(head.includes('Inventory notes') && head.includes('Answer') && head.includes('Seen by'));
+  const open = (await db.query("SELECT count(*)::int AS n FROM oos_items WHERE status = ANY($1)", [oos.OPEN])).rows[0].n;
+  const rows = ws.getSheetValues().slice(4).filter(Boolean);
+  assert.equal(rows.length, open, 'one row per open item');
+  if (open) {
+    // per-branch sheets match, and B2B items (added earlier) get their own sheet
+    const codes = [...new Set(rows.map((x) => x[1]))];
+    for (const c of codes) assert.ok(names.includes(c), `sheet for ${c}`);
+    const link = rows[0][head.indexOf('Open in app')];
+    assert.match(link.hyperlink, /\/oos\/\d+$/);
+  }
+  assert.ok((await db.query("SELECT 1 FROM audit_log WHERE action = 'export' AND table_name = 'oos_items'")).rows.length);
+  // staff and HQ staff outside the inventory team can't download it
+  const staff = await login('pin', 'hazera', '1111');
+  assert.equal((await staff.raw('/oos/inbox.xlsx')).status, 403);
 });

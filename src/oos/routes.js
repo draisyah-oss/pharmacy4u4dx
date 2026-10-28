@@ -102,6 +102,20 @@ function oosRoutes(db, { now, trackerStart }) {
     } catch (err) { next(err); }
   });
 
+  // 28 Oct: "Download Excel" – the open items (by branch + B2B), done lately and new item requests,
+  // with an empty "Inventory notes" column. One-way: answers are still saved in the app.
+  router.get('/oos/inbox.xlsx', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'The out-of-stock list is for the inventory team (Alia, Syarafana, Fariz) and admin.');
+      const out = await require('./export').oosWorkbook(db, { now, base: `${req.protocol}://${req.get('host')}` });
+      await db.query(`INSERT INTO audit_log (user_id, action, table_name, record_key) VALUES ($1, 'export', 'oos_items', $2)`, [req.user.id, out.filename]);
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${out.filename}"`);
+      await out.wb.xlsx.write(res);
+      res.end();
+    } catch (err) { next(err); }
+  });
+
   // 28 Oct: the inbox as a table – every open item on one screen, answered in one Save.
   async function renderInbox(req, res, extra) {
     const inbox = await oos.loadInbox(db, { now });

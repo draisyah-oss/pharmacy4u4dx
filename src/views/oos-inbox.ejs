@@ -5,6 +5,7 @@
   <header class="oo-head">
     <h1>Out of stock <% if (toAnswer.length) { %><span class="oo-badge"><%= toAnswer.length %></span><% } %></h1>
     <p class="muted">Urgent first, then the oldest. Answer each by 11 am the next working day.</p>
+    <p><a class="button secondary" href="/oos/inbox.xlsx" download>Download Excel</a> <span class="muted">Open items by branch + B2B, done lately and new item requests, with a column for your notes. Answers are still saved here.</span></p>
   </header>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
