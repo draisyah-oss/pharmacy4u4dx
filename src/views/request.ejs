@@ -1,0 +1,72 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'requests' }) %>
+<main class="page oo-page">
+  <p><a href="/requests">‹ All requests</a></p>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <section class="oo-card">
+    <header class="oo-top"><h1>#<%= r.id %> · <%= r.title %></h1><%- include('partials/request-status', { s: r.status }) %></header>
+    <p class="oo-meta"><%= r.area %> · asked by <%= r.asked_by_name || '–' %><%= r.asked_from ? ' (' + r.asked_from + ')' : '' %> · <%= of.when(r.created_at, at) %><%= r.approved_at ? ' · approved by ' + (r.approved_by_name || '–') + ' ' + of.when(r.approved_at, at) : '' %><%= r.live_at ? ' · live ' + of.when(r.live_at, at) : '' %></p>
+    <% if (r.details) { %><p class="oo-note"><%= r.details %></p><% } %>
+    <% if (r.photo_id) { %><p class="oo-msg-photo"><a href="/oos/photo/<%= r.photo_id %>" target="_blank" rel="noopener"><img src="/oos/photo/<%= r.photo_id %>" alt="Screenshot" loading="lazy"></a></p><% } %>
+    <ol class="oo-steps" aria-label="Progress">
+      <% ['New', 'Planned', 'Ready to check', 'Waiting for approval', 'Approved', 'Live'].forEach(function (st, i, all) {
+           const idx = all.indexOf(r.status === 'Need more info' ? 'New' : r.status); const done = r.status !== 'Not doing' && i <= idx; %>
+        <li class="<%= done ? 'is-done' : '' %><%= i === idx + 1 && r.status !== 'Not doing' ? ' is-current' : '' %>"><span class="oo-dot" aria-hidden="true"><%= done ? '✔' : '' %></span><span class="oo-step-l"><%= st === 'Waiting for approval' ? 'Dr Aisyah approves' : st === 'Ready to check' ? 'You check the preview' : st %></span></li>
+      <% }) %>
+    </ol>
+  </section>
+
+  <% if (r.plan) { %><section class="oo-card"><h2>Mr 4DX’s plan</h2><p class="pre-wrap"><%= r.plan %></p></section><% } %>
+
+  <% if (r.preview_url && ['Ready to check', 'Waiting for approval', 'Approved'].includes(r.status)) { %>
+    <section class="oo-card"><h2>Preview</h2><p><a class="button secondary" href="<%= r.preview_url %>" target="_blank" rel="noopener">Open the preview ↗</a></p><p class="muted small">A test copy of the app with this change – nothing you do there touches the real numbers.</p></section>
+  <% } %>
+
+  <% if (can.check) { %>
+    <form method="post" action="/requests/<%= r.id %>/act" class="oo-card oo-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h2>Is the preview right?</h2>
+      <label class="oo-label">Note (needed if it isn’t right)<input name="message" maxlength="1500" autocomplete="off"></label>
+      <div class="oo-two"><button class="button oo-good" name="action" value="looks_right">Looks right – send to Dr Aisyah</button><button class="button secondary" name="action" value="not_right">Not right yet</button></div>
+    </form>
+  <% } %>
+  <% if (can.approve || can.reject) { %>
+    <form method="post" action="/requests/<%= r.id %>/act" class="oo-card oo-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h2>Your decision</h2>
+      <label class="oo-label">Note (optional)<input name="message" maxlength="1500" autocomplete="off"></label>
+      <div class="oo-two"><% if (can.approve) { %><button class="button oo-good" name="action" value="approve">Approve – go live</button><% } %><% if (can.reject) { %><button class="button secondary" name="action" value="reject">Not doing</button><% } %></div>
+    </form>
+  <% } %>
+
+  <section class="oo-card" aria-labelledby="th-h">
+    <h2 id="th-h">Conversation</h2>
+    <ol class="oo-msgs">
+      <% r.notes.forEach(function (n) { %>
+        <li class="oo-msg<%= n.author ? ' is-hq' : ' is-branch' %>"><span class="oo-msg-who"><b><%= n.who || '–' %></b> · <%= of.when(n.created_at, at) %></span><span class="oo-msg-body"><%= n.body %></span></li>
+      <% }) %>
+    </ol>
+    <% if (!r.notes.length) { %><p class="muted small">No messages yet.</p><% } %>
+    <form method="post" action="/requests/<%= r.id %>/note" class="oo-msg-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <textarea name="message" rows="2" maxlength="1500" placeholder="Add a detail or answer a question"></textarea>
+      <button class="button secondary" type="submit">Send</button>
+    </form>
+  </section>
+
+  <% if (can.manage) { %>
+    <form method="post" action="/requests/<%= r.id %>/status" class="oo-card oo-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <h2>Admin</h2>
+      <label class="oo-label">Status<select name="status"><% statuses.forEach(function (s) { %><option<%= r.status === s ? ' selected' : '' %>><%= s %></option><% }) %></select></label>
+      <label class="oo-label">Plan<textarea name="plan" rows="4" maxlength="3000"><%= r.plan || '' %></textarea></label>
+      <label class="oo-label">Preview link<input name="preview_url" value="<%= r.preview_url || '' %>" placeholder="https://…"></label>
+      <label class="oo-label">Note<input name="message" maxlength="1500" autocomplete="off"></label>
+      <button class="button secondary" type="submit">Save</button>
+    </form>
+  <% } %>
+</main>
+</body>
+</html>

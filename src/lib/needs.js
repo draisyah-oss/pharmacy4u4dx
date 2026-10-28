@@ -138,6 +138,14 @@ async function buildNeeds(db, user, { at }) {
   if (user.role === 'admin' && user.is_super) await forCeo(db, today, add);
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);
   if ((user.role === 'branch_manager' || user.role === 'branch_staff') && user.branch_id) await forBranch(db, user, today, at, add);
+  // 28 Oct: change requests – the CEO approves, other admins see new ones, the asker checks previews.
+  const cr = await db.query(`SELECT count(*) FILTER (WHERE status = 'Waiting for approval')::int AS approval,
+      count(*) FILTER (WHERE status = 'New')::int AS fresh,
+      count(*) FILTER (WHERE status = 'Ready to check' AND created_by = $1)::int AS mine FROM change_requests`, [user.id]);
+  const c = cr.rows[0];
+  if (user.role === 'admin' && user.is_super && c.approval) add('today', c.approval, 'App changes waiting for your approval', 'checked by the person who asked', '/requests');
+  if (user.role === 'admin' && !user.is_super && c.fresh) add('todo', c.fresh, 'New app change requests', 'Request a change', '/requests');
+  if (c.mine) add('today', c.mine, 'Check a preview of your app change', 'looks right? / not right yet', '/requests');
   items.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
   return { items: items.slice(0, MAX), more: Math.max(0, items.length - MAX) };
 }

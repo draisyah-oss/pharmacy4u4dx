@@ -992,3 +992,4 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .oo-wide .oo-card { max-width: 640px; }
 .oo-table .oo-chip { white-space: normal; }
 .oo-table { min-width: 900px; }
+.pre-wrap { white-space: pre-wrap; }

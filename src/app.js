@@ -14,6 +14,7 @@ const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
 const { wigRoutes } = require('./wig/routes');
+const { requestRoutes, agentApi } = require('./requests/routes');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
@@ -66,6 +67,9 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
       res.status(500).json({ ok: false }); // no details for the outside world
     }
   });
+
+  // 28 Oct: Mr 4DX's API (token in AGENT_API_TOKEN) – before the session / CSRF checks.
+  app.use('/api/agent', agentApi(db, { now }));
 
   app.use(loadUser(db));
   app.use((req, res, next) => (req.method === 'POST' ? checkCsrf(req, res, next) : next()));
@@ -131,6 +135,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(salesRoutes(db, { now, salesSheet }));
   app.use(oosRoutes(db, { now, trackerStart }));
   app.use(wigRoutes(db, { now, trackerStart }));
+  app.use(requestRoutes(db, { now }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

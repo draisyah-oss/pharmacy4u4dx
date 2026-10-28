@@ -328,3 +328,46 @@ test('19 Oct: super admin (Dr Aisyah) + admin logins for Iman and Hanin', async 
   // Iman's own login still works for her own KPIs
   assert.equal((await (await iman()).get('/hq/today')).status, 200);
 });
+
+test('28 Oct: Request a change – staff asks, Mr 4DX plans via the API, asker checks, only the CEO approves', async () => {
+  process.env.AGENT_API_TOKEN = 'test-token-0123456789abcdefghij';
+  const st = await staff();
+  assert.match((await st.get('/daily')).html, /Request a change/);
+  const bad = await st.post('/requests', { title: '' });
+  assert.equal(bad.status, 400);
+  const r = await st.post('/requests', { title: 'Add Eldon strip box', area: 'Daily entry', details: 'we sell 3 a day' });
+  const id = Number(r.location.match(/\/requests\/(\d+)/)[1]);
+  // The agent API: no token → 401; reads the list; can't approve
+  const api = (method, p, body, token = process.env.AGENT_API_TOKEN) => fetch(base + '/api/agent' + p, {
+    method, headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  assert.equal((await api('GET', '/requests', null, 'wrong-token-0123456789abcdefghij')).status, 401);
+  const list = await (await api('GET', '/requests')).json();
+  assert.equal(list.open.find((x) => x.id === id).title, 'Add Eldon strip box');
+  assert.equal((await api('POST', `/requests/${id}`, { status: 'Approved' })).status, 403);
+  assert.equal((await api('POST', `/requests/${id}`, { status: 'Live' })).status, 409);
+  assert.equal((await api('POST', `/requests/${id}`, { status: 'Ready to check', plan: 'Add box p6 "Eldon strip units sold", 2 a day', preview_url: 'https://preview.example.com', message: 'Preview ready' })).status, 200);
+  // Needs you: the asker checks the preview
+  assert.match((await st.get('/daily')).html, /Check a preview of your app change/);
+  const page = (await st.get(`/requests/${id}`)).html;
+  assert.match(page, /Mr 4DX[\s\S]*Planned|New → Ready to check – Preview ready/);
+  assert.match(page, /Open the preview/);
+  // Another staff member / a manager can't do the asker's check; an admin who isn't the CEO can't approve
+  const m = await manager();
+  assert.equal((await m.post(`/requests/${id}/act`, { action: 'looks_right' })).status, 403);
+  assert.match(decodeURIComponent((await st.post(`/requests/${id}/act`, { action: 'not_right' })).location), /Say what isn’t right/);
+  await st.post(`/requests/${id}/act`, { action: 'looks_right' });
+  const ceo = await admin();
+  assert.match((await ceo.get('/requests')).html, /App changes waiting for your approval/);
+  await ceo.post(`/requests/${id}/act`, { action: 'approve' });
+  let row = (await db.query('SELECT status, approved_by FROM change_requests WHERE id = $1', [id])).rows[0];
+  assert.equal(row.status, 'Approved'); assert.ok(row.approved_by);
+  assert.equal((await api('POST', `/requests/${id}`, { status: 'Live', message: 'Deployed' })).status, 200);
+  row = (await db.query('SELECT status, live_at FROM change_requests WHERE id = $1', [id])).rows[0];
+  assert.equal(row.status, 'Live'); assert.ok(row.live_at);
+  // WhatsApp later: the bot files a request for a known username
+  const wa = await (await api('POST', '/requests', { username: 'hazera', title: 'Bigger buttons' })).json();
+  assert.ok(wa.id);
+  assert.equal((await db.query('SELECT source FROM change_requests WHERE id = $1', [wa.id])).rows[0].source, 'whatsapp');
+  delete process.env.AGENT_API_TOKEN;
+  assert.equal((await api('GET', '/requests', null, 'x')).status, 404, 'no token set → no API');
+});

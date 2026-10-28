@@ -1,0 +1,3 @@
+<%# 28 Oct: status chip for a change request. Input: s %>
+<% const c = { 'New': 'oc-info', 'Need more info': 'oc-warn', 'Planned': 'oc-info', 'Ready to check': 'oc-warn', 'Waiting for approval': 'oc-warn', 'Approved': 'oc-good', 'Live': 'oc-good', 'Not doing': 'oc-grey' }[s] || 'oc-info'; %>
+<span class="oo-chip <%= c %>"><%= s.toUpperCase() %></span>

@@ -1,0 +1,45 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'requests' }) %>
+<% const t = typed; %>
+<main class="page oo-page">
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <section class="oo-card" aria-labelledby="new-h">
+    <h1 id="new-h">Request a change</h1>
+    <p class="muted">Something in the app that could work better – a box, a target, a page, a button? Tell Mr 4DX. You’ll check a preview before anything changes, and Dr Aisyah approves it before it goes live.</p>
+    <form method="post" action="/requests" class="oo-form" novalidate>
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">What should change?
+        <input name="title" maxlength="140" autocomplete="off" required value="<%= t.title || '' %>" placeholder="e.g. Add a box for Eldon strip sold at Ampang"<%= errors.title ? ' aria-invalid="true"' : '' %>>
+        <% if (errors.title) { %><span class="wk-error"><%= errors.title %></span><% } %>
+      </label>
+      <label class="oo-label">Which part of the app?
+        <select name="area"><% areas.forEach(function (a) { %><option<%= t.area === a ? ' selected' : '' %>><%= a %></option><% }) %></select>
+      </label>
+      <label class="oo-label">Why, and any details (optional)
+        <textarea name="details" rows="4" maxlength="1500" placeholder="e.g. we sell 3 a day now and it isn’t tracked; the target could be 2 a day"><%= t.details || '' %></textarea>
+        <% if (errors.details) { %><span class="wk-error"><%= errors.details %></span><% } %>
+      </label>
+      <%- include('partials/photo-input', { id: 'ph-cr', label: 'Add a screenshot (optional)' }) %>
+      <% if (errors.photo) { %><span class="wk-error"><%= errors.photo %></span><% } %>
+      <button class="button wide" type="submit">Send to Mr 4DX</button>
+    </form>
+  </section>
+
+  <section aria-labelledby="list-h">
+    <h2 id="list-h">Requests</h2>
+    <% if (!open.length && !done.length) { %><p class="muted">No requests yet.</p><% } %>
+    <div class="oo-list">
+      <% open.concat(done).forEach(function (r) { %>
+        <a class="oo-item oo-link<%= ['Live', 'Not doing'].includes(r.status) ? ' is-closed' : '' %>" href="/requests/<%= r.id %>">
+          <span class="oo-top"><b>#<%= r.id %> · <%= r.title %></b><%- include('partials/request-status', { s: r.status }) %></span>
+          <span class="oo-meta"><%= r.area %> · <%= r.asked_by_name || '–' %><%= r.asked_from ? ' (' + r.asked_from + ')' : '' %> · <%= of.when(r.created_at, at) %><%= r.source === 'whatsapp' ? ' · via WhatsApp' : '' %></span>
+        </a>
+      <% }) %>
+    </div>
+  </section>
+</main>
+<script src="/js/photo.js?v=1" defer></script>
+</body>
+</html>
