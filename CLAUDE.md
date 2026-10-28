@@ -240,6 +240,9 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - **My boxes** (sheet-view branches): Daily entry and the week sheet show "My boxes + Team" (default for branch staff) or "Everyone (+n boxes)" (default for managers); Daily entry links to the week sheet and back.
 - saveDailyEntries **keepMissing** (now used by /daily and /daily/week): a box not in the form keeps its stored number (filtered views); an empty box in the form still clears it.
 
+## Sales sheet: "GrabMart Sales (RM)" = Grab sales (28 Oct, CEO)
+- The daily tabs (JH first, then the others) have a **"GrabMart Sales (RM)"** column. Every branch's mapping now reads Grab sales from GrabMart Sales (RM) / GrabMart Sales first, then GRAB PAY / Grabpay / Grab sales (RM) / Grab sales, and walk-in takes off the same column (walk-in = Total − Grab). "GrabMart" alone is still the Grab order count (headers match exactly after normalising). Older databases once via updateSalesSheetColumns flag sales_sheet_v4; the next sync rewrites the sheet numbers. Setup check now names "GrabMart Sales (RM)" when a tab has no Grab column.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

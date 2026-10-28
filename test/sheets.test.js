@@ -231,5 +231,19 @@ test('16 Oct: the Grab Pay column renamed "Grab sales (RM)" is still read; a mis
   assert.equal(days[1].values.grab, 0);
   assert.deepEqual(missingColumns(rows, cols), []);
   const noGrab = rows.map((r, i) => (i === 1 ? r.map((c) => (c === 'Grab sales (RM)' ? 'Grab' : c)) : r));
-  assert.deepEqual(missingColumns(noGrab, cols), ['walkin: no column “GRAB PAY” to take off', 'grab: no column “GRAB PAY”']);
+  assert.deepEqual(missingColumns(noGrab, cols), ['walkin: no column “GrabMart Sales (RM)” to take off', 'grab: no column “GrabMart Sales (RM)”']);
+});
+
+test('28 Oct: a "GrabMart Sales (RM)" column is read as Grab sales and kept out of walk-in, every branch', () => {
+  const { readSeed } = require('../src/db/seed');
+  for (const b of readSeed().branches) {
+    const rows = [
+      ['', 'Date', 'Transaction', 'Cash', 'GrabMart Sales (RM)', 'Total', 'GrabMart', 'Zakat', 'Shopee Sales', 'Alpine'],
+      ['MONDAY', '26/10/2026', '50', '900', '45.50', '1,245.50', '2', '', '', ''],
+    ];
+    const [day] = parseSalesTab(rows, b.sales_sheet.columns);
+    assert.equal(day.values.grab, 45.5, b.code);
+    assert.equal(day.values.walkin, 1200, `${b.code}: walk-in = Total minus GrabMart sales`);
+    assert.equal(day.values.graord, 2, `${b.code}: GrabMart (orders) still the order count`);
+  }
 });

@@ -67,6 +67,8 @@ async function backfillNewSettings(db, seed, log) {
   await updateSalesSheetColumns(db, seed, log);
   // 16 Oct: the sheet's Grab Pay column is now called "Grab sales (RM)" – accept either name.
   await updateSalesSheetColumns(db, seed, log, 'sales_sheet_v3');
+  // 28 Oct: the daily tabs now have "GrabMart Sales (RM)" – read it as Grab sales (and keep it out of walk-in).
+  await updateSalesSheetColumns(db, seed, log, 'sales_sheet_v4');
   await syncBranchFromSeed(db, seed, 'JH', 'jh_update_v1', log);
   await syncBranchFromSeed(db, seed, 'WM', 'wm_update_16oct', log);
   await retireJhPoster(db, log);
