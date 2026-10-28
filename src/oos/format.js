@@ -32,7 +32,7 @@ function steps(it) {
   const from = it.answer === 'transfer' ? (it.from_code || 'branch') : 'HQ';
   const closed = Boolean(it.received_at) || ['Back in stock', 'Discontinued', 'Discontinued / use substitute'].includes(it.status);
   let list;
-  if (!it.answer) list = [['Reported', it.reported_at], ['Inventory answers', null], ['Back in stock', it.received_at]];
+  if (!it.answer) list = [['Reported', it.reported_at], [it.seen_at ? `Seen by ${it.seen_by_name || 'Inventory'}` : 'Seen by Inventory', it.seen_at], ['Inventory answers', null], ['Back in stock', it.received_at]];
   else if (it.answer === 'hq_deliver' || it.answer === 'transfer') {
     list = [['Reported', it.reported_at], [`${from} will send ${it.answer_qty || ''}`.trim(), it.answered_at],
       [`Picked at ${from}`, it.picked_at || it.sent_at], ['On the way', it.sent_at], ['Received', it.received_at]];

@@ -330,3 +330,32 @@ test('27 Oct: questions & photos on an out-of-stock item; new item requests (not
   const wm = (await db.query("SELECT id FROM branches WHERE code = 'WM'")).rows[0].id;
   assert.equal((await db.query("SELECT count(*)::int AS n FROM oos_items WHERE item = 'Bio-Oil 60ml' AND branch_id = $1", [wm])).rows[0].n, 0);
 });
+
+test('28 Oct: "seen by Inventory" when Alia opens an item; activity log for the CEO', async () => {
+  clock = new Date('2026-10-28T09:00:00+08:00');
+  const staff = await login('pin', 'hazera', '1111');
+  await staff.post('/oos', { item: 'Gaviscon 150ml', left: 'none', asking: '0' });
+  const id = (await db.query("SELECT id FROM oos_items WHERE item = 'Gaviscon 150ml'")).rows[0].id;
+  assert.match((await staff.get('/oos')).html, /Gaviscon 150ml[\s\S]*?not seen by Inventory yet/);
+  // The CEO (admin) opening it doesn't count as seen; Alia opening it does
+  const admin = await login('password', 'admin', 'admin-pass-1');
+  await admin.get(`/oos/${id}`);
+  assert.equal((await db.query('SELECT seen_at FROM oos_items WHERE id = $1', [id])).rows[0].seen_at, null);
+  let act = (await admin.get('/oos/activity')).html;
+  assert.match(act, /Not opened by Inventory yet[\s\S]*Gaviscon 150ml/);
+  clock = new Date('2026-10-28T09:20:00+08:00');
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  await alia.get(`/oos/${id}`);
+  const row = (await db.query('SELECT seen_at, seen_by FROM oos_items WHERE id = $1', [id])).rows[0];
+  assert.equal(new Date(row.seen_at).toISOString(), clock.toISOString());
+  assert.match((await staff.get('/oos')).html, /Gaviscon 150ml[\s\S]*?seen by Alia today 9:20 am/);
+  await alia.post(`/oos/${id}/message`, { message: 'Saiz berapa?' });
+  act = (await admin.get('/oos/activity?branch=WM')).html;
+  assert.doesNotMatch(act, /Not opened by Inventory yet[\s\S]*Gaviscon 150ml/);
+  assert.match(act, /Seen by Inventory[\s\S]*Alia/);
+  assert.match(act, /Inventory asked: Saiz berapa\?/);
+  // Seen 2 today (also the Biorelief transfer she answered at 9 am), 1 question, 1 answer
+  assert.match(act, /<td>Alia<\/td><td class="n">2<\/td><td class="n">1<\/td><td class="n">1<\/td>/);
+  // Branch staff can't open the activity log
+  assert.equal((await staff.get('/oos/activity')).status, 403);
+});

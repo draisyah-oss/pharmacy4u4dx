@@ -17,8 +17,10 @@ const ANSWERS = {
 };
 
 const SELECT = `
-  SELECT r.*, b.code AS branch_code, b.name AS branch_name, c.display_name AS asked_by_name, a.display_name AS answered_by_name
+  SELECT r.*, b.code AS branch_code, b.name AS branch_name, c.display_name AS asked_by_name, a.display_name AS answered_by_name,
+    sn.display_name AS seen_by_name
   FROM item_requests r JOIN branches b ON b.id = r.branch_id
+  LEFT JOIN users sn ON sn.id = r.seen_by
   LEFT JOIN users c ON c.id = r.created_by LEFT JOIN users a ON a.id = r.answered_by`;
 
 async function create(db, user, branch, body, { now }) {
@@ -75,8 +77,9 @@ async function answer(db, user, req, body, { now }) {
   const at = now();
   await db.transaction(async (tx) => {
     await tx.query(
-      `UPDATE item_requests SET status = $2, answer_note = $3, answered_at = $4, answered_by = $5, updated_at = $4 WHERE id = $1`,
-      [req.id, a.status, note.value, at, user.id]);
+      `UPDATE item_requests SET status = $2, answer_note = $3, answered_at = $4, answered_by = $5, updated_at = $4,
+         seen_at = COALESCE(seen_at, CASE WHEN $6 THEN $4::timestamptz END), seen_by = COALESCE(seen_by, CASE WHEN $6 THEN $5::integer END) WHERE id = $1`,
+      [req.id, a.status, note.value, at, user.id, Boolean(user.inventory)]);
     await tx.query(`INSERT INTO audit_log (user_id, action, table_name, record_key, old_value, new_value) VALUES ($1, 'update', 'item_requests', $2, $3, $4)`,
       [user.id, `${req.branch_code} new item #${req.id} answer`, JSON.stringify({ status: req.status }), JSON.stringify({ status: a.status, note: note.value })]);
   });

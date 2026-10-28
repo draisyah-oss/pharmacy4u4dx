@@ -112,10 +112,20 @@ async function report(db, user, branch, body, { now }) {
 
 const SELECT = `
   SELECT o.*, b.code AS branch_code, b.name AS branch_name, fb.code AS from_code, fb.name AS from_name,
-    c.display_name AS reported_by_name, a.display_name AS answered_by_name, s.display_name AS sent_by_name
+    c.display_name AS reported_by_name, a.display_name AS answered_by_name, s.display_name AS sent_by_name,
+    sn.display_name AS seen_by_name
   FROM oos_items o JOIN branches b ON b.id = o.branch_id
+  LEFT JOIN users sn ON sn.id = o.seen_by
   LEFT JOIN branches fb ON fb.id = o.from_branch_id
   LEFT JOIN users c ON c.id = o.created_by LEFT JOIN users a ON a.id = o.answered_by LEFT JOIN users s ON s.id = o.sent_by`;
+
+// 28 Oct: the first time someone in the inventory team opens (or answers / asks about / closes) an
+// item, it's stamped "seen" – the branch and the CEO see it was picked up, and when.
+async function markSeen(db, user, table, id, at) {
+  if (!user || !user.inventory || !['oos_items', 'item_requests'].includes(table)) return false;
+  const r = await db.query(`UPDATE ${table} SET seen_at = $2, seen_by = $3 WHERE id = $1 AND seen_at IS NULL RETURNING id`, [id, at, user.id]);
+  return r.rows.length > 0;
+}
 
 async function loadItem(db, id) {
   if (!/^\d{1,9}$/.test(String(id))) return null;
@@ -218,6 +228,7 @@ async function answerItem(db, user, item, body, { now }) {
   const note = cleanText(body.reason, { max: 300, label: 'Note to the branch' });
   if (note.error) return { error: note.error };
   next.reason_for_delay = note.value;
+  await markSeen(db, user, 'oos_items', item.id, at);
   await db.transaction(async (tx) => {
     const cols = Object.keys(next);
     await tx.query(
@@ -272,6 +283,7 @@ async function markReceived(db, user, item, { now }) {
 async function markDone(db, user, item, { now }) {
   const at = now();
   if (!OPEN.includes(item.status)) return { ok: true, already: true };
+  await markSeen(db, user, 'oos_items', item.id, at);
   await db.transaction(async (tx) => {
     await tx.query(
       `UPDATE oos_items SET status = 'Back in stock', closed_by_hq = true, received_at = $3, received_by = $2,
@@ -381,6 +393,6 @@ async function branchWeekSummary(db, { branchId, week, now }) {
 
 module.exports = {
   branchWeekSummary,
-  OPEN, ANSWERS, DELIVERS, isDelivery, markDone, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
+  OPEN, ANSWERS, DELIVERS, isDelivery, markDone, markSeen, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
   report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, buildBoard,
 };

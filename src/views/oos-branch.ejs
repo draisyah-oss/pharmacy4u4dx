@@ -63,7 +63,7 @@
         <p class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></p>
         <%- include('partials/oos-steps', { it: it, of: of, at: at }) %>
         <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %>
-          <%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? (it.closed_by_hq ? ' · closed by Inventory ' : ' · accepted ') + of.when(it.received_at, at) : '' %></p>
+          <%= it.seen_at ? ' · seen by ' + (it.seen_by_name || 'Inventory') + ' ' + of.when(it.seen_at, at) : ' · not seen by Inventory yet' %><%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? (it.closed_by_hq ? ' · closed by Inventory ' : ' · accepted ') + of.when(it.received_at, at) : '' %></p>
         <%- include('partials/oos-thread', { it: it, action: '/oos/' + it.id + '/message', back: '/oos' + bq + '#oos-' + it.id, canTalk: canTalk, of: of, at: at, open: false }) %>
         <% if (canClose && it.isOpen) { %>
           <div class="oo-actions">

@@ -41,7 +41,7 @@
         <% if (it.urgent && it.unanswered) { %><span class="oo-chip oc-bad">URGENT</span><% } else { %><%- include('partials/oos-chip', { it: it, of: of }) %><% } %></span>
       <span class="oo-meta"><b><%= it.branch_code %></b> · <%= it.left_qty === 0 ? '0 left' : it.left_qty ? it.left_qty + ' left' : 'from the Monday list' %><%= it.customers_count ? ' · ' + (it.customers_count >= 3 ? '3+' : '1–2') + ' customers asking' : '' %><%= it.note ? ' · “' + it.note + '”' : '' %></span>
       <% if (it.unanswered) { %>
-        <span class="oo-due<%= it.dueMs < 0 ? ' s-off_track' : it.dueMs < 3 * 3600e3 ? ' s-watch' : '' %>">Reported <%= of.when(it.reported_at, at) %><%= it.dueMs !== null ? ' · ' + of.left(it.dueMs) : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %></span>
+        <span class="oo-due<%= it.dueMs < 0 ? ' s-off_track' : it.dueMs < 3 * 3600e3 ? ' s-watch' : '' %>"><%= it.seen_at ? 'Seen by ' + (it.seen_by_name || '–') + ' · ' : 'NOT OPENED YET · ' %>Reported <%= of.when(it.reported_at, at) %><%= it.dueMs !== null ? ' · ' + of.left(it.dueMs) : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %></span>
       <% } else { %>
         <span class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></span>
         <% if (it.late_flagged_at) { %><span class="oo-due s-watch">Branch says it’s late (<%= of.when(it.late_flagged_at, at) %>)</span><% } %>
@@ -54,7 +54,7 @@
   <% }) %>
   </div>
   <% } %>
-  <p class="wk-next"><a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Deliveries to send →</a></p>
+  <p class="wk-next"><a class="button secondary" href="/oos/activity">Activity log →</a> <a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Deliveries to send →</a></p>
 </main>
 </body>
 </html>

@@ -55,7 +55,7 @@
         <header class="oo-top"><b><%= r.item %></b><%- include('partials/request-chip', { r: r }) %></header>
         <% if (r.details) { %><p class="oo-line"><%= r.details %></p><% } %>
         <% if (r.answer_note) { %><p class="oo-line"><b>Inventory:</b> “<%= r.answer_note %>”</p><% } %>
-        <p class="oo-meta">Asked <%= of.when(r.created_at, at) %> by <%= r.asked_by_name || '–' %><%= r.answered_at ? ' · answered ' + of.when(r.answered_at, at) + ' by ' + (r.answered_by_name || '–') : '' %></p>
+        <p class="oo-meta">Asked <%= of.when(r.created_at, at) %> by <%= r.asked_by_name || '–' %><%= r.seen_at ? ' · seen by ' + (r.seen_by_name || 'Inventory') + ' ' + of.when(r.seen_at, at) : ' · not seen yet' %><%= r.answered_at ? ' · answered ' + of.when(r.answered_at, at) + ' by ' + (r.answered_by_name || '–') : '' %></p>
         <%- include('partials/oos-thread', { it: r, action: '/oos/new-items/' + r.id + '/message', back: '/oos/new-items' + bq + '#req-' + r.id, canTalk: canTalk, of: of, at: at, open: false }) %>
       </article>
     <% }) %>

@@ -77,8 +77,10 @@ async function addMessage(db, user, target, body, { now }) {
     await tx.query(
       `INSERT INTO oos_messages (oos_id, request_id, user_id, from_branch, body, photo_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [target.kind === 'oos' ? target.id : null, target.kind === 'request' ? target.id : null, user.id, isBranchUser(user), text.value, photoId, at]);
-    if (target.kind === 'oos') await tx.query('UPDATE oos_items SET updated_at = $2 WHERE id = $1', [target.id, at]);
-    else await tx.query('UPDATE item_requests SET updated_at = $2 WHERE id = $1', [target.id, at]);
+    const table = target.kind === 'oos' ? 'oos_items' : 'item_requests';
+    await tx.query(`UPDATE ${table} SET updated_at = $2 WHERE id = $1`, [target.id, at]);
+    // Asking the branch counts as Inventory having seen it (28 Oct).
+    if (user.inventory) await tx.query(`UPDATE ${table} SET seen_at = $2, seen_by = $3 WHERE id = $1 AND seen_at IS NULL`, [target.id, at, user.id]);
     await tx.query(
       `INSERT INTO audit_log (user_id, action, table_name, record_key, new_value) VALUES ($1, 'insert', 'oos_messages', $2, $3)`,
       [user.id, `${target.branch_code} ${target.kind === 'oos' ? '#' : 'new item #'}${target.id} message`, JSON.stringify({ text: text.value, photo: Boolean(photo.value) })]);

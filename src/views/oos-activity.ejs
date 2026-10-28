@@ -1,0 +1,53 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oosactivity' }) %>
+<% const q = function (d, b) { return '/oos/activity?date=' + d + (b ? '&branch=' + encodeURIComponent(b) : ''); }; const time = function (t) { return of.time(t); }; %>
+<div class="daybar"><nav class="strip" aria-label="Choose a day">
+  <% days.forEach(function (d) { %><a href="<%= q(d, branch) %>" class="strip-pill<%= d === date ? ' is-current' : '' %>"><%= d === today ? 'Today' : of.dateLabel(d) %></a><% }) %>
+</nav></div>
+<main class="page oo-page">
+  <header class="oo-head">
+    <h1>Out-of-stock activity</h1>
+    <p class="muted">What happened between the branches and Inventory on <%= date === today ? 'today' : of.dateLabel(date) %> – reports, “seen”, questions and replies, answers, deliveries. Every step is in the app, so nothing depends on WhatsApp.</p>
+  </header>
+  <nav class="strip oo-tabs" aria-label="Branch">
+    <a href="<%= q(date, null) %>" class="strip-pill<%= !branch ? ' is-current' : '' %>">All branches</a>
+    <% branches.forEach(function (b) { %><a href="<%= q(date, b) %>" class="strip-pill<%= branch === b ? ' is-current' : '' %>"><%= b %></a><% }) %>
+  </nav>
+
+  <% if (unseen.length || unseenReq.length) { %>
+  <section class="oo-card" aria-labelledby="unseen-h">
+    <h2 id="unseen-h">Not opened by Inventory yet <span class="oo-badge"><%= unseen.length + unseenReq.length %></span></h2>
+    <ul class="oo-plain">
+      <% unseen.forEach(function (u) { %><li><a href="/oos/<%= u.id %>"><b><%= u.item %></b></a> · <%= u.branch_code %><%= u.urgent ? ' · urgent' : '' %> · reported <%= of.when(u.reported_at, at) %> <span class="<%= u.hours > 24 ? 's-off_track' : u.hours > 4 ? 's-watch' : 'muted' %>">(<%= of.span(u.hours * 3600e3) %> ago)</span></li><% }) %>
+      <% unseenReq.forEach(function (u) { %><li><a href="/oos/new-items/<%= u.id %>"><b><%= u.item %></b></a> · <%= u.branch_code %> · new item · asked <%= of.when(u.created_at, at) %></li><% }) %>
+    </ul>
+  </section>
+  <% } %>
+
+  <% if (people.length) { %>
+  <section class="oo-card" aria-labelledby="who-h">
+    <h2 id="who-h">Inventory team that day</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Who</th><th class="n">Seen</th><th class="n">Questions asked</th><th class="n">Answered</th><th class="n">Sent</th><th class="n">Closed</th></tr></thead>
+      <tbody><% people.forEach(function (p) { %><tr><td><%= p.name %></td><td class="n"><%= p.seen %></td><td class="n"><%= p.question %></td><td class="n"><%= p.answered %></td><td class="n"><%= p.sent %></td><td class="n"><%= p.done %></td></tr><% }) %></tbody>
+    </table></div>
+  </section>
+  <% } %>
+
+  <section aria-labelledby="log-h">
+    <h2 id="log-h">Timeline</h2>
+    <% if (!events.length) { %><p class="muted">Nothing happened on this day<%= branch ? ' at ' + branch : '' %>.</p><% } %>
+    <ol class="oo-log">
+      <% events.forEach(function (e) { %>
+        <li class="oo-log-row is-<%= e.side %>">
+          <span class="oo-log-time"><%= time(e.at) %></span>
+          <span class="oo-log-main"><a href="<%= e.href %>"><b><%= e.item.item %></b></a> <span class="muted">· <%= e.item.branch %> · <%= e.item.type %></span><br>
+            <span><%= e.text %></span><% if (e.by) { %> <span class="muted">– <%= e.by %></span><% } %></span>
+        </li>
+      <% }) %>
+    </ol>
+  </section>
+</main>
+</body>
+</html>

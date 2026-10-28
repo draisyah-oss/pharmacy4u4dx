@@ -122,6 +122,7 @@ function oosRoutes(db, { now, trackerStart }) {
       if (!/^\d{1,9}$/.test(req.params.id)) return next();
       if (!oos.canAnswer(req.user)) return forbid(res, 'Answering out-of-stock items is for the inventory team and admin.');
       const item = await itemOr404(req, res); if (!item) return;
+      if (await oos.markSeen(db, req.user, 'oos_items', item.id, now())) Object.assign(item, await oos.loadItem(db, item.id));
       await renderAnswer(req, res, item);
     } catch (err) { next(err); }
   });
@@ -226,6 +227,7 @@ function oosRoutes(db, { now, trackerStart }) {
         if (!chat.canSeeBranch(req.user, r.branch_id)) return forbid(res, 'You can only open your own branch.');
         return res.redirect(`/oos/new-items${many(req.user) ? `?branch=${encodeURIComponent(r.branch_code)}` : ''}#req-${r.id}`);
       }
+      if (await oos.markSeen(db, req.user, 'item_requests', r.id, now())) Object.assign(r, await requests.load(db, r.id));
       r.forHq = true; r.kindKey = 'r';
       res.render('oos-new-item', { title: `New item – ${r.item}`, r, of, fmt, answers: requests.ANSWERS, at: now(), ok: req.query.ok || null, err: req.query.err || null });
     } catch (err) { next(err); }
@@ -261,6 +263,21 @@ function oosRoutes(db, { now, trackerStart }) {
       const r = await oos.markTransfer(db, req.user, item, req.params.step, { now });
       if (r.error) return back(res, '/oos/transfers', r.error, 'err');
       back(res, '/oos/transfers', `${item.item} → ${item.branch_code}: ${req.params.step === 'sent' ? 'on the way – the branch sees it' : 'picked – the branch sees it'}.`);
+    } catch (err) { next(err); }
+  });
+
+  // ─────────────── 28 Oct: activity log (CEO can see Inventory's follow-up) ───────────────
+  router.get('/oos/activity', async (req, res, next) => {
+    try {
+      if (!(req.user.role === 'admin' || req.user.role === 'hq' || req.user.inventory)) return forbid(res, 'The out-of-stock activity log is for HQ, the inventory team and admin.');
+      const today = calc.todayInMalaysia(now());
+      const start = await trackerStart();
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') && req.query.date >= start && req.query.date <= today ? req.query.date : today;
+      const branches = (await db.query('SELECT code FROM branches WHERE active ORDER BY sort_order')).rows.map((b) => b.code);
+      const branch = branches.includes(req.query.branch) ? req.query.branch : null;
+      const a = await require('./activity').loadActivity(db, { date, branchCode: branch, now });
+      const days = []; for (let d = today; d >= start && days.length < 14; d = calc.addDays(d, -1)) days.push(d);
+      res.render('oos-activity', { title: 'Out-of-stock activity', ...a, date, days, branch, branches, of, at: now() });
     } catch (err) { next(err); }
   });
 

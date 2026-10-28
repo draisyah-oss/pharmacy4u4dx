@@ -215,6 +215,10 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - **New item request** (/oos/new-items; tab next to Out of stock; button on Daily entry): an item a customer wants that **isn't listed in Dynamod** – item, brand / size / where seen, customers asking (1 / 2–3 / 4+), photo, note → item_requests status New. Inventory answers on /oos/new-items/:id (inbox tab "New item requests"): Need more info · Will list it · Listed – can order · Not listing (reason required); same questions & photos thread. Not counted as out of stock anywhere.
 - Needs you: branch – "Inventory asked about an item / a new item"; inventory team (Alia included) – "Branches replied", "New item requests".
 
+## Seen by Inventory + activity log (28 Oct, Alia: "Dr can't see if I acknowledged")
+- Migration 023: oos_items / item_requests seen_at + seen_by. Stamped the first time someone in the **inventory team** opens the item (GET /oos/:id, /oos/new-items/:id), asks about it, answers it or closes it (markSeen; admin / CEO opening doesn't count). The branch sees "seen by Alia 9:20 am" or "not seen by Inventory yet" on each item, and a "Seen by …" step; the inbox shows "Seen by … / NOT OPENED YET".
+- **Activity log** (/oos/activity; admin, HQ, inventory team; menu Inventory → Activity log; src/oos/activity.js): per day (last 14 days) and branch – "Not opened by Inventory yet" (open, unanswered items with how long), the inventory team's day (seen, questions asked, answered, sent, closed per person) and a timeline of every step (reported, seen, asked / replied with the text, answered, picked, sent, accepted / closed by Inventory, branch said late; new item requests too), each linked to the item.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 
