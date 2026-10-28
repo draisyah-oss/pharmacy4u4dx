@@ -173,10 +173,16 @@ function parseEntries(fields, input, maxOf) {
 
 // sheetFields: fields filled from the sales sheet – never written here, but their stored
 // numbers still count for checks like "…of which" ≤ its total.
-async function saveDailyEntries(db, { branch, date, user, input, sheetFields = new Set() }) {
+// keepMissing (28 Oct): a box not in the form at all keeps its stored number (the "my boxes"
+// view and the week sheet only post some boxes); an empty box in the form still clears it.
+async function saveDailyEntries(db, { branch, date, user, input, sheetFields = new Set(), keepMissing = false }) {
   const all = (await db.query('SELECT key, label, type FROM daily_fields WHERE branch_id = $1 AND active', [branch.id])).rows;
   const measures = await loadMeasures(db, branch.id);
   const merged = { ...input };
+  if (keepMissing) {
+    const stored = (await db.query('SELECT field_key, value FROM daily_entries WHERE branch_id = $1 AND entry_date = $2', [branch.id, date])).rows;
+    for (const r of stored) if (merged[r.field_key] === undefined) merged[r.field_key] = String(Number(r.value));
+  }
   if (sheetFields.size) {
     const stored = (await db.query(
       'SELECT field_key, value FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = ANY($3)',

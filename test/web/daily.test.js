@@ -288,6 +288,53 @@ test('hints: daily target, week so far, month so far, ratio, storefront day, tra
   const hc = buildHint({ key: 'hc', type: 'count' }, ampang, entries, '2026-10-20', '2026-10-12');
   assert.deepEqual([hc.kind, hc.gate, hc.target], ['perday', 'twostaff', 5]);
 
-  const jh = await loadMeasures(db, await branchId('JH'));
-  assert.equal(buildHint({ key: 'ttcom', type: 'money' }, jh, entries, '2026-10-20', '2026-10-12').kind, 'track');
+  const bangi = await loadMeasures(db, await branchId('Bangi'));
+  assert.equal(buildHint({ key: 'biop', type: 'count' }, bangi, entries, '2026-10-20', '2026-10-12').kind, 'track');
+});
+
+// ───────────── 28 Oct: JH week sheet + "my boxes" ─────────────
+
+test('28 Oct: JH week sheet – type a week in one Save; staff see their own boxes; other branches unchanged', async () => {
+  const set = (u, col, v) => db.query(`UPDATE users SET ${col} = $1 WHERE username = $2`, [bcrypt.hashSync(v, 4), u]);
+  await set('nabihah', 'pin_hash', '4444');
+  const nab = await pinLogin('nabihah', '4444');
+  // Phone view: Nabihah sees Team + her own boxes, not Afifah's / Yaya's
+  const day = (await nab.get('/daily')).html;
+  assert.match(day, /My boxes \+ Team/);
+  assert.match(day, /Week sheet view/);
+  assert.match(day, /WhatsApp customer follow-ups/);
+  assert.doesNotMatch(day, /Zakat orders completed/);
+  assert.doesNotMatch(day, /TikTok affiliate commission|Grab cancelled orders|Out-of-stock items logged/, 'the 7 no-target boxes are gone');
+  assert.match((await nab.get('/daily?show=all')).html, /Zakat orders completed/);
+  // Someone else's number survives Nabihah saving her filtered page
+  const jh = await branchId('JH');
+  await db.query("INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, '2026-10-20', 'zko', 2)", [jh]);
+  const csrf = await nab.csrf();
+  const r = await nab.post('/daily', { _csrf: csrf, date: '2026-10-20', show: 'mine', 'f[fu]': '16' });
+  assert.equal(r.status, 302);
+  assert.equal(Number(await entry('JH', '2026-10-20', 'fu')), 16);
+  assert.equal(Number(await entry('JH', '2026-10-20', 'zko')), 2, 'hidden box kept');
+  // Week sheet: Mon 19 – Sun 25 Oct (today Tue 20): Mon and Tue editable, the rest not
+  const wk = (await nab.get('/daily/week')).html;
+  assert.match(wk, /Week of/);
+  assert.match(wk, /name="c\[2026-10-19\]\[fu\]"/);
+  assert.match(wk, /name="c\[2026-10-20\]\[fu\]" value="16"/);
+  assert.doesNotMatch(wk, /name="c\[2026-10-21\]\[fu\]"/, 'tomorrow is read-only');
+  const save = await nab.post('/daily/week', { _csrf: csrf, week: '2026-10-19', show: 'mine',
+    'c[2026-10-19][fu]': '14', 'c[2026-10-19][grabinv]': '45', 'c[2026-10-20][fu]': '16', 'c[2026-10-20][grabon]': '1' });
+  assert.equal(save.status, 302);
+  assert.match(save.location, /saved=3/);
+  assert.equal(Number(await entry('JH', '2026-10-19', 'grabinv')), 45);
+  assert.equal(Number(await entry('JH', '2026-10-20', 'zko')), 2, 'hidden box still kept');
+  // A bad cell: that day isn't saved, the other day is, typed values come back
+  const bad = await nab.post('/daily/week', { _csrf: csrf, week: '2026-10-19', 'c[2026-10-19][grabinv]': '140', 'c[2026-10-20][fu]': '18' });
+  assert.equal(bad.status, 422);
+  assert.match(bad.html, /1 day has a number to fix/);
+  assert.match(bad.html, /name="c\[2026-10-19\]\[grabinv\]" value="140"/);
+  assert.equal(Number(await entry('JH', '2026-10-19', 'grabinv')), 45);
+  assert.equal(Number(await entry('JH', '2026-10-20', 'fu')), 18);
+  // WM doesn't have it yet
+  const hz = await pinLogin('hazera', '1111');
+  assert.doesNotMatch((await hz.get('/daily')).html, /Week sheet view/);
+  assert.equal((await hz.get('/daily/week')).status, 302);
 });

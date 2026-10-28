@@ -1,0 +1,73 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'daily' }) %>
+<% const q = function (extra) { return '/daily/week?week=' + week + bq + extra; }; %>
+<main class="page oo-page oo-wide week-sheet">
+  <div class="ws-head">
+    <div>
+      <p class="muted small">Daily entry · <%= branch.name %></p>
+      <h1>Week of <%= fmt.weekLabel(week, weekEnd) %></h1>
+    </div>
+    <nav class="strip oo-tabs" aria-label="Change view">
+      <a href="<%= oneDayHref %>" class="strip-pill">Phone view (one day)</a>
+      <span class="strip-pill is-current" aria-current="page">Week sheet</span>
+    </nav>
+  </div>
+  <nav class="strip oo-tabs" aria-label="Choose a week">
+    <% pills.forEach(function (p) { %><a href="/daily/week?week=<%= p.week %><%= bq %>&show=<%= show %>" class="strip-pill<%= p.current ? ' is-current' : '' %>"><%= p.label %></a><% }) %>
+  </nav>
+  <% if (saved !== null) { %><p class="alert alert-good" role="status"><%= saved === 0 ? 'No changes – everything was already saved.' : 'Saved ' + saved + ' ' + (saved === 1 ? 'number' : 'numbers') + ' – the scoreboard is updated.' %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <div class="ws-bar">
+    <span><b>Show:</b></span>
+    <a href="<%= q('&show=mine') %>" class="strip-pill<%= show === 'mine' ? ' is-current' : '' %>">My boxes + Team</a>
+    <a href="<%= q('&show=all') %>" class="strip-pill<%= show === 'all' ? ' is-current' : '' %>">Everyone<%= hidden ? ' (+' + hidden + ' boxes)' : '' %></a>
+    <span class="muted small ws-note">Grey cells come from the sales sheet or can’t be changed any more. Empty a cell to clear it.</span>
+  </div>
+
+  <form method="post" action="/daily/week" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="week" value="<%= week %>">
+    <input type="hidden" name="branch" value="<%= branch.code %>">
+    <input type="hidden" name="show" value="<%= show %>">
+    <div class="table-wrap">
+      <table class="ws-table">
+        <thead><tr>
+          <th scope="col" class="ws-box">Box</th>
+          <% days.forEach(function (d) { %><th scope="col" class="ws-day<%= d.isToday ? ' is-today' : '' %>"><%= d.dow %><br><span><%= d.num %></span></th><% }) %>
+          <th scope="col" class="n">Week so far</th><th scope="col">Target</th><th scope="col" class="c">On track?</th>
+        </tr></thead>
+        <% groups.forEach(function (g) { %>
+          <tbody>
+            <tr class="ws-group"><th colspan="<%= days.length + 4 %>" scope="colgroup"><%= g.name %><% if (g.isMe) { %> <span class="me">you</span><% } %> <span class="muted small">· <%= g.role %></span></th></tr>
+            <% g.rows.forEach(function (r) { %>
+              <tr>
+                <th scope="row" class="ws-box"><%= r.label %><% if (r.fromSheet) { %> <span class="sheet-tag">Sales sheet</span><% } %></th>
+                <% r.cells.forEach(function (c) { const e = errors[c.date] && errors[c.date][r.key]; %>
+                  <td class="ws-cell<%= c.isToday ? ' is-today' : '' %><%= e ? ' has-error' : '' %>">
+                    <% if (!c.editable) { %><span class="ws-ro"><%= c.value === '' ? (c.future ? '' : '–') : (r.type === 'yes_no' ? (c.value === '1' ? 'Y' : 'N') : c.value) %></span>
+                    <% } else if (r.type === 'yes_no') { %>
+                      <select name="<%= c.name %>" aria-label="<%= r.label %> <%= c.date %>"><option value=""<%= c.value === '' ? ' selected' : '' %>>–</option><option value="1"<%= c.value === '1' ? ' selected' : '' %>>Y</option><option value="0"<%= c.value === '0' ? ' selected' : '' %>>N</option></select>
+                    <% } else { %>
+                      <input name="<%= c.name %>" value="<%= c.value %>" inputmode="decimal" autocomplete="off" aria-label="<%= r.label %> <%= c.date %>"<%- e ? ' aria-invalid="true" title="' + e.replace(/"/g, '&quot;') + '"' : '' %>>
+                    <% } %>
+                    <% if (e) { %><span class="ws-err"><%= e %></span><% } %>
+                  </td>
+                <% }) %>
+                <td class="n"><b><%= r.week %></b></td>
+                <td class="small muted"><%= r.target || '' %></td>
+                <td class="c"><% if (r.status && r.statusSymbol) { %><span class="ws-st s-<%= r.status %>"><%= r.statusSymbol %></span><% } else { %><span class="muted">–</span><% } %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        <% }) %>
+      </table>
+    </div>
+    <% if (anyEditable) { %>
+      <div class="oo-save-bar ws-save"><button class="button" type="submit">Save week</button><span class="muted small">Edit any day of the last 7 days – like the Google Sheet, but the scoreboard updates by itself.</span></div>
+    <% } else { %><p class="alert alert-info">This week can’t be changed any more. Ask admin to fix older days.</p><% } %>
+  </form>
+</main>
+</body>
+</html>

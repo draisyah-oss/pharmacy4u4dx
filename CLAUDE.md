@@ -234,6 +234,12 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - **Agent API for Mr 4DX** (/api/agent, before the session/CSRF checks; Bearer token = env AGENT_API_TOKEN, ≥ 24 chars, compared in constant time; no token set → 404): GET /api/agent/requests (open requests with plan, notes, photo link + recently closed), POST /api/agent/requests/:id {status, plan, preview_url, message} or {message} (author "Mr 4DX"; can never set Approved; Live only after Approved), POST /api/agent/requests {username, title, details, area} (files a request for a known user – source 'whatsapp', for the WhatsApp bot later).
 - WhatsApp (planned, not built): a Meta WhatsApp Business number → webhook in this app → same change_requests list.
 
+## JH: easier daily entry (28 Oct, CEO – Afifah found the app confusing, JH preferred the Google Sheet)
+- **7 JH boxes with no target removed** (seed.json + older databases via retireBranchItemsOnce flag jh_no_target_v1; history kept): out-of-stock items logged (oosn, T7), sales lost to out-of-stock (oosloss, T6), zakat claims RM (zkrm, F7), RFQ invitations / approved (zkrfq, zkrfqok, F9), TikTok affiliate commission (ttcom, Y0), Grab cancelled orders (grabcx, N4). JH has no track-only measures left. Bangi / Ampang not changed yet.
+- **Week sheet view** (/daily/week, src/daily/week.js, views/daily-week.ejs) – only for branches in app_settings sheet_view_branches (seed company.sheet_view_branches ["JH"]; others redirect to /daily): boxes down the side grouped Team / me / others, Monday–Sunday across (today highlighted), week so far + target + ✔/▲/✕ from the branch scoreboard (numerator field → measure), week pills (last 4 weeks), one **Save week** (each day saved through saveDailyEntries; a day with a bad cell isn't saved and comes back in red with what was typed, the other days are saved). Editable days follow editBlockReason (last 7 days; future and sales-sheet cells read-only). Yes/no cells are a – / Y / N select.
+- **My boxes** (sheet-view branches): Daily entry and the week sheet show "My boxes + Team" (default for branch staff) or "Everyone (+n boxes)" (default for managers); Daily entry links to the week sheet and back.
+- saveDailyEntries **keepMissing** (now used by /daily and /daily/week): a box not in the form keeps its stored number (filtered views); an empty box in the form still clears it.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

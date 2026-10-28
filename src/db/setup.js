@@ -27,6 +27,8 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     ]);
     await grabInventoryOnce(db, readSeed(), log);
     await bangiOct27Once(db, readSeed(), log);
+    await retireBranchItemsOnce(db, 'JH', { fields: ['oosn', 'oosloss', 'zkrm', 'zkrfq', 'zkrfqok', 'ttcom', 'grabcx'], measures: ['T6', 'T7', 'F7', 'F9', 'Y0', 'N4'] },
+      'jh_no_target_v1', 'JH: 7 boxes with no target removed (CEO, 28 Oct) – out-of-stock logged / sales lost, zakat claims RM, RFQ invitations / approved, TikTok commission, Grab cancelled orders', log);
     return { seeded: false };
   }
 
@@ -59,6 +61,7 @@ async function backfillNewSettings(db, seed, log) {
   }
   await backfillHqTeam(db, seed, log);
   await ensureSetting(db, 'oos_targets', seed.company.oos_targets, log);
+  await ensureSetting(db, 'sheet_view_branches', seed.company.sheet_view_branches, log);
   await backfillHqAccess(db, seed, log);
   await backfillHqTasks(db, seed, log);
   await updateSalesSheetColumns(db, seed, log);

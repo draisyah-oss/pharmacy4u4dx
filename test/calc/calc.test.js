@@ -186,7 +186,7 @@ test('week from a track-only month into a month with a target compares like with
   // A monthly measure: Oct blank, Nov RM 300 → only 1 Nov has a target (300/30 = 10)
   // (shaped like JH's TikTok commission before 15 Oct, when Nov had RM 300)
   const entries = calc.indexEntries(calc.rowsFromDays({ '2026-10-27': { ttcom: 50 }, '2026-11-01': { ttcom: 12 } }));
-  const m = { ...measure('JH', 'Y0'), targets: { '2026-10': null, '2026-11': 300, '2026-12': 1000 } };
+  const m = { calc: 'sum', target_per: 'month', numerator_field: 'ttcom', denominator_field: null, targets: { '2026-10': null, '2026-11': 300, '2026-12': 1000 } };
   const r = calc.evaluateMeasure({
     measure: m, entries, from: '2026-10-26', to: '2026-11-01', trackerStart: START,
   });

@@ -85,6 +85,13 @@
     </form>
   <% } %>
 
+  <% if (sheetView) { const dq = 'date=' + date + branchQs; %>
+    <nav class="strip oo-tabs view-switch" aria-label="How to show the boxes">
+      <a href="/daily?<%= dq %>&show=mine" class="strip-pill<%= show === 'mine' ? ' is-current' : '' %>"<%- show === 'mine' ? ' aria-current="page"' : '' %>>My boxes + Team</a>
+      <a href="/daily?<%= dq %>&show=all" class="strip-pill<%= show === 'all' ? ' is-current' : '' %>"<%- show === 'all' ? ' aria-current="page"' : '' %>>Everyone<%= hiddenBoxes ? ' (+' + hiddenBoxes + ' boxes)' : '' %></a>
+      <a href="/daily/week?show=<%= show %><%= branchQs %>" class="strip-pill">Week sheet view →</a>
+    </nav>
+  <% } %>
   <nav class="people" aria-label="Jump to a person">
     <% cards.forEach(function (c) { %>
       <a href="#<%= c.id %>" class="people-chip<%= c.isMe ? ' is-me' : '' %>" data-chip="<%= c.id %>"><%= c.name %> <span class="chip-count"><%= c.filled %>/<%= c.fields.length %></span></a>
@@ -95,6 +102,7 @@
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <input type="hidden" name="date" value="<%= date %>">
     <input type="hidden" name="branch" value="<%= branch.code %>">
+    <% if (sheetView) { %><input type="hidden" name="show" value="<%= show %>"><% } %>
 
     <% cards.forEach(function (c) { %>
       <section class="person" id="<%= c.id %>" data-card="<%= c.id %>">

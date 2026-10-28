@@ -36,7 +36,8 @@ test('seed.json is still valid and JH has the new measures and fields', async ()
   assert.deepEqual(validateSeed(readSeed()).errors, []);
   const b = readSeed().branches.find((x) => x.code === 'JH');
   const codes = b.measures.map((m) => m.id);
-  for (const c of ['T5', 'T6', 'T7', 'F9', 'N4']) assert.ok(codes.includes(c), c);
+  assert.ok(codes.includes('T5'));
+  for (const c of ['T6', 'T7', 'F7', 'F9', 'Y0', 'N4']) assert.ok(!codes.includes(c), `${c} removed 28 Oct (no target)`);
   assert.ok(!codes.includes('N5'), '22 Oct: WhatsApp days to fulfil removed');
   assert.match(b.measures.find((m) => m.id === 'P2').label, /gout/i);
   assert.ok(!b.daily_fields.some((f) => f.key === 'zkc7d'), 'the 7-day claim box is gone');
@@ -52,10 +53,8 @@ test('JH scoreboard: zakat scored month to date only; walk-ins vs 60 a day; RFQ 
   const t5 = row(board, 'T5');
   assert.equal(t5.week.actual, 59 + 50 + 57);
   near(t5.week.target, 180, '60 a day × 3 days');
-  near(row(board, 'F9').week.actual, 0.75);
   assert.equal(row(board, 'Y1').monthTarget, 4);
   assert.equal(row(board, 'N1').monthTarget, 15);
-  assert.equal(row(board, 'Y0').week.status, 'track_only');
   assert.equal(row(board, 'N2').kind, 'Routine');
   const gr = board.running.find((r) => r.code === 'GR');
   assert.equal(gr.endTarget, 294);
@@ -150,7 +149,7 @@ test('22 Oct: JH tracker numbers (12–21 Oct) imported once – empty boxes onl
   const v = async (d, k) => { const r = (await db2.query('SELECT value FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = $3', [jh, d, k])).rows[0]; return r ? Number(r.value) : null; };
   assert.equal(await v('2026-10-12', 'two'), 27, '59 transactions × 46.43% with 3+ items');
   assert.equal(await v('2026-10-18', 'ttfol'), 8);
-  assert.equal(await v('2026-10-13', 'zkrm'), 3221.28);
+  assert.equal(await v('2026-10-13', 'zkrm'), null, '28 Oct: the zakat claims RM box is gone, so it isn’t imported');
   assert.equal(await v('2026-10-13', 'reviews'), 9, 'the app’s number is kept');
   assert.equal(await v('2026-10-12', 'walkin'), null, 'walk-in comes from the sales sheet, not the tracker');
   assert.match(logs.join(' '), /differ/);
