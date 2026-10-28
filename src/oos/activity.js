@@ -24,7 +24,7 @@ async function loadActivity(db, { date, branchCode = null, now }) {
   const add = (at, kind, side, by, item, text, href) => { if (at && new Date(at) >= from && new Date(at) < to) events.push({ at, kind, side, by, item, text, href }); };
 
   const items = (await db.query(
-    `SELECT x.*, bb.code AS branch_code FROM oos_items x JOIN branches bb ON bb.id = x.branch_id
+    `SELECT x.*, COALESCE(bb.code, 'B2B') AS branch_code FROM oos_items x LEFT JOIN branches bb ON bb.id = x.branch_id
      WHERE (x.reported_at >= $1 AND x.reported_at < $2 OR x.seen_at >= $1 AND x.seen_at < $2 OR x.answered_at >= $1 AND x.answered_at < $2
        OR x.picked_at >= $1 AND x.picked_at < $2 OR x.sent_at >= $1 AND x.sent_at < $2 OR x.received_at >= $1 AND x.received_at < $2
        OR x.late_flagged_at >= $1 AND x.late_flagged_at < $2) ${bf}`, args)).rows;
@@ -50,9 +50,9 @@ async function loadActivity(db, { date, branchCode = null, now }) {
     add(r.answered_at, 'answered', 'hq', who(r.answered_by), label, `Answered: ${r.status}`, href);
   }
   const msgs = (await db.query(
-    `SELECT m.*, COALESCE(o.item, r.item) AS item, bb.code AS branch_code, (m.oos_id IS NOT NULL) AS is_oos
+    `SELECT m.*, COALESCE(o.item, r.item) AS item, COALESCE(bb.code, 'B2B') AS branch_code, (m.oos_id IS NOT NULL) AS is_oos
      FROM oos_messages m LEFT JOIN oos_items o ON o.id = m.oos_id LEFT JOIN item_requests r ON r.id = m.request_id
-     JOIN branches bb ON bb.id = COALESCE(o.branch_id, r.branch_id)
+     LEFT JOIN branches bb ON bb.id = COALESCE(o.branch_id, r.branch_id)
      WHERE m.created_at >= $1 AND m.created_at < $2 ${b ? 'AND bb.id = $3' : ''}`, args)).rows;
   for (const m of msgs) {
     add(m.created_at, m.from_branch ? 'reply' : 'question', m.from_branch ? 'branch' : 'hq', who(m.user_id),
@@ -72,7 +72,7 @@ async function loadActivity(db, { date, branchCode = null, now }) {
   // Open items nobody in Inventory has opened yet (any day), oldest first.
   const at = now();
   const unseen = (await db.query(
-    `SELECT x.id, x.item, x.reported_at, x.urgent, bb.code AS branch_code FROM oos_items x JOIN branches bb ON bb.id = x.branch_id
+    `SELECT x.id, x.item, x.reported_at, x.urgent, COALESCE(bb.code, 'B2B') AS branch_code FROM oos_items x LEFT JOIN branches bb ON bb.id = x.branch_id
      WHERE x.seen_at IS NULL AND x.answer IS NULL AND x.status = 'Open' ${b ? 'AND x.branch_id = $1' : ''} ORDER BY x.reported_at`, b ? [b.id] : [])).rows
     .map((x) => ({ ...x, hours: (at - new Date(x.reported_at)) / 3600e3 }));
   const unseenReq = (await db.query(

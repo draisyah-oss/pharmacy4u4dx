@@ -1,7 +1,7 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <%- include('partials/nav', { navActive: 'oosinbox' }) %>
-<main class="page oo-page">
+<main class="page oo-page<%= tab === 'table' ? ' oo-wide' : '' %>">
   <header class="oo-head">
     <h1>Out of stock <% if (toAnswer.length) { %><span class="oo-badge"><%= toAnswer.length %></span><% } %></h1>
     <p class="muted">Urgent first, then the oldest. Answer each by 11 am the next working day.</p>
@@ -9,17 +9,20 @@
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
   <div class="oo-stats">
-    <a href="/oos/inbox" class="oo-stat<%= tab === 'answer' ? ' is-current' : '' %>"><span>To answer</span><b class="<%= toAnswer.length ? 's-off_track' : '' %>"><%= toAnswer.length %></b></a>
+    <a href="/oos/inbox?tab=answer" class="oo-stat<%= tab === 'answer' ? ' is-current' : '' %>"><span>To answer</span><b class="<%= toAnswer.length ? 's-off_track' : '' %>"><%= toAnswer.length %></b></a>
     <a href="/oos/inbox?tab=waiting" class="oo-stat<%= tab === 'waiting' ? ' is-current' : '' %>"><span>Waiting for stock</span><b><%= waiting.length %></b></a>
     <a href="/oos/inbox?tab=waiting" class="oo-stat"><span>Late or overdue</span><b class="<%= overdue ? 's-watch' : '' %>"><%= overdue %></b></a>
   </div>
   <nav class="strip oo-tabs" aria-label="Lists">
-    <a href="/oos/inbox" class="strip-pill<%= tab === 'answer' ? ' is-current' : '' %>">To answer (<%= toAnswer.length %>)</a>
+    <a href="/oos/inbox" class="strip-pill<%= tab === 'table' ? ' is-current' : '' %>">Table – answer all</a>
+    <a href="/oos/inbox?tab=answer" class="strip-pill<%= tab === 'answer' ? ' is-current' : '' %>">To answer (<%= toAnswer.length %>)</a>
     <a href="/oos/inbox?tab=waiting" class="strip-pill<%= tab === 'waiting' ? ' is-current' : '' %>">Waiting for stock (<%= waiting.length %>)</a>
     <a href="/oos/inbox?tab=new" class="strip-pill<%= tab === 'new' ? ' is-current' : '' %>">New item requests (<%= newItems.toAnswer %>)</a>
     <a href="/oos/inbox?tab=done" class="strip-pill<%= tab === 'done' ? ' is-current' : '' %>">Done lately</a>
   </nav>
-  <% if (tab === 'new') { %>
+  <% if (tab === 'table') { %>
+    <%- include('partials/oos-table', { open: toAnswer.concat(waiting), branchCodes: branchCodes, typed: typed, rowErrors: rowErrors, today: today, tomorrow: tomorrow, of: of, at: at }) %>
+  <% } else if (tab === 'new') { %>
     <p class="muted">Items a branch wants that aren’t in Dynamod yet. New first, then the oldest.</p>
     <% if (!newItems.open.length) { %><p class="muted">No new item requests.</p><% } %>
     <div class="oo-list">
@@ -56,5 +59,6 @@
   <% } %>
   <p class="wk-next"><a class="button secondary" href="/oos/activity">Activity log →</a> <a class="button secondary" href="/oos/scoreboard">Out-of-stock scoreboard →</a> <a class="button secondary" href="/oos/transfers">Deliveries to send →</a></p>
 </main>
+<script src="/js/oos-table.js?v=1" defer></script>
 </body>
 </html>

@@ -255,7 +255,7 @@ async function groupWorkbook(db, { now = () => new Date() } = {}) {
       { header: 'Item', key: 'item', width: 34 }, { header: 'Out since', key: 'out_of_stock_since', width: 12 },
       { header: 'Customers asking', key: 'customers_asking', width: 24 }, { header: 'Reason (HQ)', key: 'reason_for_delay', width: 30 },
       { header: 'Expected back', key: 'expected_back', width: 12 }, { header: 'Status', key: 'status', width: 16 }],
-    rows: (await db.query(`SELECT o.*, b.code AS branch FROM oos_items o JOIN branches b ON b.id = o.branch_id ORDER BY o.week_start, b.sort_order, o.id`)).rows,
+    rows: (await db.query(`SELECT o.*, COALESCE(b.code, 'B2B') AS branch FROM oos_items o LEFT JOIN branches b ON b.id = o.branch_id ORDER BY o.week_start, b.sort_order NULLS LAST, o.id`)).rows,
   });
   addTable(wb, 'Commitments', {
     columns: [{ header: 'Week', key: 'week_start', width: 12 }, { header: 'Branch', key: 'branch', width: 9 },

@@ -108,13 +108,36 @@ async function report(db, user, branch, body, { now }) {
   });
 }
 
+// 28 Oct: a B2B out-of-stock item, added by the inventory team (no branch; the customer's name).
+async function reportB2b(db, user, body, { now }) {
+  const item = cleanText(body.item, { max: 120, label: 'Item' });
+  if (item.error) return { error: item.error };
+  if (!item.value) return { error: 'Type the item.' };
+  const customer = cleanText(body.customer, { max: 80, label: 'Customer' });
+  if (customer.error) return { error: customer.error };
+  if (!customer.value) return { error: 'Type the B2B customer.' };
+  const note = cleanText(body.note, { max: 200, label: 'Note' });
+  if (note.error) return { error: note.error };
+  const t = await targets(db);
+  const at = now(); const today = mytDate(at);
+  return db.transaction(async (tx) => {
+    const { rows } = await tx.query(
+      `INSERT INTO oos_items (branch_id, b2b_customer, week_start, item, out_of_stock_since, created_by, updated_by,
+         reported_at, urgent, note, answer_due, updated_at, seen_at, seen_by)
+       VALUES (NULL, $1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $6, $6, $5) RETURNING id`,
+      [customer.value, calc.weekStart(today), item.value, today, user.id, at, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour)]);
+    await audit(tx, user, 'insert', `B2B #${rows[0].id}`, null, { item: item.value, customer: customer.value });
+    return { id: rows[0].id };
+  });
+}
+
 // ─────────────── Loading ───────────────
 
 const SELECT = `
-  SELECT o.*, b.code AS branch_code, b.name AS branch_name, fb.code AS from_code, fb.name AS from_name,
+  SELECT o.*, COALESCE(b.code, 'B2B') AS branch_code, COALESCE(b.name, 'B2B – ' || o.b2b_customer) AS branch_name, fb.code AS from_code, fb.name AS from_name,
     c.display_name AS reported_by_name, a.display_name AS answered_by_name, s.display_name AS sent_by_name,
     sn.display_name AS seen_by_name
-  FROM oos_items o JOIN branches b ON b.id = o.branch_id
+  FROM oos_items o LEFT JOIN branches b ON b.id = o.branch_id
   LEFT JOIN users sn ON sn.id = o.seen_by
   LEFT JOIN branches fb ON fb.id = o.from_branch_id
   LEFT JOIN users c ON c.id = o.created_by LEFT JOIN users a ON a.id = o.answered_by LEFT JOIN users s ON s.id = o.sent_by`;
@@ -242,6 +265,36 @@ async function answerItem(db, user, item, body, { now }) {
       item.answer ? { answer: item.answer, status: item.status } : null, next);
   });
   return { ok: true };
+}
+
+// 28 Oct: answer many items at once from the inbox table (like Alia's OOS spreadsheet).
+// body.r = { i<id>: { answer, qty, from, by, note } }. answer '' = leave the row alone; 'done' =
+// Done – delivered. For a substitute the note is what to offer; otherwise it's the note to the branch.
+// Rows that haven't changed are skipped; each changed row is saved on its own (same checks as the
+// item page) and rows with a problem come back with their message, the rest are saved.
+async function saveTable(db, user, body, { now }) {
+  const rows = body && typeof body.r === 'object' && body.r ? body.r : {};
+  const errors = {}; let saved = 0;
+  for (const [key, row] of Object.entries(rows)) {
+    const id = /^i(\d{1,9})$/.exec(key); if (!id || !row || typeof row !== 'object') continue;
+    const answer = String(row.answer || '');
+    if (!answer) continue;
+    const item = (await db.query(`${SELECT} WHERE o.id = $1`, [id[1]])).rows[0];
+    if (!item || !OPEN.includes(item.status)) continue;
+    if (answer === 'done') { await markDone(db, user, item, { now }); saved++; continue; }
+    const qty = String(row.qty ?? '').trim(); const from = String(row.from ?? ''); const by = String(row.by ?? '').trim();
+    const note = String(row.note ?? '').replace(/\s+/g, ' ').trim();
+    const curNote = item.answer === 'substitute' ? (item.substitute || '') : (item.reason_for_delay || '');
+    const same = item.answer === answer && String(item.answer_qty ?? '') === qty && (answer !== 'transfer' || (item.from_code || '') === from)
+      && (item.expected_back || '') === by && curNote === note;
+    if (same) continue;
+    const r = await answerItem(db, user, item, {
+      answer, qty, from, expected_back: by,
+      substitute: answer === 'substitute' ? note : '', reason: answer === 'substitute' ? '' : note,
+    }, { now });
+    if (r.error) errors[item.id] = r.error; else saved++;
+  }
+  return { saved, errors };
 }
 
 // ─────────────── 3. Transfers (Fariz) ───────────────
@@ -393,6 +446,6 @@ async function branchWeekSummary(db, { branchId, week, now }) {
 
 module.exports = {
   branchWeekSummary,
-  OPEN, ANSWERS, DELIVERS, isDelivery, markDone, markSeen, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
+  OPEN, ANSWERS, DELIVERS, isDelivery, markDone, markSeen, saveTable, reportB2b, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
   report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, buildBoard,
 };

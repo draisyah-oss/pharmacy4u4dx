@@ -359,3 +359,43 @@ test('28 Oct: "seen by Inventory" when Alia opens an item; activity log for the 
   // Branch staff can't open the activity log
   assert.equal((await staff.get('/oos/activity')).status, 403);
 });
+
+test('28 Oct: inbox as a table by branch + B2B – answer many rows in one Save', async () => {
+  clock = new Date('2026-10-28T10:00:00+08:00');
+  const staff = await login('pin', 'hazera', '1111');
+  for (const item of ['Panadol 10s', 'Strepsils honey', 'Vicks 50g']) await staff.post('/oos', { item, left: 'none', asking: '0' });
+  const id = async (name) => (await db.query('SELECT id FROM oos_items WHERE item = $1', [name])).rows[0].id;
+  const [p, s, v] = [await id('Panadol 10s'), await id('Strepsils honey'), await id('Vicks 50g')];
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  // B2B item added by Inventory
+  assert.match(decodeURIComponent((await alia.post('/oos/inbox/b2b', { item: 'Face mask 50s', customer: '' })).location), /Type the B2B customer/);
+  await alia.post('/oos/inbox/b2b', { item: 'Face mask 50s', customer: 'Klinik Mesra', note: '20 boxes' });
+  const b2b = await id('Face mask 50s');
+  const page = (await alia.get('/oos/inbox')).html;
+  assert.match(page, /Table – answer all/);
+  assert.match(page, /id="t-WM"[\s\S]*Panadol 10s[\s\S]*id="t-JH"[\s\S]*id="t-B2B"[\s\S]*Face mask 50s[\s\S]*Klinik Mesra/);
+  // One Save: Panadol HQ delivers 5, Strepsils order 3 but no date (error), B2B order 20, Vicks untouched
+  const r = await alia.post('/oos/inbox/table', {
+    [`r[i${p}][answer]`]: 'hq_deliver', [`r[i${p}][qty]`]: '5', [`r[i${p}][by]`]: '2026-10-29', [`r[i${p}][note]`]: 'van tomorrow',
+    [`r[i${s}][answer]`]: 'order', [`r[i${s}][qty]`]: '3', [`r[i${s}][by]`]: '',
+    [`r[i${b2b}][answer]`]: 'order', [`r[i${b2b}][qty]`]: '20', [`r[i${b2b}][by]`]: '2026-11-02',
+    [`r[i${v}][answer]`]: '', [`r[i${v}][qty]`]: '',
+  });
+  assert.equal(r.status, 400);
+  assert.match(r.html, /2 saved\. 1 row not saved/);
+  assert.match(r.html, /Strepsils honey: Pick the date it should arrive/);
+  assert.match(r.html, new RegExp(`name="r\\[i${s}\\]\\[qty\\]"[^>]*value="3"`), 'typed value kept');
+  const row = async (i) => (await db.query('SELECT answer, answer_qty, reason_for_delay, status, seen_by FROM oos_items WHERE id = $1', [i])).rows[0];
+  assert.equal((await row(p)).answer, 'hq_deliver'); assert.equal((await row(p)).reason_for_delay, 'van tomorrow'); assert.ok((await row(p)).seen_by);
+  assert.equal((await row(s)).answer, null);
+  assert.equal((await row(v)).answer, null);
+  assert.equal((await row(b2b)).answer, 'order');
+  // Same values again = no change; Done from the table closes it
+  const again = await alia.post('/oos/inbox/table', { [`r[i${p}][answer]`]: 'hq_deliver', [`r[i${p}][qty]`]: '5', [`r[i${p}][by]`]: '2026-10-29', [`r[i${p}][note]`]: 'van tomorrow' });
+  assert.match(decodeURIComponent(again.location), /No changes to save/);
+  await alia.post('/oos/inbox/table', { [`r[i${b2b}][answer]`]: 'done' });
+  assert.equal((await row(b2b)).status, 'Back in stock');
+  // B2B never counts in a branch: WM's open count unchanged by it; branch staff can't add B2B
+  assert.equal((await staff.post('/oos/inbox/b2b', { item: 'x', customer: 'y' })).status, 403);
+  assert.match((await alia.get('/oos/activity')).html, /Face mask 50s[\s\S]*B2B/);
+});

@@ -98,9 +98,42 @@ function oosRoutes(db, { now, trackerStart }) {
   router.get('/oos/inbox', async (req, res, next) => {
     try {
       if (!oos.canAnswer(req.user)) return forbid(res, 'The out-of-stock inbox is for the inventory team (Alia, Syarafana, Fariz) and admin.');
-      const inbox = await oos.loadInbox(db, { now });
-      const newItems = await requests.loadInbox(db, { now });
-      res.render('oos-inbox', { title: 'Out of stock – inbox', ...inbox, newItems, fmt, of, tab: ['waiting', 'done', 'new'].includes(req.query.tab) ? req.query.tab : 'answer', ok: req.query.ok || null, err: req.query.err || null, at: now() });
+      await renderInbox(req, res, { tab: ['answer', 'waiting', 'done', 'new'].includes(req.query.tab) ? req.query.tab : 'table' });
+    } catch (err) { next(err); }
+  });
+
+  // 28 Oct: the inbox as a table – every open item on one screen, answered in one Save.
+  async function renderInbox(req, res, extra) {
+    const inbox = await oos.loadInbox(db, { now });
+    const newItems = await requests.loadInbox(db, { now });
+    const today = calc.todayInMalaysia(now());
+    const branchCodes = (await db.query('SELECT code FROM branches WHERE active ORDER BY sort_order')).rows.map((b) => b.code);
+    res.status(extra.status || 200).render('oos-inbox', {
+      title: 'Out of stock – inbox', ...inbox, newItems, fmt, of, branchCodes, today, tomorrow: calc.addDays(today, 1),
+      tab: extra.tab, typed: extra.typed || {}, rowErrors: extra.rowErrors || {},
+      ok: req.query.ok || null, err: extra.err || req.query.err || null, at: now(),
+    });
+  }
+
+  router.post('/oos/inbox/b2b', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'B2B items are added by the inventory team and admin.');
+      const r = await oos.reportB2b(db, req.user, req.body, { now });
+      if (r.error) return back(res, '/oos/inbox#b2b', r.error, 'err');
+      back(res, '/oos/inbox#b2b', `B2B item added: ${String(req.body.item).trim()}.`);
+    } catch (err) { next(err); }
+  });
+
+  router.post('/oos/inbox/table', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'Answering out-of-stock items is for the inventory team and admin.');
+      const r = await oos.saveTable(db, req.user, req.body, { now });
+      const n = Object.keys(r.errors).length;
+      if (n) {
+        return renderInbox(req, res, { tab: 'table', status: 400, typed: req.body.r || {}, rowErrors: r.errors,
+          err: `${r.saved ? `${r.saved} saved. ` : ''}${n} row${n === 1 ? '' : 's'} not saved – see the red message${n === 1 ? '' : 's'}.` });
+      }
+      back(res, '/oos/inbox', r.saved ? `${r.saved} item${r.saved === 1 ? '' : 's'} saved – the branches see your answers now.` : 'No changes to save.');
     } catch (err) { next(err); }
   });
 
