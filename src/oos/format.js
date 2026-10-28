@@ -29,7 +29,7 @@ const days = (from, to) => ((new Date(to) - new Date(from)) / 86400e3);
 // reported → answered → picked → on the way → received. Order: reported → ordered → received.
 // Substitute: reported → substitute offered → done.
 function steps(it) {
-  const from = it.answer === 'transfer' ? (it.from_code || 'branch') : 'HQ';
+  const from = it.answer !== 'transfer' ? 'HQ' : it.from_branch_id && it.from_branch_id === it.branch_id ? 'own stock' : (it.from_code || 'branch');
   const closed = Boolean(it.received_at) || ['Back in stock', 'Discontinued', 'Discontinued / use substitute'].includes(it.status);
   let list;
   if (!it.answer) list = [['Reported', it.reported_at], [it.seen_at ? `Seen by ${it.seen_by_name || 'Inventory'}` : 'Seen by Inventory', it.seen_at], ['Inventory answers', null], ['Back in stock', it.received_at]];

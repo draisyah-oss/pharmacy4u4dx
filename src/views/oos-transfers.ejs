@@ -3,7 +3,7 @@
 <%- include('partials/nav', { navActive: 'oostransfers' }) %>
 <% const done = function (it, label) { %>
   <form method="post" action="/oos/<%= it.id %>/done"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/oos/transfers"><button class="button oo-good wide" type="submit"><%= label %></button></form>
-<% }; const from = function (it) { return it.answer === 'transfer' ? it.from_code : 'HQ'; }; %>
+<% }; const from = function (it) { return it.answer !== 'transfer' ? 'HQ' : it.from_branch_id === it.branch_id ? it.from_code + ' own stock' : it.from_code; }; %>
 <main class="page oo-page">
   <header class="oo-head"><h1>Deliveries to send</h1><p class="muted">HQ deliveries and branch transfers from Inventory’s answers. Pick, then send within <%= hours %> hours – the branch sees each step and taps Accept when it arrives.</p></header>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>

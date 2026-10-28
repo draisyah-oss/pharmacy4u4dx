@@ -38,7 +38,7 @@
     <fieldset class="oo-set oo-when-transfer">
       <legend>From which branch? <small class="muted">(transfer)</small></legend>
       <div class="oo-pills">
-        <% branches.forEach(function (b, i) { %><label class="oo-pill"><input type="radio" name="from" value="<%= b.code %>"<%= (t.from || item.from_code) === b.code ? ' checked' : '' %>><span><%= b.code %></span></label><% }) %>
+        <% branches.forEach(function (b, i) { %><label class="oo-pill"><input type="radio" name="from" value="<%= b.code %>"<%= (t.from || item.from_code) === b.code ? ' checked' : '' %>><span><%= b.code %><%= b.code === item.branch_code ? ' (own stock)' : '' %></span></label><% }) %>
       </div>
     </fieldset>
     <div class="oo-two">

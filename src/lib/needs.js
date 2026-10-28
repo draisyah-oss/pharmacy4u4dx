@@ -96,8 +96,9 @@ async function forBranch(db, user, today, at, add) {
   const entered = await one(db, 'SELECT count(*) AS n FROM daily_entries WHERE branch_id = $1 AND entry_date = $2', [branchId, yesterday]);
   if (!entered) add('today', 1, 'Yesterday’s numbers not entered', fmtDay(yesterday), `/daily?date=${yesterday}`);
   // 27 Oct: Inventory asked a question about one of our items / requests.
-  const w = await require('../oos/chat').waitingCounts(db, { branchId });
-  if (w.oos) add('today', w.oos, 'Inventory asked about an item', 'out of stock – reply or send a photo', '/oos');
+  // Staff: only items they reported; the manager: the whole branch.
+  const w = await require('../oos/chat').waitingCounts(db, { branchId, reportedBy: user.role === 'branch_staff' ? user.id : null });
+  if (w.oos) add('today', w.oos, 'Inventory asked you to clarify an item', 'out of stock – reply or send a photo', '/oos');
   if (w.req) add('today', w.req, 'Inventory asked about a new item', 'reply or send a photo', '/oos/new-items');
   if (user.role === 'branch_manager') {
     const sent = await one(db, 'SELECT count(*) AS n FROM weekly_checkins WHERE branch_id = $1 AND week_start = $2', [branchId, prev]);

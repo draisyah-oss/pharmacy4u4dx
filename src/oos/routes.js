@@ -138,7 +138,7 @@ function oosRoutes(db, { now, trackerStart }) {
   });
 
   async function renderAnswer(req, res, item, extra = {}) {
-    const branches = (await db.query('SELECT code, name FROM branches WHERE active AND id <> $1 ORDER BY sort_order', [item.branch_id])).rows;
+    const branches = (await db.query('SELECT code, name FROM branches WHERE active ORDER BY sort_order')).rows;
     const today = calc.todayInMalaysia(now());
     const history = (await db.query(
       `SELECT reported_at, status, answer FROM oos_items WHERE branch_id = $1 AND lower(item) = lower($2) AND id <> $3 ORDER BY reported_at DESC LIMIT 3`,

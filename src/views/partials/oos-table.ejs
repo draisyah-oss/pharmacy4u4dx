@@ -2,10 +2,10 @@
     Alia's OOS spreadsheet). Input: open, branchCodes, typed, rowErrors, today, tomorrow, of, at %>
 <%
   const groups = branchCodes.concat(['B2B']).map(function (code) { return { code: code, rows: open.filter(function (it) { return it.branch_code === code; }) }; });
-  const ANS = [['', '— choose —'], ['hq_deliver', 'HQ delivers'], ['transfer', 'Transfer from branch'], ['order', 'Order (supplier)'], ['substitute', 'Substitute'], ['discontinue', 'Discontinue'], ['done', '✔ Done – delivered']];
+  const ANS = [['', '— choose —'], ['clarify', '❓ Ask branch to clarify'], ['hq_deliver', 'HQ delivers'], ['transfer', 'Transfer from branch'], ['order', 'Order (supplier)'], ['substitute', 'Substitute'], ['discontinue', 'Discontinue'], ['done', '✔ Done – delivered']];
   const val = function (it, k, dflt) { const t = typed['i' + it.id]; return t && t[k] !== undefined ? t[k] : dflt; };
 %>
-<p class="muted">Every open item, by branch. Pick an answer, fill the row, then one <b>Save all</b> at the bottom. Rows you don’t touch stay as they are. Tap an item to ask the branch a question or see photos.</p>
+<p class="muted">Every open item, by branch. Pick an answer, fill the row, then one <b>Save all</b> at the bottom. Not sure what the item is? Choose <b>❓ Ask branch to clarify</b> and type the question in the note – it goes to whoever reported it. Rows you don’t touch stay as they are. Tap an item to ask the branch a question or see photos.</p>
 <nav class="strip oo-tabs" aria-label="Jump to a branch">
   <% groups.forEach(function (g) { %><a href="#t-<%= g.code %>" class="strip-pill"><%= g.code %> (<%= g.rows.length %>)</a><% }) %>
 </nav>
@@ -17,7 +17,7 @@
       <% if (!g.rows.length) { %><p class="muted small"><%= g.code === 'B2B' ? 'No B2B items – add one below.' : 'Nothing open.' %></p><% } else { %>
       <div class="table-wrap"><table class="oo-table">
         <thead><tr>
-          <th>Reported</th><th>Item</th><th>Answer</th><th class="n">Qty</th><th>From</th><th>Arrives by</th><th>Note to branch / substitute</th><th>Now</th>
+          <th>Reported</th><th>Item</th><th>Answer</th><th class="n">Qty</th><th>From</th><th>Arrives by</th><th>Note to branch / substitute / question</th><th>Now</th>
         </tr></thead>
         <tbody>
         <% g.rows.forEach(function (it) { const k = 'r[i' + it.id + ']'; const a = val(it, 'answer', it.answer || ''); const bad = rowErrors[it.id]; %>
@@ -32,8 +32,10 @@
             </select></td>
             <td class="n"><input name="<%= k %>[qty]" inputmode="numeric" class="oo-tqty" value="<%= val(it, 'qty', it.answer_qty || '') %>" aria-label="Quantity" autocomplete="off"></td>
             <td><select name="<%= k %>[from]" aria-label="From which branch" data-from>
+              <% const fromNow = val(it, 'from', it.answer === 'hq_deliver' ? 'HQ' : (it.from_code || '')); %>
               <option value="">–</option>
-              <% branchCodes.filter(function (c) { return c !== it.branch_code; }).forEach(function (c) { %><option<%= val(it, 'from', it.from_code || '') === c ? ' selected' : '' %>><%= c %></option><% }) %>
+              <option value="HQ"<%= fromNow === 'HQ' ? ' selected' : '' %>>HQ</option>
+              <% branchCodes.forEach(function (c) { %><option value="<%= c %>"<%= fromNow === c ? ' selected' : '' %>><%= c %><%= c === it.branch_code ? ' (own stock)' : '' %></option><% }) %>
             </select></td>
             <td><input type="date" name="<%= k %>[by]" min="<%= today %>" value="<%= val(it, 'by', it.expected_back || (it.answer ? '' : tomorrow)) %>" aria-label="Arrives by"></td>
             <td><input name="<%= k %>[note]" maxlength="300" class="oo-tnote" value="<%= val(it, 'note', it.answer === 'substitute' ? (it.substitute || '') : (it.reason_for_delay || '')) %>" aria-label="Note to the branch or substitute" autocomplete="off"></td>

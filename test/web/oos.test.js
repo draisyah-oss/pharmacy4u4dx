@@ -92,11 +92,8 @@ test('the whole flow: report → inbox badge → transfer answer → Fariz sends
   assert.doesNotMatch((await hn.get('/hq/today')).html, /Out-of-stock inbox/);
   assert.match(inbox, /Inventory<\/summary>/);
   assert.equal((await staff.post(`/oos/${item.id}/answer`, { answer: 'order', qty: '5', expected_back: '2026-10-20' })).status, 403);
-  // Answer: transfer 6 from WM? Not the same branch – WM reported it, so from JH
+  // Answer: transfer 6 from JH
   clock = new Date('2026-10-16T10:05:00+08:00');
-  const same = await alia.post(`/oos/${item.id}/answer`, { answer: 'transfer', from: 'WM', qty: '6', expected_back: '2026-10-17' });
-  assert.equal(same.status, 400);
-  assert.match(same.html, /same branch/);
   const ans = await alia.post(`/oos/${item.id}/answer`, { answer: 'transfer', from: 'JH', qty: '6', expected_back: '2026-10-17' });
   assert.equal(ans.status, 302);
   // The branch sees the answer on Daily entry
@@ -296,7 +293,7 @@ test('27 Oct: questions & photos on an out-of-stock item; new item requests (not
   const page = (await staff.get('/oos')).html;
   assert.match(page, /<details class="oo-thread" open>[\s\S]*INVENTORY ASKED[\s\S]*Brg apa ni\? Brand apa\?/);
   assert.match((await staff.get('/daily')).html, /Inventory asked a question/);
-  assert.match((await staff.get('/daily')).html, /Inventory asked about an item/);
+  assert.match((await staff.get('/daily')).html, /Inventory asked you to clarify an item/);
   // The photo: this branch and Inventory can open it, another branch can't
   assert.equal((await staff.get(`/oos/photo/${it.photo_id}`)).status, 200);
   assert.equal((await alia.get(`/oos/photo/${it.photo_id}`)).status, 200);
@@ -398,4 +395,39 @@ test('28 Oct: inbox as a table by branch + B2B – answer many rows in one Save'
   // B2B never counts in a branch: WM's open count unchanged by it; branch staff can't add B2B
   assert.equal((await staff.post('/oos/inbox/b2b', { item: 'x', customer: 'y' })).status, 403);
   assert.match((await alia.get('/oos/activity')).html, /Face mask 50s[\s\S]*B2B/);
+});
+
+test('28 Oct: table – "Ask branch to clarify" goes to the person who reported it; From can be HQ or own branch', async () => {
+  clock = new Date('2026-10-28T11:00:00+08:00');
+  const staff = await login('pin', 'hazera', '1111');
+  await staff.post('/oos', { item: 'Ubat X', left: 'none', asking: '0' });
+  await staff.post('/oos', { item: 'Cream Y', left: 'none', asking: '0' });
+  await staff.post('/oos', { item: 'Spray Z', left: 'none', asking: '0' });
+  const id = async (n) => (await db.query('SELECT id FROM oos_items WHERE item = $1', [n])).rows[0].id;
+  const [x, y, z] = [await id('Ubat X'), await id('Cream Y'), await id('Spray Z')];
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  const page = (await alia.get('/oos/inbox')).html;
+  assert.match(page, /❓ Ask branch to clarify/);
+  assert.match(page, new RegExp(`name="r\\[i${x}\\]\\[from\\]"[\\s\\S]*?<option value="HQ"[\\s\\S]*?WM \\(own stock\\)`));
+  const r = await alia.post('/oos/inbox/table', {
+    [`r[i${x}][answer]`]: 'clarify', [`r[i${x}][note]`]: 'Ubat X tu brand apa? Boleh hantar gambar?',
+    [`r[i${y}][answer]`]: 'transfer', [`r[i${y}][from]`]: 'HQ', [`r[i${y}][qty]`]: '2', [`r[i${y}][by]`]: '2026-10-29',
+    [`r[i${z}][answer]`]: 'transfer', [`r[i${z}][from]`]: 'WM', [`r[i${z}][qty]`]: '1', [`r[i${z}][by]`]: '2026-10-28',
+  });
+  assert.match(decodeURIComponent(r.location), /3 items saved/);
+  assert.equal((await db.query('SELECT answer FROM oos_items WHERE id = $1', [x])).rows[0].answer, null, 'clarify doesn’t answer');
+  assert.equal((await db.query('SELECT body FROM oos_messages WHERE oos_id = $1', [x])).rows[0].body, 'Ubat X tu brand apa? Boleh hantar gambar?');
+  assert.equal((await db.query('SELECT answer FROM oos_items WHERE id = $1', [y])).rows[0].answer, 'hq_deliver', 'From HQ = HQ delivers');
+  const own = (await db.query('SELECT answer, from_branch_id = branch_id AS own FROM oos_items WHERE id = $1', [z])).rows[0];
+  assert.equal(own.answer, 'transfer'); assert.equal(own.own, true);
+  // Clarify needs a question
+  const bad = await alia.post('/oos/inbox/table', { [`r[i${x}][answer]`]: 'clarify', [`r[i${x}][note]`]: '' });
+  assert.match(bad.html, /Type your question for the branch/);
+  // The reporter sees it in Needs you; another WM staff member who didn't report it doesn't
+  const daily = (await staff.get('/daily')).html;
+  assert.match(daily, /Inventory asked you to clarify an item/);
+  assert.match((await staff.get('/oos')).html, /From your own stock: 1/);
+  await db.query('UPDATE users SET pin_hash = $1 WHERE username = $2', [bcrypt.hashSync('3333', 4), 'zawiyah']);
+  const other = await login('pin', 'zawiyah', '3333');
+  assert.doesNotMatch((await other.get('/daily')).html, /Inventory asked you to clarify/);
 });

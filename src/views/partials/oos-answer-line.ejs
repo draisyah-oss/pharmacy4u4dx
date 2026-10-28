@@ -1,5 +1,6 @@
 <%# What Inventory decided, in one line. Input: it, of %>
 <% if (it.answer === 'hq_deliver') { %><b>HQ sends <%= it.answer_qty %></b> · arrives <%= of.dateLabel(it.expected_back) %>
+<% } else if (it.answer === 'transfer' && it.from_branch_id === it.branch_id) { %><b>From your own stock: <%= it.answer_qty %></b> (store / other counter) · by <%= of.dateLabel(it.expected_back) %>
 <% } else if (it.answer === 'transfer') { %><b>Transfer <%= it.answer_qty %> from <%= it.from_code %></b> · arrives <%= of.dateLabel(it.expected_back) %>
 <% } else if (it.answer === 'order') { %><b>Ordered <%= it.answer_qty %> from the supplier</b> · expected <%= of.dateLabel(it.expected_back) %>
 <% } else if (it.answer === 'substitute') { %><b>Offer instead: <%= it.substitute %></b><%= it.expected_back ? ' · original back ' + of.dateLabel(it.expected_back) : '' %>

@@ -220,7 +220,8 @@ async function loadTransfers(db, { now }) {
 
 async function answerItem(db, user, item, body, { now }) {
   const at = now();
-  const kind = String(body.answer || '');
+  // 28 Oct: "From" can be HQ (= HQ delivers) or the branch's own stock (e.g. the store room).
+  const kind = String(body.answer || '') === 'transfer' && String(body.from || '') === 'HQ' ? 'hq_deliver' : String(body.answer || '');
   if (!ANSWERS[kind]) return { error: 'Pick one of the answers.' };
   if (!OPEN.includes(item.status)) return { error: 'This item is already closed.' };
   const today = mytDate(now());
@@ -237,7 +238,6 @@ async function answerItem(db, user, item, body, { now }) {
   if (kind === 'transfer') {
     const from = (await db.query('SELECT id FROM branches WHERE code = $1 AND active', [String(body.from || '')])).rows[0];
     if (!from) return { error: 'Pick the branch it comes from.' };
-    if (from.id === item.branch_id) return { error: 'It can’t come from the same branch.' };
     next.from_branch_id = from.id;
   }
   if (kind === 'substitute') {
@@ -282,6 +282,15 @@ async function saveTable(db, user, body, { now }) {
     const item = (await db.query(`${SELECT} WHERE o.id = $1`, [id[1]])).rows[0];
     if (!item || !OPEN.includes(item.status)) continue;
     if (answer === 'done') { await markDone(db, user, item, { now }); saved++; continue; }
+    if (answer === 'clarify') {
+      // 28 Oct: ask the branch to clarify – the note goes to the item's conversation; the person who
+      // reported it gets it in Needs you and on Daily entry. The answer itself doesn't change.
+      const q = String(row.note ?? '').trim();
+      if (!q) { errors[item.id] = 'Type your question for the branch in the note box.'; continue; }
+      const r = await chat.addMessage(db, user, { kind: 'oos', id: item.id, branch_id: item.branch_id, branch_code: item.branch_code }, { message: q }, { now });
+      if (r.error || r.forbidden) errors[item.id] = r.error || 'Not allowed.'; else saved++;
+      continue;
+    }
     const qty = String(row.qty ?? '').trim(); const from = String(row.from ?? ''); const by = String(row.by ?? '').trim();
     const note = String(row.note ?? '').replace(/\s+/g, ' ').trim();
     const curNote = item.answer === 'substitute' ? (item.substitute || '') : (item.reason_for_delay || '');

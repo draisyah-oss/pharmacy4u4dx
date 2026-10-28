@@ -89,10 +89,13 @@ async function addMessage(db, user, target, body, { now }) {
 }
 
 // For "Needs you": open items / requests where the other side spoke last.
-async function waitingCounts(db, { branchId = null, forHq = false }) {
+// reportedBy (28 Oct): staff only see questions about the items they reported themselves.
+async function waitingCounts(db, { branchId = null, forHq = false, reportedBy = null }) {
   const fromBranch = forHq;
-  const where = branchId ? 'AND x.branch_id = $2' : '';
-  const args = branchId ? [fromBranch, branchId] : [fromBranch];
+  const args = [fromBranch];
+  let where = '';
+  if (branchId) { args.push(branchId); where += ` AND x.branch_id = $${args.length}`; }
+  if (reportedBy) { args.push(reportedBy); where += ` AND x.created_by = $${args.length}`; }
   const q = (table, col, open) => db.query(
     `SELECT count(*)::int AS n FROM ${table} x WHERE ${open} ${where} AND (
        SELECT m.from_branch FROM oos_messages m WHERE m.${col} = x.id ORDER BY m.created_at DESC, m.id DESC LIMIT 1) = $1`, args);
