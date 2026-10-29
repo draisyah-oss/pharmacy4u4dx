@@ -21,6 +21,7 @@ test.before(async () => {
   await loadSeed(db, readSeed(), { adminPassword: 'admin-pass-1' });
   const set = (u, col, v) => db.query(`UPDATE users SET ${col} = $1 WHERE username = $2`, [bcrypt.hashSync(v, 4), u]);
   await set('hazera', 'pin_hash', '1111');
+  await set('alya', 'pin_hash', '4444');
   await set('zawiyah', 'pin_hash', '2222');
   await set('hidayah', 'pin_hash', '3333');
   await set('hafizah', 'password_hash', 'manager-pass-1');
@@ -33,10 +34,10 @@ test.after(async () => { server.close(); await db.close(); });
 // A tiny browser: keeps the session cookie, doesn't follow redirects.
 function browser() {
   let cookie = '';
-  async function req(method, path, form) {
+  async function req(method, path, form, extra = {}) {
     const res = await fetch(base + path, {
       method, redirect: 'manual',
-      headers: { cookie, ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}) },
+      headers: { cookie, ...(form ? { 'content-type': 'application/x-www-form-urlencoded' } : {}), ...extra },
       body: form ? new URLSearchParams(form).toString() : undefined,
     });
     const set = res.headers.get('set-cookie');
@@ -46,6 +47,7 @@ function browser() {
   return {
     get: (p) => req('GET', p),
     post: (p, f) => req('POST', p, f),
+    postJson: async (p, f) => { const r = await req('POST', p, f, { accept: 'application/json' }); return { status: r.status, body: JSON.parse(r.html) }; },
     csrf: async (p = '/daily') => (await req('GET', p)).html.match(/name="_csrf" value="([^"]+)"/)[1],
   };
 }
@@ -337,4 +339,37 @@ test('28 Oct: JH week sheet – type a week in one Save; staff see their own box
   const hz = await pinLogin('hazera', '1111');
   assert.doesNotMatch((await hz.get('/daily')).html, /Week sheet view/);
   assert.equal((await hz.get('/daily/week')).status, 302);
+});
+
+test('29 Oct: +1 buttons at BR – each tap saved at once, −1 never below 0, count boxes only', async () => {
+  const b = await pinLogin('alya', '4444');
+  const page = (await b.get('/daily')).html;
+  assert.match(page, /name="tally" value="p9:\+1"/, 'Nurvi has a +1 button');
+  assert.match(page, /name="tally" value="poct:-1"/);
+  assert.doesNotMatch(page, /name="tally" value="walkin:/, 'money boxes have none');
+  const csrf = await b.csrf();
+  const tap = (v, date = '2026-10-20') => b.postJson('/daily/tally', { _csrf: csrf, date, tally: v });
+  assert.deepEqual((await tap('p9:+1')).body, { key: 'p9', value: 1 });
+  assert.deepEqual((await tap('p9:+1')).body, { key: 'p9', value: 2 });
+  assert.deepEqual((await tap('p9:-1')).body, { key: 'p9', value: 1 });
+  assert.equal(Number(await entry('BR', '2026-10-20', 'p9')), 1);
+  await tap('loyal:-1');
+  assert.equal(Number(await entry('BR', '2026-10-20', 'loyal')), 0, 'never below 0');
+  // Not a count box, a made-up key, or a day older than 7 days → refused, nothing saved
+  assert.equal((await tap('walkin:+1')).status, 400);
+  assert.equal((await tap('nope:+1')).status, 400);
+  assert.equal((await tap('p9:+5')).status, 400);
+  assert.equal((await tap('p9:+1', '2026-10-01')).status, 403);
+  // Each tap is in the audit log under the person who tapped
+  const log = (await db.query("SELECT u.username FROM audit_log a JOIN users u ON u.id = a.user_id WHERE a.record_key = 'BR 2026-10-20 p9' ORDER BY a.id")).rows;
+  assert.ok(log.length >= 3 && log.every((r) => r.username === 'alya'));
+  // Without JavaScript the button posts the form and comes back to the same box
+  const plain = await b.post('/daily/tally', { _csrf: csrf, date: '2026-10-20', tally: 'p1:+1', 'f[p1]': '99' });
+  assert.equal(plain.status, 302);
+  assert.match(plain.location, /#f_p1$/);
+  assert.equal(Number(await entry('BR', '2026-10-20', 'p1')), 1, 'adds 1 to the saved number, not to what was typed');
+  // Branches without +1 buttons: none on the page, and the route refuses
+  const wm = await pinLogin('hazera', '1111');
+  assert.doesNotMatch((await wm.get('/daily')).html, /name="tally"/);
+  assert.equal((await wm.postJson('/daily/tally', { _csrf: await wm.csrf(), date: '2026-10-20', tally: 'pwp:+1' })).status, 404);
 });

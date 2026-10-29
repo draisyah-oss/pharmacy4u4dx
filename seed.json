@@ -8,6 +8,7 @@
     "company_wig": "RM 360.5k a month in December = breakeven",
     "monthly_sales_target": {"2026-10": 266800, "2026-11": 313600, "2026-12": 360500},
     "sheet_view_branches": ["JH"],
+    "tally_branches": ["BR"],
     "oos_targets": {"answer_by_hour": 11, "answer_on_time": 0.9, "transfer_hours": 24, "transfer_on_time": 0.95, "restock_days": 3, "note": "Out-of-stock flow (16 Oct): Inventory answers by 11 am the next working day (Mon–Fri); transfers sent within 24 hours of the answer; back in stock within 3 days on average."},
     "monthly_sales_target_note": "Company sales = all branches + B2B (Q4 4DX HQ Tracker). B2B is entered weekly by Alia; a week counts in the month its Thursday falls in.",
     "meeting_rhythm": {

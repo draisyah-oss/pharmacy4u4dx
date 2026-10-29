@@ -352,6 +352,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       wiki_approver: seed.hq && seed.hq.wiki_approver ? JSON.stringify(seed.hq.wiki_approver) : null,
       oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
       sheet_view_branches: seed.company.sheet_view_branches ? JSON.stringify(seed.company.sheet_view_branches) : null,
+      tally_branches: seed.company.tally_branches ? JSON.stringify(seed.company.tally_branches) : null,
     };
     for (const [key, value] of Object.entries(settings)) {
       if (value === null) continue;

@@ -1021,3 +1021,12 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .ws-st.s-off_track { background: var(--short); color: #fff; }
 .ws-save { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
 .view-switch { margin: 8px 0; }
+
+/* 29 Oct: +1 / −1 buttons on count boxes (tally branches, BR first) – big enough to tap at the counter */
+.tally { display: flex; gap: 8px; margin-top: 8px; }
+.tally button { min-height: 44px; border-radius: 10px; font-weight: 700; font-size: 1.05rem; cursor: pointer; border: 1px solid var(--brand); }
+.tally-plus { flex: 1; background: var(--brand); color: #fff; }
+.tally-minus { width: 64px; background: #fff; color: var(--brand); }
+.tally button:disabled { opacity: .55; }
+.field.tally-flash .num { animation: tally-flash .6s ease-out; }
+@keyframes tally-flash { from { background: #dff3e6; } to { background: transparent; } }

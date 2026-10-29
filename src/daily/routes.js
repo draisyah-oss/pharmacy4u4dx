@@ -6,6 +6,7 @@ const oosFormat = require('../oos/format');
 const calc = require('../calc');
 const { canViewBranch, editBlockReason, dateStrip } = require('./rules');
 const { loadBranch, loadDailyPage, saveDailyEntries } = require('./data');
+const tally = require('./tally');
 const { buildScoreboard } = require('../scoreboard/data');
 const { scoreboardAccess } = require('../scoreboard/routes');
 const fmt = require('../scoreboard/format');
@@ -72,8 +73,9 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
       myCommit = (await db.query('SELECT commitment, result FROM commitments WHERE branch_id = $1 AND week_start = $2 AND person_id = $3',
         [branch.id, calc.weekStart(today), req.user.person_id])).rows[0] || { none: true };
     }
+    const tallyButtons = await tally.tallyOn(db, branch.code);
     res.status(extra.status || 200).render('daily', {
-      myCommit, sheetView, show, hiddenBoxes,
+      myCommit, sheetView, show, hiddenBoxes, tallyButtons,
       oosItems, of: oosFormat, oosLink: `/oos${req.user.role === 'admin' || req.user.role === 'hq' ? `?branch=${encodeURIComponent(branch.code)}` : ''}`,
       oosCanReport: oosData.canReport(req.user, branch),
       monthSales: { s: board.sales, started: board.started, asOf: board.asOf, href: salesHref }, fmt,
@@ -117,6 +119,29 @@ function dailyRoutes(db, { now, trackerStart, salesSheet }) {
   });
 
   // ─────────────── 28 Oct: week sheet view (JH first) ───────────────
+  // 29 Oct: "+1" / "−1" buttons (tally branches, BR first): each tap saved at once. The page's script
+  // sends it in the background and gets JSON back; without JavaScript the button posts the form here
+  // and comes back to the same box.
+  router.post('/daily/tally', async (req, res, next) => {
+    try {
+      const ctx = await resolve(req);
+      const json = (req.get('accept') || '').includes('application/json');
+      const fail = (status, message) => (json ? res.status(status).json({ error: message }) : res.status(status).render('message', { title: 'Can’t count', message }));
+      if (!ctx.branch) return fail(404, 'No branch.');
+      if (!(await tally.tallyOn(db, ctx.branch.code))) return fail(404, '+1 buttons aren’t switched on for this branch.');
+      const blocked = editBlockReason(req.user, ctx.branch.id, ctx.date, { today: ctx.today, trackerStart: ctx.start });
+      if (blocked) return fail(403, blocked);
+      const sheetFields = await sheetFieldsFor(db, ctx.branch.id, salesSheet);
+      const r = await tally.addTally(db, { branch: ctx.branch, date: ctx.date, user: req.user, tap: tally.parseTap(req.body.tally), sheetFields });
+      if (r.error) return fail(400, r.error);
+      if (json) return res.json({ key: r.key, value: r.value });
+      const qs = new URLSearchParams({ date: ctx.date });
+      if (['mine', 'all'].includes(req.body.show)) qs.set('show', req.body.show);
+      if (req.user.role === 'admin' || req.user.role === 'hq') qs.set('branch', ctx.branch.code);
+      res.redirect(`/daily?${qs}#f_${r.key}`);
+    } catch (err) { next(err); }
+  });
+
   async function weekCtx(req) {
     const ctx = await resolve(req);
     if (!ctx.branch) return ctx;

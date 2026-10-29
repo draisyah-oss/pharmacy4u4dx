@@ -167,11 +167,42 @@
   var submitting = false;
   form.addEventListener('submit', function () {
     submitting = true;
-    var btn = form.querySelector('button[type=submit]');
+    var btn = form.querySelector('button.save');
     if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
   });
   window.addEventListener('beforeunload', function (e) {
     if (!submitting && dirtyCount() > 0) { e.preventDefault(); e.returnValue = ''; }
+  });
+
+  // 29 Oct: +1 / −1 buttons (BR first). Each tap is saved at once in the background; the box shows
+  // the saved number and stays "saved". Without JavaScript the button posts the form instead.
+  form.addEventListener('click', function (e) {
+    var btn = e.target.closest('button[name=tally]');
+    if (!btn || !window.fetch) return;
+    e.preventDefault();
+    var el = btn.closest('[data-field]');
+    var input = el && el.querySelector('input.num');
+    if (!input || btn.disabled) return;
+    var body = new URLSearchParams();
+    ['_csrf', 'date', 'branch', 'show'].forEach(function (n) {
+      var h = form.querySelector('input[type=hidden][name=' + n + ']');
+      if (h) body.append(n, h.value);
+    });
+    body.append('tally', btn.value);
+    var status = el.querySelector('.field-status');
+    btn.disabled = true;
+    fetch('/daily/tally', { method: 'POST', credentials: 'same-origin', headers: { Accept: 'application/json' }, body: body })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (res) {
+        if (!res.ok) throw new Error(res.j && res.j.error ? res.j.error : 'Not saved – try again.');
+        input.value = String(res.j.value);
+        el.setAttribute('data-initial', String(res.j.value));
+        el.setAttribute('data-touched', '1');
+        el.classList.remove('tally-flash'); void el.offsetWidth; el.classList.add('tally-flash');
+        refreshAll();
+      })
+      .catch(function (err) { if (status) status.textContent = err.message || 'Not saved – check the connection.'; })
+      .then(function () { btn.disabled = false; });
   });
 
   refreshAll();

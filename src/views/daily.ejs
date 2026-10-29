@@ -137,6 +137,12 @@
                        placeholder="<%= f.fromSheet ? 'Not in the sheet yet' : '–' %>"<%= editable && !f.fromSheet ? '' : ' disabled' %><%= f.fromSheet ? ' data-from-sheet' : '' %><%= err ? ' aria-invalid="true"' : '' %>
                        aria-describedby="<%= id %>-s">
               </div>
+              <% if (tallyButtons && editable && f.type === 'count' && !f.fromSheet) { %>
+                <div class="tally">
+                  <button type="submit" class="tally-minus" formaction="/daily/tally" formnovalidate name="tally" value="<%= f.key %>:-1" aria-label="Take 1 off <%= f.label %>">−1</button>
+                  <button type="submit" class="tally-plus" formaction="/daily/tally" formnovalidate name="tally" value="<%= f.key %>:+1" aria-label="Add 1 to <%= f.label %>">+1</button>
+                </div>
+              <% } %>
             <% } %>
 
             <% if (f.hint && f.hint.kind !== 'track' && f.type !== 'yes_no') { %><div class="gauge" aria-hidden="true"><span></span></div><% } %>
@@ -154,6 +160,6 @@
     <% } %>
   </form>
 </main>
-<script src="/js/daily.js?v=6" defer></script>
+<script src="/js/daily.js?v=7" defer></script>
 </body>
 </html>
