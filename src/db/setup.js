@@ -30,6 +30,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await retireBranchItemsOnce(db, 'JH', { fields: ['oosn', 'oosloss', 'zkrm', 'zkrfq', 'zkrfqok', 'ttcom', 'grabcx'], measures: ['T6', 'T7', 'F7', 'F9', 'Y0', 'N4'] },
       'jh_no_target_v1', 'JH: 7 boxes with no target removed (CEO, 28 Oct) – out-of-stock logged / sales lost, zakat claims RM, RFQ invitations / approved, TikTok commission, Grab cancelled orders', log);
     await brOct29Once(db, readSeed(), log);
+    await ampangOct29Once(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -472,6 +473,34 @@ async function brOct29Once(db, seed, log) {
   log('BR 29 Oct 4DX adjustment applied (Aqilah added, Qushairi off, new focus items, leads and targets).');
 }
 
+// 29 Oct (CEO): Ampang target products – PWP 5 a day (unchanged), Biorelief / Biopropolis 2, Proponeem /
+// Neem facial 2 (one product now; Neem facial's own box P4 retired), Beecrobes 2, new Loose supplements
+// (P6) and Short-expiry products (P7) 2 a day. Eldon strip (P3) is off the list. History kept.
+async function ampangOct29Once(db, seed, log) {
+  const flag = 'ampang_29oct_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const sb = seed.branches.find((b) => b.code === 'Ampang');
+  await db.transaction(async (tx) => {
+    const b = (await tx.query("SELECT id FROM branches WHERE code = 'Ampang'")).rows[0];
+    if (b && sb) {
+      await tx.query('UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = ANY($2)', [b.id, ['p3', 'p4']]);
+      await tx.query('UPDATE measures SET active = false WHERE branch_id = $1 AND (code = ANY($2) OR numerator_field = ANY($3))', [b.id, ['P3', 'P4'], ['p3', 'p4']]);
+      for (const key of ['p1', 'p2']) {
+        const f = sb.daily_fields.find((x) => x.key === key);
+        await tx.query('UPDATE daily_fields SET label = $3 WHERE branch_id = $1 AND key = $2', [b.id, key, f.label]);
+      }
+      for (const code of ['P1', 'P2']) {
+        const m = sb.measures.find((x) => x.id === code);
+        await tx.query('UPDATE measures SET label = $3, note = $4 WHERE branch_id = $1 AND code = $2', [b.id, code, m.label, m.note]);
+      }
+      await addSeedItems(tx, seed, 'Ampang', { fields: ['p6', 'p7'], measures: ['P6', 'P7'] });
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Ampang target products (CEO, 29 Oct): Proponeem / Neem facial, Biorelief / Biopropolis, loose supplements, short-expiry products; Eldon strip off', NULL)");
+      log('Ampang 29 Oct target products applied.');
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+}
+
 // Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
 async function retireBranchItemsOnce(db, code, { fields = [], measures = [] }, flag, note, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -713,4 +742,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

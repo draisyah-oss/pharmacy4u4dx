@@ -208,7 +208,7 @@ test('22 Oct: JH no longer has "Grab menu items added/fixed" (N3); other branche
 test('22 Oct: Ampang target product Oat → Eldon strip; JH WhatsApp is customer follow-ups only', async () => {
   const s = readSeed();
   const amp = s.branches.find((b) => b.code === 'Ampang');
-  assert.ok(amp.measures.some((m) => m.label === 'Target product: Eldon strip'));
+  assert.ok(!amp.measures.some((m) => m.label === 'Target product: Oat')); // 29 Oct: Eldon strip itself came off Ampang's list too
   assert.ok(s.branches.find((b) => b.code === 'WM').measures.some((m) => m.label === 'Target product: Oat'), 'other branches keep Oat');
   const jh = s.branches.find((b) => b.code === 'JH');
   assert.equal(jh.daily_fields.find((f) => f.key === 'fu').label, 'WhatsApp customer follow-ups');
@@ -346,5 +346,29 @@ test('29 Oct: BR 4DX adjustment – an older database ends up the same as a fres
   const t1 = [...board.top, ...board.groups.flatMap((g) => g.rows)].find((r) => r.code === 'T1');
   assert.equal(t1.week.target, 9550);
   assert.equal(t1.highDays, 'Sun,Mon');
+  await old.close();
+});
+
+test('29 Oct: Ampang target products – an older database ends up the same as a fresh one, history kept', async () => {
+  const { ampangOct29Once } = require('../../src/db/setup');
+  const s = readSeed();
+  const sb = s.branches.find((b) => b.code === 'Ampang');
+  const products = sb.measures.filter((m) => /^(T2|P\d)$/.test(m.id)).map((m) => [m.label, m.targets['2026-11']]);
+  assert.deepEqual(products, [['PWP units sold', 5], ['Target product: Proponeem / Neem facial', 2], ['Target product: Biorelief / Biopropolis', 2],
+    ['Target product: Beecrobes', 2], ['Target product: Loose supplements', 2], ['Target product: Short-expiry products', 2]]);
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-br-29oct.json'), { adminPassword: 'admin-pass-1' });
+  const q = async (sql, args) => (await old.query(sql, args)).rows;
+  const id = (await q("SELECT id FROM branches WHERE code = 'Ampang'"))[0].id;
+  await old.query("INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, '2026-10-20', 'p3', 1)", [id]);
+  await ampangOct29Once(old, s, () => {});
+  await ampangOct29Once(old, s, () => {});
+  const fields = await q('SELECT key, label FROM daily_fields WHERE branch_id = $1 AND active', [id]);
+  assert.deepEqual(fields.map((f) => f.key).sort(), sb.daily_fields.map((f) => f.key).sort());
+  const measures = await q('SELECT code, label FROM measures WHERE branch_id = $1 AND active', [id]);
+  assert.deepEqual(measures.map((m) => m.code).sort(), sb.measures.map((m) => m.id).sort());
+  for (const m of sb.measures) assert.equal(measures.find((x) => x.code === m.id).label, m.label);
+  assert.equal((await q("SELECT 1 FROM daily_entries WHERE branch_id = $1 AND field_key = 'p3'", [id])).length, 1, 'Eldon strip history kept');
   await old.close();
 });

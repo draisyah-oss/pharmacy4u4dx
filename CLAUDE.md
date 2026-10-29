@@ -237,6 +237,9 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Unchanged: Ainur's Shopee leads (M1, M2, Q2, Q3), NP neuropathy (Amirah), zakat orders within 2 weeks (A6); Grab active inventory % (GI) moves to Aqilah.
 - Older databases once via brOct29Once (flags br_29oct_v1, br_aqilah_v1): labels, owners and targets copied from seed.json so live and fresh databases match (test: seed-before-br-29oct.json fixture).
 
+## Ampang target products (29 Oct, CEO)
+- Ampang's list: PWP 5 a day (T2, unchanged), **Proponeem / Neem facial** 2 (P1, one product now – P4 Neem facial retired), **Biorelief / Biopropolis** 2 (P2), Beecrobes 2 (P5), new **Loose supplements** 2 (P6, box p6) and **Short-expiry products** 2 (P7, box p7). **Eldon strip** (P3) is off the list. All owned by Team. Older databases once via ampangOct29Once (flag ampang_29oct_v1); history kept.
+
 ## +1 buttons on Daily entry (29 Oct, CEO – BR first)
 - BR kept a paper tally at the counter and typed it in at closing. Branches in app_settings **tally_branches** (seed company.tally_branches ["BR"]) get **−1 / +1** under every staff-typed **count** box on Daily entry (never money, %, yes/no or sales-sheet boxes). POST /daily/tally {tally: '<key>:+1' | '<key>:-1'} (src/daily/tally.js addTally): adds to the SAVED number, never below 0, saved at once through saveDailyEntries (7-day rule, checks, audit under the person who tapped). public/js/daily.js sends it in the background (Accept: application/json → {key, value}), updates the box and keeps "All saved"; without JavaScript the button posts the form and redirects back to #f_<key>. Other branches: no buttons, route 404.
 
