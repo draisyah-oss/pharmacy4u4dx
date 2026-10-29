@@ -2,6 +2,7 @@
 // measures), branch month totals, running totals, and HQ measure targets.
 
 const { audit, parseOptional, num, sameNumber } = require('./common');
+const { highDaysLabel } = require('../calc');
 
 // Percent measures are typed as 45 (%) and stored as 0.45.
 const isPercent = (m) => m.calc === 'ratio_percent' || m.calc === 'average_percent';
@@ -28,7 +29,7 @@ async function loadBranchTargets(db, branch) {
   return {
     months,
     measures: measures.map((m) => ({
-      ...m, pct: isPercent(m), daily: m.target_per === 'day' && m.calc === 'sum',
+      ...m, pct: isPercent(m), daily: m.target_per === 'day' && m.calc === 'sum', highLabel: highDaysLabel(m.high_days),
       cells: Object.fromEntries(months.map((mo) => {
         const c = (byMeasure[m.id] || {})[mo] || { target: null, weekend: null };
         return [mo, { target: toShown(c.target, isPercent(m)), weekend: toShown(c.weekend, false) }];

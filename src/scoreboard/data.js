@@ -90,7 +90,7 @@ async function buildScoreboard(db, { branch, weekStart, today, trackerStart }) {
       code: m.code, label: m.label, owner: m.owner_name, kind: m.kind, unit: m.unit, calc: m.calc,
       targetPer: m.target_per, note: m.note, top: isTopMeasure(m, branch),
       monthTarget: calc.monthTarget(m.targets, started ? asOf : weekStart),
-      weekendTarget: calc.monthTarget(m.weekend_targets, started ? asOf : weekStart),
+      weekendTarget: calc.monthTarget(m.weekend_targets, started ? asOf : weekStart), highDays: m.high_days || null,
       money: m.unit === 'RM', week: strip(week), mtd: strip(mtd), scoreBy: m.score_by || 'week',
     };
   });
@@ -180,7 +180,7 @@ async function traceMeasure(db, { branch, code, from, to, trackerStart }) {
     const counted = m.calc !== 'ratio_per_day' || (d.denominator || 0) > 0;
     return {
       date: d.date, numerator: d.numerator, denominator: d.denominator, counted,
-      target: m.calc === 'sum' ? calc.dailyTarget(m.targets, m.target_per, d.date, m.weekend_targets) : calc.monthTarget(m.targets, d.date),
+      target: m.calc === 'sum' ? calc.dailyTarget(m.targets, m.target_per, d.date, m.weekend_targets, m.high_days) : calc.monthTarget(m.targets, d.date),
       enteredBy: w ? w.display_name : null, updatedAt: w ? w.updated_at : null,
     };
   });

@@ -88,6 +88,9 @@ function validateSeed(seed) {
           if (t !== null && typeof t !== 'number') err(`${mat}: weekend target for ${month} must be a number or null`);
         }
       }
+      if (m.high_days !== undefined && !/^(Sun|Mon|Tue|Wed|Thu|Fri|Sat)(,(Sun|Mon|Tue|Wed|Thu|Fri|Sat))*$/.test(String(m.high_days))) {
+        err(`${mat}: high_days must be day names like "Sun,Mon"`);
+      }
       if (m.owner !== 'Team' && !people.has(m.owner)) {
         err(`${mat}: owner "${m.owner}" is not a person in this branch`);
       }
@@ -218,10 +221,10 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       for (const [mi, m] of b.measures.entries()) {
         const measure = await one(
           `INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per,
-             calc, numerator_field, denominator_field, note, sort_order, score_by)
-           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+             calc, numerator_field, denominator_field, note, sort_order, score_by, high_days)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
           [branch.id, m.id, m.owner, personIds[m.owner] || null, m.label, m.kind, m.unit, m.target_per,
-            m.calc, m.numerator_field, m.denominator_field, m.note, mi + 1, m.score_by || 'week']
+            m.calc, m.numerator_field, m.denominator_field, m.note, mi + 1, m.score_by || 'week', m.high_days || null]
         );
         summary.measures++;
         const weekend = m.weekend_targets || {};

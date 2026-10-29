@@ -142,7 +142,7 @@ async function branchWorkbook(db, code, { now = () => new Date() } = {}) {
   });
 
   const targets = (await db.query(
-    `SELECT m.code, m.label, m.owner_name, m.target_per, m.calc, t.month, t.target, t.weekend_target
+    `SELECT m.code, m.label, m.owner_name, m.target_per, m.calc, t.month, t.target, t.weekend_target, m.high_days
      FROM measures m JOIN measure_targets t ON t.measure_id = m.id
      WHERE m.branch_id = $1 AND m.active ORDER BY m.sort_order, t.month`, [branch.id])).rows;
   addTable(wb, 'Targets', {
@@ -151,7 +151,7 @@ async function branchWorkbook(db, code, { now = () => new Date() } = {}) {
       { header: 'Code', key: 'code', width: 7 }, { header: 'Measure', key: 'label', width: 48 },
       { header: 'Owner', key: 'owner_name', width: 12 }, { header: 'Per', key: 'target_per', width: 7 },
       { header: 'Calc', key: 'calc', width: 13 }, { header: 'Month', key: 'month', width: 9 },
-      { header: 'Target', key: 'target', format: '#,##0.##' }, { header: 'Sat–Sun target', key: 'weekend_target', format: '#,##0.##' },
+      { header: 'Target', key: 'target', format: '#,##0.##' }, { header: 'Weekend / busy-day target', key: 'weekend_target', format: '#,##0.##' }, { header: 'Busy days', key: 'high_days', width: 10 },
     ],
     rows: targets,
   });

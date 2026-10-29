@@ -328,53 +328,62 @@ test('HQ: done of total – 18 of 20 POs checked = 90% ▲', () => {
 
 // ───────────── Weekday / weekend targets (BR, core JD revision 14 Oct) ─────────────
 
-test('BR walk-in: RM 1,250 on weekdays, RM 1,650 on Sat–Sun in October', () => {
+test('BR walk-in (29 Oct): RM 1,250 Tuesday–Saturday, RM 1,650 on the busy days Sunday and Monday, every month', () => {
   const t1 = measure('BR', 'T1');
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-16', t1.weekend_targets), 1250); // Friday
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-17', t1.weekend_targets), 1650); // Saturday
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-18', t1.weekend_targets), 1650); // Sunday
-  // November: RM 1,330 weekdays, RM 1,750 weekends
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-06', t1.weekend_targets), 1330);
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-07', t1.weekend_targets), 1750);
+  assert.equal(t1.high_days, 'Sun,Mon');
+  const day = (d) => calc.dailyTarget(t1.targets, 'day', d, t1.weekend_targets, t1.high_days);
+  assert.equal(day('2026-11-03'), 1250); // Tuesday
+  assert.equal(day('2026-11-07'), 1250); // Saturday – no longer a high day
+  assert.equal(day('2026-11-08'), 1650); // Sunday
+  assert.equal(day('2026-11-09'), 1650); // Monday
+  assert.equal(day('2026-12-14'), 1650); // Monday in December – same amounts every month
+  assert.equal(day('2026-12-15'), 1250);
+  // Without high_days the weekend figure still applies on Saturday and Sunday (other branches)
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-07', t1.weekend_targets), 1650);
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-09', t1.weekend_targets), 1250);
+  assert.equal(calc.highDaysLabel('Sun,Mon'), 'Sun–Mon');
+  assert.equal(calc.highDaysLabel(null), 'Sat–Sun');
 });
 
-test('BR walk-in week 12–18 Oct: 5 × 1,250 + 2 × 1,650 = RM 9,550', () => {
-  const r = calc.evaluateMeasure({ measure: measure('BR', 'T1'), entries: NO_ENTRIES, ...WEEK });
+test('BR walk-in week 2–8 Nov: 5 × 1,250 + 2 × 1,650 = RM 9,550', () => {
+  const r = calc.evaluateMeasure({ measure: measure('BR', 'T1'), entries: NO_ENTRIES, from: '2026-11-02', to: '2026-11-08', trackerStart: START });
   near(r.target, 9550);
 });
 
-test('BR POCT lead: 3 each Saturday and Sunday, nothing due on weekdays (6 a week)', () => {
+test('BR POCT lead (29 Oct): 6 a week with product recommendations, any day', () => {
   const n1 = measure('BR', 'N1');
-  assert.equal(calc.dailyTarget(n1.targets, 'day', '2026-10-14', n1.weekend_targets), 0);
-  assert.equal(calc.dailyTarget(n1.targets, 'day', '2026-10-17', n1.weekend_targets), 3);
-  // to Friday nothing is due yet, so 1 weekday test isn't "behind"
-  const friday = calc.evaluateMeasure({ measure: n1, entries: calc.indexEntries(calc.rowsFromDays({ '2026-10-14': { poct: 1 } })), from: '2026-10-12', to: '2026-10-16', trackerStart: START });
-  assert.equal(friday.target, 0);
-  assert.notEqual(friday.status, 'off_track');
-  const entries = calc.indexEntries(calc.rowsFromDays({ '2026-10-17': { poct: 3 }, '2026-10-18': { poct: 2 }, '2026-10-14': { poct: 1 } }));
-  const r = calc.evaluateMeasure({ measure: measure('BR', 'N1'), entries, ...WEEK });
+  assert.equal(n1.target_per, 'week');
+  assert.equal(n1.weekend_targets, undefined);
+  const entries = calc.indexEntries(calc.rowsFromDays({ '2026-11-03': { poct: 2 }, '2026-11-05': { poct: 1 }, '2026-11-08': { poct: 3 } }));
+  const r = calc.evaluateMeasure({ measure: n1, entries, from: '2026-11-02', to: '2026-11-08', trackerStart: START });
   assert.equal(r.actual, 6);
   near(r.target, 6);
   assert.equal(r.status, 'on_track');
 });
 
-test('BR October total sales target RM 60k includes Shopee, zakat, Grabmart and Alpine', () => {
+test('BR 29 Oct: lag measures, 5 focus items, owners; PWP, 3+ items and Qushairi gone', () => {
   const br = branch('BR');
   assert.equal(br.monthly_total_target['2026-10'], 60000);
   assert.deepEqual(br.total_sales_fields, ['walkin', 'zakat', 'shopee', 'grab', 'alpine']);
-  assert.equal(measure('BR', 'M3').targets['2026-10'], 7500);
-  assert.equal(measure('BR', 'A5').targets['2026-10'], 10000);
-  assert.equal(measure('BR', 'AL').targets['2026-10'], 500);
-  assert.equal(br.measures.filter((m) => /^P\d$/.test(m.id)).length, 8);
-  // BR's own split continues into Nov and Dec; walk-in fills the rest of the 4DX month totals
-  for (const month of ['2026-11', '2026-12']) {
+  for (const month of ['2026-10', '2026-11', '2026-12']) {
     assert.equal(measure('BR', 'M3').targets[month], 7500);
     assert.equal(measure('BR', 'A5').targets[month], 10000);
     assert.equal(measure('BR', 'AL').targets[month], 500);
+    assert.equal(measure('BR', 'G0').targets[month], 1500);
+    assert.equal(measure('BR', 'T4').targets[month], 20);
   }
-  const t1 = measure('BR', 'T1');
-  const monthWalkin = (month) => calc.dateRange(calc.monthStart(month), calc.monthEnd(month))
-    .reduce((a, d) => a + calc.dailyTarget(t1.targets, 'day', d, t1.weekend_targets), 0);
-  assert.ok(Math.abs(monthWalkin('2026-11') + 18000 - br.monthly_total_target['2026-11']) < 200);
-  assert.ok(Math.abs(monthWalkin('2026-12') + 18000 - br.monthly_total_target['2026-12']) < 200);
+  assert.equal(measure('BR', 'T4').target_per, 'month');
+  assert.equal(br.running_totals.find((r) => r.id === 'GR').end_target, 200);
+  const focus = br.measures.filter((m) => /^P\d$/.test(m.id));
+  assert.deepEqual(focus.map((m) => [m.label.replace('Focus item: ', ''), m.targets['2026-11'], m.owner]), [
+    ['Beecrobes', 2, 'Alya'], ['Nature Pharmacy / Proponeem soap bar', 0.5, 'Alya'], ['Androchi', 0.5, 'Alya'], ['Acevis', 1, 'Alya'], ['Nurvi', 0.5, 'Alya']]);
+  const owner = (id) => measure('BR', id).owner;
+  assert.deepEqual([owner('N1'), owner('Q1'), owner('M3'), owner('A5'), owner('AL'), owner('A7'), owner('T4'), owner('G0')],
+    ['Amirah', 'Ainur', 'Ainur', 'Amirah', 'Alya', 'Alya', 'Aqilah', 'Aqilah']);
+  assert.match(measure('BR', 'A7').label, /2 weeks of supply/);
+  for (const key of ['two', 'pwp', 'aframe', 'p3', 'p5', 'p6', 'p8']) assert.ok(!br.daily_fields.some((f) => f.key === key), key);
+  assert.ok(!br.measures.some((m) => m.id === 'T2' || m.id === 'Q4'));
+  assert.ok(!br.people.some((p) => p.name === 'Qushairi'));
+  assert.ok(br.people.some((p) => p.name === 'Aqilah'));
+  assert.ok(![...br.measures, ...br.daily_fields].some((x) => x.owner === 'Qushairi'));
 });

@@ -34,7 +34,7 @@
                     <input name="<%= hq ? 'h' : 't' %>[m<%= m.id %>][<%= mo %>]" value="<%= c.target %>" inputmode="decimal" autocomplete="off"><% if (m.pct) { %><i>%</i><% } %>
                   </label>
                   <% if (!hq && m.daily) { %>
-                    <label class="t-input t-weekend" title="Saturday and Sunday target – leave empty for the same every day"><span>Sat–Sun</span>
+                    <label class="t-input t-weekend" title="<%= m.high_days ? 'Target on ' + m.high_days.replace(/,/g, ', ') : 'Saturday and Sunday target' %> – leave empty for the same every day"><span><%= m.highLabel %></span>
                       <input name="w[m<%= m.id %>][<%= mo %>]" value="<%= c.weekend %>" inputmode="decimal" autocomplete="off" placeholder="same">
                     </label>
                   <% } %>

@@ -1,6 +1,7 @@
 // How numbers are shown on the scoreboard. Used by the views.
 
-const { STATUS } = require('../calc');
+const calc = require('../calc');
+const { STATUS } = calc;
 
 const grouped = (n, digits) => Number(n).toLocaleString('en-MY', { maximumFractionDigits: digits });
 
@@ -31,8 +32,13 @@ function targetBasis(row) {
   if (row.calc === 'ratio_per_day') return `${grouped(t, 1)} per storefront day`;
   const show = (n) => (row.money ? `RM ${grouped(n, 0)}` : grouped(n, 1));
   if (row.targetPer === 'day' && row.weekendTarget !== null && row.weekendTarget !== undefined) {
-    if (t === 0) return `${show(row.weekendTarget)} each Sat and Sun`;
-    return `${show(t)} a weekday, ${show(row.weekendTarget)} Sat–Sun`;
+    if (!row.highDays) {
+      if (t === 0) return `${show(row.weekendTarget)} each Sat and Sun`;
+      return `${show(t)} a weekday, ${show(row.weekendTarget)} Sat–Sun`;
+    }
+    const days = calc.highDaysLabel(row.highDays);
+    if (t === 0) return `${show(row.weekendTarget)} each ${days} day`;
+    return `${show(t)} a day, ${show(row.weekendTarget)} ${days}`;
   }
   return `${show(t)} a ${row.targetPer}`;
 }

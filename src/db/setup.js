@@ -29,6 +29,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await bangiOct27Once(db, readSeed(), log);
     await retireBranchItemsOnce(db, 'JH', { fields: ['oosn', 'oosloss', 'zkrm', 'zkrfq', 'zkrfqok', 'ttcom', 'grabcx'], measures: ['T6', 'T7', 'F7', 'F9', 'Y0', 'N4'] },
       'jh_no_target_v1', 'JH: 7 boxes with no target removed (CEO, 28 Oct) – out-of-stock logged / sales lost, zakat claims RM, RFQ invitations / approved, TikTok commission, Grab cancelled orders', log);
+    await brOct29Once(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -368,10 +369,10 @@ async function addSeedItems(tx, seed, code, { fields = [], measures = [] }) {
     if (!m || (await tx.query('SELECT 1 FROM measures WHERE branch_id = $1 AND code = $2', [b.id, m.id])).rows.length) continue;
     const order = (await tx.query('SELECT COALESCE(max(sort_order), 0) + 1 AS n FROM measures WHERE branch_id = $1', [b.id])).rows[0].n;
     const mid = (await tx.query(`INSERT INTO measures (branch_id, code, owner_name, person_id, label, kind, unit, target_per,
-        calc, numerator_field, denominator_field, note, sort_order, score_by)
-      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING id`,
+        calc, numerator_field, denominator_field, note, sort_order, score_by, high_days)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`,
       [b.id, m.id, m.owner, await person(m.owner), m.label, m.kind, m.unit, m.target_per, m.calc,
-        m.numerator_field, m.denominator_field, m.note, order, m.score_by || 'week'])).rows[0].id;
+        m.numerator_field, m.denominator_field, m.note, order, m.score_by || 'week', m.high_days || null])).rows[0].id;
     const months = (await tx.query('SELECT DISTINCT t.month FROM measure_targets t JOIN measures x ON x.id = t.measure_id WHERE x.branch_id = $1', [b.id])).rows.map((r) => r.month.trim());
     for (const month of new Set([...months, ...Object.keys(m.targets || {})])) {
       await tx.query('INSERT INTO measure_targets (measure_id, month, target) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [mid, month, (m.targets || {})[month] ?? null]);
@@ -412,6 +413,62 @@ async function bangiOct27Once(db, seed, log) {
     await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
   });
   log('Bangi 27 Oct changes applied (Siti on Grab, Androchi / Canberra, neuropathy lead → BR).');
+}
+
+// 29 Oct (CEO): BR 4DX adjustment. Qushairi has left (login off) and Aqilah joins (staff login, PIN in
+// Admin → People). Removed (history kept): 3+ items, PWP, Qushairi's target products Magalax, Biovita,
+// Freederm, Propolis and the A-frame routine. Owners: focus items → Alya, Lead 2 loyalty → Ainur, Google
+// reviews and Grab → Aqilah. New box / measure: Nurvi (P9). Targets Oct–Dec: walk-in RM 1,250 Tue–Sat,
+// RM 1,650 on the busy days Sun–Mon (high_days); POCT lead 6 a week; focus items 2 / 0.5 / 0.5 / 0.5 / 1
+// a day; Google reviews 20 a month (200 by 31 Dec); Grabmart RM 1,500 a month; zakat claims within 2 weeks.
+// Labels, owners and targets come from seed.json, so a fresh database and an older one end up the same.
+async function brOct29Once(db, seed, log) {
+  const flag = 'br_29oct_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const sb = seed.branches.find((b) => b.code === 'BR');
+  const br = (await db.query("SELECT id FROM branches WHERE code = 'BR'")).rows[0];
+  if (!sb || !br) {
+    await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+    return;
+  }
+  await addBranchPersonOnce(db, 'BR', { name: 'Aqilah', job: 'Sales Assistant' }, 'br_aqilah_v1', log);
+  const qus = (await db.query("SELECT id FROM people WHERE branch_id = $1 AND name = 'Qushairi' AND active", [br.id])).rows[0];
+  if (qus) await require('../admin/people').setActive(db, { personId: qus.id, active: false, user: null });
+  await db.transaction(async (tx) => {
+    await tx.query("UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = ANY($2)", [br.id, ['two', 'pwp', 'p3', 'p5', 'p6', 'p8', 'aframe']]);
+    await tx.query("UPDATE measures SET active = false WHERE branch_id = $1 AND (code = ANY($2) OR numerator_field = ANY($3))",
+      [br.id, ['T2', 'P3', 'P5', 'P6', 'P8', 'Q4'], ['two', 'pwp', 'p3', 'p5', 'p6', 'p8', 'aframe']]);
+    await addSeedItems(tx, seed, 'BR', { fields: ['p9'], measures: ['P9'] });
+    const person = async (name) => (await tx.query('SELECT id FROM people WHERE branch_id = $1 AND name = $2 AND active', [br.id, name])).rows[0]?.id || null;
+    for (const key of ['p1', 'p2', 'p4', 'p7', 'reviews', 'poct', 'zkc7d', 'loyal', 'grabinv', 'graord', 'grab']) {
+      const f = sb.daily_fields.find((x) => x.key === key);
+      if (f) await tx.query('UPDATE daily_fields SET label = $3, owner_name = $4, person_id = $5 WHERE branch_id = $1 AND key = $2',
+        [br.id, key, f.label, f.owner, await person(f.owner)]);
+    }
+    // Entered once a month (on the 30th): scored month to date, the week shows the actual only.
+    await tx.query("UPDATE measures SET score_by = 'month' WHERE branch_id = $1 AND code = ANY($2)", [br.id, ['A5', 'AL', 'G0']]);
+    for (const code of ['T1', 'P1', 'P2', 'P4', 'P7', 'T4', 'N1', 'Q1', 'A7', 'G0', 'GI', 'M3']) {
+      const m = sb.measures.find((x) => x.id === code);
+      const row = m && (await tx.query('SELECT id FROM measures WHERE branch_id = $1 AND code = $2', [br.id, code])).rows[0];
+      if (!row) continue;
+      await tx.query(`UPDATE measures SET label = $2, owner_name = $3, person_id = $4, unit = $5, target_per = $6, note = $7, high_days = $8, active = true
+        WHERE id = $1`, [row.id, m.label, m.owner, await person(m.owner), m.unit, m.target_per, m.note, m.high_days || null]);
+      if (['M3', 'Q1', 'A7', 'GI'].includes(code)) continue; // targets unchanged
+      const w = m.weekend_targets || {};
+      for (const [month, t] of Object.entries(m.targets || {})) {
+        await tx.query(`INSERT INTO measure_targets (measure_id, month, target, weekend_target) VALUES ($1, $2, $3, $4)
+          ON CONFLICT (measure_id, month) DO UPDATE SET target = EXCLUDED.target, weekend_target = EXCLUDED.weekend_target`,
+          [row.id, month, t, w[month] ?? null]);
+      }
+    }
+    const gr = sb.running_totals.find((r) => r.id === 'GR');
+    if (gr) await tx.query("UPDATE running_totals SET label = $2, end_target = $3 WHERE branch_id = $1 AND code = 'GR'", [br.id, gr.label, gr.end_target]);
+    await tx.query('UPDATE branches SET wig = $2, wig_detail = $3, lead_measures = $4 WHERE id = $1',
+      [br.id, sb.wig, sb.wig_detail, JSON.stringify(sb.lead_measures)]);
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'BR 4DX adjustment (CEO, 29 Oct): 3+ items, PWP and Qushairi''s measures removed; Aqilah added; focus items, leads, reviews, Grab and walk-in Tue–Sat / Sun–Mon targets', NULL)");
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+  log('BR 29 Oct 4DX adjustment applied (Aqilah added, Qushairi off, new focus items, leads and targets).');
 }
 
 // Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
@@ -655,4 +712,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

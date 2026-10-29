@@ -217,7 +217,7 @@ test('22 Oct: Ampang target product Oat → Eldon strip; JH WhatsApp is customer
 
 test('22 Oct: every branch tracks Grab active inventory % (above 50%) instead of Grab menu items', async () => {
   const s = readSeed();
-  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Qushairi', Bangi: 'Siti', Ampang: 'Aishah' }; // 27 Oct: Siti took Bangi's Grab
+  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Aqilah', Bangi: 'Siti', Ampang: 'Aishah' }; // 27 Oct: Siti took Bangi's Grab
   for (const b of s.branches) {
     const f = b.daily_fields.find((x) => x.key === 'grabinv');
     const m = b.measures.find((x) => x.id === 'GI');
@@ -257,7 +257,7 @@ test('22 Oct: older databases swap Grab menu items for Grab active inventory % o
   const q = async (sql) => (await old.query(sql)).rows;
   const gi = await q("SELECT b.code, m.calc, m.active, m.person_id FROM measures m JOIN branches b ON b.id = m.branch_id WHERE m.code = 'GI' ORDER BY b.code");
   assert.deepEqual(gi.map((r) => r.code), ['Ampang', 'BR', 'Bangi', 'JH', 'WM']);
-  assert.ok(gi.every((r) => r.active && r.calc === 'average_percent' && (r.person_id || r.code === 'Bangi')), 'Bangi’s owner Siti is added by bangiOct27Once');
+  assert.ok(gi.every((r) => r.active && r.calc === 'average_percent' && (r.person_id || ['Bangi', 'BR'].includes(r.code))), 'Bangi’s Siti and BR’s Aqilah are added later (bangiOct27Once, brOct29Once)');
   const oldOn = await q("SELECT count(*)::int AS n FROM measures WHERE numerator_field = 'grabmenu' AND active");
   assert.equal(oldOn[0].n, 0);
   const t = await q("SELECT t.month, t.target FROM measure_targets t JOIN measures m ON m.id = t.measure_id JOIN branches b ON b.id = m.branch_id WHERE b.code = 'WM' AND m.code = 'GI' AND t.month = '2026-10'");
@@ -294,5 +294,57 @@ test('27 Oct: Bangi – Siti on Grab, Androchi / Canberra, neuropathy lead moved
   const np = await q("SELECT m.owner_name, m.person_id, t.target FROM measures m JOIN branches b ON b.id = m.branch_id JOIN measure_targets t ON t.measure_id = m.id WHERE b.code = 'BR' AND m.code = 'NP' AND t.month = '2026-11'");
   assert.equal(np[0].owner_name, 'Amirah'); assert.ok(np[0].person_id); assert.equal(Number(np[0].target), 1);
   assert.equal((await q("SELECT count(*)::int AS n FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'BR' AND f.key = 'neuro' AND f.active"))[0].n, 1);
+  await old.close();
+});
+
+test('29 Oct: BR 4DX adjustment – an older database ends up the same as a fresh one, history kept', async () => {
+  const { brOct29Once } = require('../../src/db/setup');
+  const s = readSeed();
+  const sb = s.branches.find((b) => b.code === 'BR');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, require('../fixtures/seed-before-br-29oct.json'), { adminPassword: 'admin-pass-1' });
+  const q = async (sql, args) => (await old.query(sql, args)).rows;
+  const br = (await q("SELECT id FROM branches WHERE code = 'BR'"))[0].id;
+  await old.query("INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, '2026-10-20', 'pwp', 4), ($1, '2026-10-20', 'p3', 2)", [br]);
+  await brOct29Once(old, s, () => {});
+  await brOct29Once(old, s, () => {}); // second run does nothing
+  // People: Qushairi can no longer log in, Aqilah has a staff login (PIN set in Admin → People)
+  const people = await q('SELECT p.name, p.active, u.active AS login, u.role FROM people p LEFT JOIN users u ON u.person_id = p.id WHERE p.branch_id = $1 ORDER BY p.name', [br]);
+  assert.deepEqual(people.find((p) => p.name === 'Qushairi'), { name: 'Qushairi', active: false, login: false, role: 'branch_staff' });
+  assert.deepEqual(people.filter((p) => p.name === 'Aqilah'), [{ name: 'Aqilah', active: true, login: true, role: 'branch_staff' }]);
+  // Same boxes and measures as a fresh database, with the same owners
+  const fields = await q('SELECT key, label, owner_name, person_id FROM daily_fields WHERE branch_id = $1 AND active', [br]);
+  assert.deepEqual(fields.map((f) => f.key).sort(), sb.daily_fields.map((f) => f.key).sort());
+  for (const f of sb.daily_fields) {
+    const got = fields.find((x) => x.key === f.key);
+    assert.equal(got.owner_name, f.owner, f.key);
+    if (f.owner !== 'Team') assert.ok(got.person_id, `${f.key} linked to ${f.owner}`);
+  }
+  const measures = await q('SELECT code, label, owner_name, target_per, high_days FROM measures WHERE branch_id = $1 AND active', [br]);
+  assert.deepEqual(measures.map((m) => m.code).sort(), sb.measures.map((m) => m.id).sort());
+  for (const m of sb.measures) {
+    const got = measures.find((x) => x.code === m.id);
+    assert.equal(got.owner_name, m.owner, m.id);
+    assert.equal(got.target_per, m.target_per, m.id);
+  }
+  const target = async (code, month) => (await q(`SELECT t.target::float, t.weekend_target::float FROM measure_targets t JOIN measures m ON m.id = t.measure_id
+    WHERE m.branch_id = $1 AND m.code = $2 AND t.month = $3`, [br, code, month]))[0];
+  assert.deepEqual(await target('T1', '2026-12'), { target: 1250, weekend_target: 1650 });
+  assert.equal(measures.find((m) => m.code === 'T1').high_days, 'Sun,Mon');
+  assert.deepEqual((await q("SELECT code FROM measures WHERE branch_id = $1 AND score_by = 'month' ORDER BY code", [br])).map((r) => r.code), ['A5', 'AL', 'G0']);
+  assert.deepEqual(await target('N1', '2026-11'), { target: 6, weekend_target: null });
+  assert.deepEqual(await target('T4', '2026-11'), { target: 20, weekend_target: null });
+  assert.deepEqual(await target('G0', '2026-12'), { target: 1500, weekend_target: null });
+  assert.deepEqual(await target('P9', '2026-11'), { target: 0.5, weekend_target: null });
+  assert.equal(Number((await q("SELECT end_target FROM running_totals WHERE branch_id = $1 AND code = 'GR'", [br]))[0].end_target), 200);
+  // History of the removed boxes is kept
+  assert.equal((await q("SELECT 1 FROM daily_entries WHERE branch_id = $1 AND field_key IN ('pwp', 'p3')", [br])).length, 2);
+  // The scoreboard uses the new walk-in days: week of 2 Nov = 5 × 1,250 + Sun 8 + Mon 2 Nov at 1,650
+  const branch = await loadBranch(old, 'BR');
+  const board = await buildScoreboard(old, { branch, weekStart: '2026-11-02', today: '2026-11-09', trackerStart: '2026-10-12' });
+  const t1 = [...board.top, ...board.groups.flatMap((g) => g.rows)].find((r) => r.code === 'T1');
+  assert.equal(t1.week.target, 9550);
+  assert.equal(t1.highDays, 'Sun,Mon');
   await old.close();
 });

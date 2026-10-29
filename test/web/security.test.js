@@ -152,13 +152,13 @@ test('30 wrong logins from one device block that device, even with a right PIN',
 
 test('fields of someone who was removed still show (on an "Others" card) and keep their owner in Admin', async () => {
   const admin = await asAdmin();
-  const pid = (await db.query("SELECT p.id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = 'BR' AND p.name = 'Qushairi'")).rows[0].id;
+  const pid = (await db.query("SELECT p.id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = 'BR' AND p.name = 'Aqilah'")).rows[0].id;
   await admin.post(`/admin/people/${pid}/active`, { branch: 'BR', active: 'false' });
   const page = await admin.get('/daily?branch=BR');
   assert.match(page.html, /<h2>Others/);
-  assert.match(page.html, /New loyalty members/);
+  assert.match(page.html, /New Google reviews/);
   const m = await admin.get('/admin/measures?branch=BR');
-  assert.match(m.html, /<option selected>Qushairi<\/option>/); // stays Qushairi, not quietly "Team"
+  assert.match(m.html, /<option selected>Aqilah<\/option>/); // stays Aqilah, not quietly "Team"
   await admin.post(`/admin/people/${pid}/active`, { branch: 'BR', active: 'true' });
 });
 
