@@ -25,6 +25,9 @@ const ANSWERS = {
   transfer: { status: 'On the way', label: 'Transfer from a branch' },
   order: { status: 'Ordered', label: 'Order from the supplier' },
   substitute: { status: 'Substitute offered', label: 'Offer a substitute' },
+  // 30 Oct: "we don't stock this brand – offer X instead": saved as a substitute answer and closed at
+  // once, so it doesn't sit open (and LATE) in the branch's list.
+  not_stocked: { status: 'Discontinued / use substitute', label: 'Not stocked – offer substitute' },
   discontinue: { status: 'Discontinued', label: 'Discontinue' },
 };
 
@@ -136,9 +139,10 @@ async function reportB2b(db, user, body, { now }) {
 const SELECT = `
   SELECT o.*, COALESCE(b.code, 'B2B') AS branch_code, COALESCE(b.name, 'B2B – ' || o.b2b_customer) AS branch_name, fb.code AS from_code, fb.name AS from_name,
     c.display_name AS reported_by_name, a.display_name AS answered_by_name, s.display_name AS sent_by_name,
-    sn.display_name AS seen_by_name
+    sn.display_name AS seen_by_name, cx.display_name AS cancelled_by_name
   FROM oos_items o LEFT JOIN branches b ON b.id = o.branch_id
   LEFT JOIN users sn ON sn.id = o.seen_by
+  LEFT JOIN users cx ON cx.id = o.cancelled_by
   LEFT JOIN branches fb ON fb.id = o.from_branch_id
   LEFT JOIN users c ON c.id = o.created_by LEFT JOIN users a ON a.id = o.answered_by LEFT JOIN users s ON s.id = o.sent_by`;
 
@@ -171,7 +175,9 @@ function decorate(it, at, today) {
   it.unanswered = it.isOpen && !it.answer && it.status === 'Open';
   it.dueMs = it.answer_due ? new Date(it.answer_due).getTime() - at.getTime() : null;
   it.overdueAnswer = it.unanswered && it.dueMs !== null && it.dueMs < 0;
-  it.late = it.isOpen && it.expected_back && it.expected_back < today;
+  // A substitute's date is when the original might be back – the branch can already offer the
+  // substitute, so it's never shown as LATE (30 Oct, Ampang's Clarityne).
+  it.late = it.isOpen && it.answer !== 'substitute' && it.expected_back && it.expected_back < today;
   return it;
 }
 
@@ -225,7 +231,7 @@ async function answerItem(db, user, item, body, { now }) {
   if (!ANSWERS[kind]) return { error: 'Pick one of the answers.' };
   if (!OPEN.includes(item.status)) return { error: 'This item is already closed.' };
   const today = mytDate(now());
-  const next = { answer: kind, status: ANSWERS[kind].status, answer_qty: null, from_branch_id: null, substitute: null, expected_back: null };
+  const next = { answer: kind === 'not_stocked' ? 'substitute' : kind, status: ANSWERS[kind].status, answer_qty: null, from_branch_id: null, substitute: null, expected_back: null };
   if (DELIVERS.includes(kind) || kind === 'order') {
     const q = int(body.qty, { min: 1, max: 9999 });
     if (q.error || q.value === null) return { error: q.error || 'How many?' };
@@ -240,13 +246,13 @@ async function answerItem(db, user, item, body, { now }) {
     if (!from) return { error: 'Pick the branch it comes from.' };
     next.from_branch_id = from.id;
   }
-  if (kind === 'substitute') {
+  if (kind === 'substitute' || kind === 'not_stocked') {
     const sub = cleanText(body.substitute, { max: 160, label: 'Substitute' });
     if (sub.error) return { error: sub.error };
     if (!sub.value) return { error: 'Type what the branch should offer instead.' };
     next.substitute = sub.value;
     const by = String(body.expected_back || '').trim();
-    if (by) { if (!isRealDate(by) || by < today) return { error: 'Pick a real date from today on.' }; next.expected_back = by; }
+    if (by && kind === 'substitute') { if (!isRealDate(by) || by < today) return { error: 'Pick a real date from today on.' }; next.expected_back = by; }
   }
   const note = cleanText(body.reason, { max: 300, label: 'Note to the branch' });
   if (note.error) return { error: note.error };
@@ -299,7 +305,7 @@ async function saveTable(db, user, body, { now }) {
     if (same) continue;
     const r = await answerItem(db, user, item, {
       answer, qty, from, expected_back: by,
-      substitute: answer === 'substitute' ? note : '', reason: answer === 'substitute' ? '' : note,
+      substitute: ['substitute', 'not_stocked'].includes(answer) ? note : '', reason: ['substitute', 'not_stocked'].includes(answer) ? '' : note,
     }, { now });
     if (r.error) errors[item.id] = r.error; else saved++;
   }
@@ -346,6 +352,15 @@ async function markDone(db, user, item, { now }) {
   const at = now();
   if (!OPEN.includes(item.status)) return { ok: true, already: true };
   await markSeen(db, user, 'oos_items', item.id, at);
+  // 30 Oct: a substitute item that Inventory closes is "use the substitute", not "back in stock".
+  if (item.answer === 'substitute') {
+    await db.transaction(async (tx) => {
+      await tx.query(`UPDATE oos_items SET status = 'Discontinued / use substitute', closed_by_hq = true, expected_back = NULL,
+         updated_by = $2, updated_at = $3 WHERE id = $1`, [item.id, user.id, at]);
+      await audit(tx, user, 'update', `${item.branch_code} #${item.id} done by inventory`, item.status, 'Discontinued / use substitute');
+    });
+    return { ok: true };
+  }
   await db.transaction(async (tx) => {
     await tx.query(
       `UPDATE oos_items SET status = 'Back in stock', closed_by_hq = true, received_at = $3, received_by = $2,
@@ -355,6 +370,21 @@ async function markDone(db, user, item, { now }) {
          updated_by = $2, updated_at = $3 WHERE id = $1`,
       [item.id, user.id, at, DELIVERS]);
     await audit(tx, user, 'update', `${item.branch_code} #${item.id} done by inventory`, item.status, 'Back in stock');
+  });
+  return { ok: true };
+}
+
+// 30 Oct: cancel a report – the branch (or Inventory) says it isn't needed any more. Closed, never
+// counted as back in stock; the reason (optional) shows to both sides and goes to the audit log.
+async function cancelItem(db, user, item, body, { now }) {
+  const at = now();
+  if (!OPEN.includes(item.status)) return { ok: true, already: true };
+  const reason = cleanText(body && body.reason, { max: 200, label: 'Reason' });
+  if (reason.error) return { error: reason.error };
+  await db.transaction(async (tx) => {
+    await tx.query(`UPDATE oos_items SET status = 'Cancelled', cancelled_at = $3, cancelled_by = $2, cancel_reason = $4,
+       updated_by = $2, updated_at = $3 WHERE id = $1`, [item.id, user.id, at, reason.value]);
+    await audit(tx, user, 'update', `${item.branch_code} #${item.id} cancelled`, item.status, { status: 'Cancelled', reason: reason.value });
   });
   return { ok: true };
 }
@@ -456,5 +486,5 @@ async function branchWeekSummary(db, { branchId, week, now }) {
 module.exports = {
   branchWeekSummary,
   OPEN, ANSWERS, DELIVERS, isDelivery, markDone, markSeen, saveTable, reportB2b, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
-  report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, buildBoard,
+  report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, cancelItem, buildBoard,
 };

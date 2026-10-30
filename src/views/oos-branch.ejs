@@ -71,6 +71,11 @@
             <% if (it.answer !== 'discontinue') { %>
               <form method="post" action="/oos/<%= it.id %>/received"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button oo-good" type="submit"><%= delivery ? 'Accept – received' + (it.answer_qty ? ' ' + it.answer_qty : '') : it.answer === 'substitute' ? 'Done – sorted' : 'Received – back in stock' %></button></form>
             <% } %>
+            <details class="oo-cancel"><summary class="link-button">Cancel – not needed any more</summary>
+              <form method="post" action="/oos/<%= it.id %>/cancel"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <label class="oo-label">Why? <small class="muted">(optional)</small><input name="reason" maxlength="200" placeholder="e.g. customer took the substitute / reported by mistake"></label>
+                <button class="button secondary" type="submit">Cancel this report</button></form>
+            </details>
             <% if (it.late && !it.late_flagged_at) { %>
               <form method="post" action="/oos/<%= it.id %>/late"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-button" type="submit">Tell Inventory it’s late</button></form>
             <% } else if (it.late_flagged_at) { %><span class="muted small">Inventory told it’s late <%= of.when(it.late_flagged_at, at) %></span><% } %>

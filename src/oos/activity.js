@@ -27,7 +27,7 @@ async function loadActivity(db, { date, branchCode = null, now }) {
     `SELECT x.*, COALESCE(bb.code, 'B2B') AS branch_code FROM oos_items x LEFT JOIN branches bb ON bb.id = x.branch_id
      WHERE (x.reported_at >= $1 AND x.reported_at < $2 OR x.seen_at >= $1 AND x.seen_at < $2 OR x.answered_at >= $1 AND x.answered_at < $2
        OR x.picked_at >= $1 AND x.picked_at < $2 OR x.sent_at >= $1 AND x.sent_at < $2 OR x.received_at >= $1 AND x.received_at < $2
-       OR x.late_flagged_at >= $1 AND x.late_flagged_at < $2) ${bf}`, args)).rows;
+       OR x.late_flagged_at >= $1 AND x.late_flagged_at < $2 OR x.cancelled_at >= $1 AND x.cancelled_at < $2) ${bf}`, args)).rows;
   for (const it of items) {
     const label = { item: it.item, branch: it.branch_code, type: 'Out of stock' };
     const href = `/oos/${it.id}`;
@@ -38,6 +38,7 @@ async function loadActivity(db, { date, branchCode = null, now }) {
     add(it.sent_at, 'sent', 'hq', who(it.sent_by), label, 'Sent – on the way', href);
     add(it.received_at, it.closed_by_hq ? 'done' : 'accepted', it.closed_by_hq ? 'hq' : 'branch', who(it.received_by), label, it.closed_by_hq ? 'Closed by Inventory – delivered' : 'Accepted by the branch – back in stock', href);
     add(it.late_flagged_at, 'late', 'branch', '', label, 'Branch told Inventory it’s late', href);
+    add(it.cancelled_at, 'cancelled', 'branch', who(it.cancelled_by), label, `Cancelled${it.cancel_reason ? ` – “${it.cancel_reason}”` : ''}`, href);
   }
   const reqs = (await db.query(
     `SELECT x.*, bb.code AS branch_code FROM item_requests x JOIN branches bb ON bb.id = x.branch_id

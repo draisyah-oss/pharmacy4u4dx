@@ -30,7 +30,7 @@
     <fieldset class="oo-set">
       <legend>Your answer</legend>
       <div class="oo-answers">
-        <% [['hq_deliver', 'HQ delivers', 'from the HQ warehouse'], ['transfer', 'Transfer', 'from another branch'], ['order', 'Order', 'from the supplier'], ['substitute', 'Substitute', 'offer another'], ['discontinue', 'Discontinue', 'stop stocking']].forEach(function (a) { %>
+        <% [['hq_deliver', 'HQ delivers', 'from the HQ warehouse'], ['transfer', 'Transfer', 'from another branch'], ['order', 'Order', 'from the supplier'], ['substitute', 'Substitute', 'until the original is back'], ['not_stocked', 'Not stocked', 'offer a substitute – closes the item'], ['discontinue', 'Discontinue', 'stop stocking']].forEach(function (a) { %>
           <label class="oo-ans"><input type="radio" name="answer" value="<%= a[0] %>"<%= pick === a[0] ? ' checked' : '' %>><span><b><%= a[1] %></b><small><%= a[2] %></small></span></label>
         <% }) %>
       </div>
@@ -45,7 +45,7 @@
       <label class="oo-label">Quantity <small class="muted">(deliver / transfer / order)</small><input name="qty" inputmode="numeric" class="num" value="<%= t.qty || item.answer_qty || '' %>" autocomplete="off"></label>
       <label class="oo-label">Arrives by<input type="date" name="expected_back" min="<%= today %>" value="<%= t.expected_back || item.expected_back || tomorrow %>"></label>
     </div>
-    <label class="oo-label">Offer instead <small class="muted">(substitute)</small><input name="substitute" maxlength="160" value="<%= t.substitute || item.substitute || '' %>" placeholder="e.g. Androchi 60ml × 2"></label>
+    <label class="oo-label">Offer instead <small class="muted">(substitute / not stocked)</small><input name="substitute" maxlength="160" value="<%= t.substitute || item.substitute || '' %>" placeholder="e.g. Androchi 60ml × 2"></label>
     <label class="oo-label">Note to the branch (optional)<input name="reason" maxlength="300" value="<%= t.reason || item.reason_for_delay || '' %>" placeholder="e.g. supplier out until Nov"></label>
     <p class="muted small">HQ delivers / transfer: it goes on Deliveries to send (pick → send within 24 hours) and the branch taps Accept when it arrives. The branch sees every step on Daily entry.</p>
     <button class="button wide" type="submit"><%= item.answer ? 'Change answer' : 'Send answer' %></button>

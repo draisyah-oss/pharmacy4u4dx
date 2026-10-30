@@ -2,7 +2,7 @@
     Alia's OOS spreadsheet). Input: open, branchCodes, typed, rowErrors, today, tomorrow, of, at %>
 <%
   const groups = branchCodes.concat(['B2B']).map(function (code) { return { code: code, rows: open.filter(function (it) { return it.branch_code === code; }) }; });
-  const ANS = [['', '— choose —'], ['clarify', '❓ Ask branch to clarify'], ['hq_deliver', 'HQ delivers'], ['transfer', 'Transfer from branch'], ['order', 'Order (supplier)'], ['substitute', 'Substitute'], ['discontinue', 'Discontinue'], ['done', '✔ Done – delivered']];
+  const ANS = [['', '— choose —'], ['clarify', '❓ Ask branch to clarify'], ['hq_deliver', 'HQ delivers'], ['transfer', 'Transfer from branch'], ['order', 'Order (supplier)'], ['substitute', 'Substitute (until back)'], ['not_stocked', 'Not stocked – offer substitute (closes)'], ['discontinue', 'Discontinue'], ['done', '✔ Done – delivered']];
   const val = function (it, k, dflt) { const t = typed['i' + it.id]; return t && t[k] !== undefined ? t[k] : dflt; };
 %>
 <p class="muted">Every open item, by branch. Pick an answer, fill the row, then one <b>Save all</b> at the bottom. Not sure what the item is? Choose <b>❓ Ask branch to clarify</b> and type the question in the note – it goes to whoever reported it. Rows you don’t touch stay as they are. Tap an item to ask the branch a question or see photos.</p>

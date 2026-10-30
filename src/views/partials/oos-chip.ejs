@@ -3,7 +3,9 @@
   const delivery = it.answer === 'hq_deliver' || it.answer === 'transfer';
   let chip = ['SENT TO INVENTORY', 'oc-info'];
   if (it.status === 'Back in stock') chip = [it.closed_by_hq ? 'DONE – DELIVERED' : 'BACK IN STOCK', 'oc-good'];
-  else if (it.status === 'Discontinued' || it.status === 'Discontinued / use substitute') chip = ['DISCONTINUED', 'oc-grey'];
+  else if (it.status === 'Cancelled') chip = ['CANCELLED', 'oc-grey'];
+  else if (it.status === 'Discontinued / use substitute') chip = ['USE SUBSTITUTE', 'oc-grey'];
+  else if (it.status === 'Discontinued') chip = ['DISCONTINUED', 'oc-grey'];
   else if (it.late) chip = ['LATE', 'oc-warn'];
   else if (delivery && it.sent_at) chip = ['ON THE WAY – ACCEPT WHEN IT ARRIVES', 'oc-good'];
   else if (delivery && it.picked_at) chip = ['PICKED – BEING PACKED', 'oc-good'];

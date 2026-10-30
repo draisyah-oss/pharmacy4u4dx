@@ -30,14 +30,15 @@ const days = (from, to) => ((new Date(to) - new Date(from)) / 86400e3);
 // Substitute: reported → substitute offered → done.
 function steps(it) {
   const from = it.answer !== 'transfer' ? 'HQ' : it.from_branch_id && it.from_branch_id === it.branch_id ? 'own stock' : (it.from_code || 'branch');
-  const closed = Boolean(it.received_at) || ['Back in stock', 'Discontinued', 'Discontinued / use substitute'].includes(it.status);
+  const closed = Boolean(it.received_at) || ['Back in stock', 'Discontinued', 'Discontinued / use substitute', 'Cancelled'].includes(it.status);
   let list;
-  if (!it.answer) list = [['Reported', it.reported_at], [it.seen_at ? `Seen by ${it.seen_by_name || 'Inventory'}` : 'Seen by Inventory', it.seen_at], ['Inventory answers', null], ['Back in stock', it.received_at]];
+  if (it.status === 'Cancelled') list = [['Reported', it.reported_at], [`Cancelled${it.cancelled_by_name ? ` by ${it.cancelled_by_name}` : ''}`, it.cancelled_at]];
+  else if (!it.answer) list = [['Reported', it.reported_at], [it.seen_at ? `Seen by ${it.seen_by_name || 'Inventory'}` : 'Seen by Inventory', it.seen_at], ['Inventory answers', null], ['Back in stock', it.received_at]];
   else if (it.answer === 'hq_deliver' || it.answer === 'transfer') {
     list = [['Reported', it.reported_at], [`${from} will send ${it.answer_qty || ''}`.trim(), it.answered_at],
       [`Picked at ${from}`, it.picked_at || it.sent_at], ['On the way', it.sent_at], ['Received', it.received_at]];
   } else if (it.answer === 'order') list = [['Reported', it.reported_at], ['Ordered from the supplier', it.answered_at], ['Received', it.received_at]];
-  else if (it.answer === 'substitute') list = [['Reported', it.reported_at], ['Substitute offered', it.answered_at], ['Done', it.received_at]];
+  else if (it.answer === 'substitute') list = [['Reported', it.reported_at], ['Substitute offered', it.answered_at], ['Done', it.received_at || (closed ? it.updated_at : null)]];
   else list = [['Reported', it.reported_at], ['Discontinued', it.answered_at]];
   const out = list.map(([label, at]) => ({ label, at: at || null, done: Boolean(at) || closed }));
   const next = out.findIndex((x) => !x.done);

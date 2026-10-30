@@ -85,6 +85,19 @@ function oosRoutes(db, { now, trackerStart }) {
     } catch (err) { next(err); }
   });
 
+  // 30 Oct: cancel a report (branch that reported it, or Inventory) – optional reason.
+  router.post('/oos/:id/cancel', async (req, res, next) => {
+    try {
+      const item = await itemOr404(req, res); if (!item) return;
+      const mine = item.branch_id && oos.canReport(req.user, { id: item.branch_id });
+      if (!mine && !oos.canAnswer(req.user)) return forbid(res, 'Only the branch that reported it or the inventory team can cancel it.');
+      const r = await oos.cancelItem(db, req.user, item, req.body, { now });
+      const to = mine ? `/oos${many(req.user) ? `?branch=${encodeURIComponent(item.branch_code)}` : ''}` : '/oos/inbox';
+      if (r.error) return back(res, to, r.error, 'err');
+      back(res, to, `${item.item}: cancelled.`);
+    } catch (err) { next(err); }
+  });
+
   router.post('/oos/:id/late', async (req, res, next) => {
     try {
       const item = await itemOr404(req, res); if (!item) return;

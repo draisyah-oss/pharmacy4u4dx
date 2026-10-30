@@ -464,3 +464,51 @@ test('28 Oct: Download Excel – open items by branch + B2B, notes column, links
   const staff = await login('pin', 'hazera', '1111');
   assert.equal((await staff.raw('/oos/inbox.xlsx')).status, 403);
 });
+
+test('30 Oct: "Not stocked – offer substitute" closes the item; substitutes never LATE; branch can cancel a report', async () => {
+  const before = clock;
+  clock = new Date('2026-10-15T21:40:00+08:00');
+  const staff = await login('pin', 'hazera', '1111');
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  const id = async (name) => (await db.query('SELECT id FROM oos_items WHERE item = $1', [name])).rows[0].id;
+  const row = async (i) => (await db.query('SELECT status, answer, substitute, expected_back, cancelled_at, cancel_reason, received_at FROM oos_items WHERE id = $1', [i])).rows[0];
+  await staff.post('/oos', { item: 'Clarityne 10s', left: 'none', asking: '1-2' });
+  await staff.post('/oos', { item: 'Zyrtec 10s', left: 'none', asking: '1-2' });
+  await staff.post('/oos', { item: 'Wrong item typed', left: 'none', asking: '0' });
+  const clar = await id('Clarityne 10s'); const zyr = await id('Zyrtec 10s'); const wrong = await id('Wrong item typed');
+
+  // Not stocked: needs what to offer, closes at once, branch sees USE SUBSTITUTE with no buttons
+  const bad = await alia.post(`/oos/${clar}/answer`, { answer: 'not_stocked' });
+  assert.equal(bad.status, 400); assert.match(bad.html, /Type what the branch should offer/);
+  await alia.post(`/oos/${clar}/answer`, { answer: 'not_stocked', substitute: 'Lorastad, Ezede', expected_back: '2026-10-20', reason: 'kita tak simpan brand ni' });
+  const c = await row(clar);
+  assert.equal(c.status, 'Discontinued / use substitute'); assert.equal(c.answer, 'substitute'); assert.equal(c.expected_back, null);
+  assert.equal(c.received_at, null, 'not counted as back in stock');
+  let page = (await staff.get('/oos')).html;
+  const card = page.split(`id="oos-${clar}"`)[1].split('</article>')[0];
+  assert.match(card, /USE SUBSTITUTE/); assert.match(card, /Not stocked – offer instead: Lorastad, Ezede/);
+  assert.doesNotMatch(card, /Done – sorted|LATE|Cancel this report/);
+
+  // Substitute until back: stays open, and after its date it is NOT shown LATE
+  assert.equal((await alia.post(`/oos/${zyr}/answer`, { answer: 'substitute', substitute: 'Cetirizine generic', expected_back: '2026-10-16' })).status, 302);
+  clock = new Date('2026-10-19T10:00:00+08:00');
+  page = (await staff.get('/oos')).html;
+  const zcard = page.split(`id="oos-${zyr}"`)[1].split('</article>')[0];
+  assert.match(zcard, /SUBSTITUTE/); assert.doesNotMatch(zcard, /LATE/);
+  // Inventory's "Done" on a substitute = use the substitute, not back in stock
+  await alia.post(`/oos/${zyr}/done`, {});
+  assert.equal((await row(zyr)).status, 'Discontinued / use substitute');
+
+  // The branch cancels a report with a reason; Inventory sees it in the activity log
+  const r = await staff.post(`/oos/${wrong}/cancel`, { reason: 'reported by mistake' });
+  assert.equal(r.status, 302);
+  const w = await row(wrong);
+  assert.equal(w.status, 'Cancelled'); assert.equal(w.cancel_reason, 'reported by mistake'); assert.ok(w.cancelled_at); assert.equal(w.received_at, null);
+  assert.match((await staff.get('/oos')).html, /CANCELLED/);
+  assert.match((await alia.get('/oos/activity?date=2026-10-19')).html, /Cancelled – “reported by mistake”/);
+  // Another branch can't cancel it, and a closed item can't be cancelled again
+  await staff.post('/oos', { item: 'Panadol 20s', left: 'none', asking: '0' });
+  const yaya = await login('pin', 'yaya', '2222');
+  assert.equal((await yaya.post(`/oos/${await id('Panadol 20s')}/cancel`, {})).status, 403);
+  clock = before;
+});
