@@ -1,0 +1,37 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'policies' }) %>
+<main class="page oo-page pol-page">
+  <p><a class="back-link" href="/policies">‹ All policies</a></p>
+  <article class="oo-card pol-doc">
+    <p class="pol-company"><%= p.company %></p>
+    <h1><%= p.title %></h1>
+    <dl class="pol-meta">
+      <dt>Document no.</dt><dd><%= p.docNo %></dd>
+      <dt>Effective date</dt><dd><%= fmtDate(p.effective, { weekday: undefined, month: 'long', year: 'numeric' }) %></dd>
+      <dt>Prepared by</dt><dd><%= p.preparedBy %></dd>
+      <dt>Approved by</dt><dd><%= p.approvedBy %></dd>
+      <dt>Applies to</dt><dd><%= p.appliesTo %></dd>
+    </dl>
+    <% if (p.file) { %><p><a class="button secondary" href="/policies/<%= p.slug %>/pdf">Download the signed PDF</a></p><% } %>
+    <nav class="pol-toc" aria-label="Sections">
+      <% p.sections.forEach(function (s, i) { %><a href="#pol-s<%= i %>"><%= s.h %></a><% }) %>
+    </nav>
+    <% p.sections.forEach(function (s, i) { %>
+      <section id="pol-s<%= i %>">
+        <h2><%= s.h %></h2>
+        <% s.blocks.forEach(function (b) { %>
+          <% if (b.p) { %><p><%- rich(b.p) %></p><% } %>
+          <% if (b.table) { %>
+            <div class="pol-table-wrap"><table class="pol-table">
+              <thead><tr><% b.table.head.forEach(function (h) { %><th scope="col"><%= h %></th><% }) %></tr></thead>
+              <tbody><% b.table.rows.forEach(function (r) { %><tr><% r.forEach(function (c, j) { %><td<%- b.table.num && j > 0 ? ' class="num"' : '' %>><%= c %></td><% }) %></tr><% }) %></tbody>
+            </table></div>
+          <% } %>
+        <% }) %>
+      </section>
+    <% }) %>
+  </article>
+</main>
+</body>
+</html>

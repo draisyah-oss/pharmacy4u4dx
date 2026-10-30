@@ -262,6 +262,12 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 ## Sales sheet: "GrabMart Sales (RM)" = Grab sales (28 Oct, CEO)
 - The daily tabs (JH first, then the others) have a **"GrabMart Sales (RM)"** column. Every branch's mapping now reads Grab sales from GrabMart Sales (RM) / GrabMart Sales first, then GRAB PAY / Grabpay / Grab sales (RM) / Grab sales, and walk-in takes off the same column (walk-in = Total − Grab). "GrabMart" alone is still the Grab order count (headers match exactly after normalising). Older databases once via updateSalesSheetColumns flag sales_sheet_v4; the next sync rewrites the sheet numbers. Setup check now names "GrabMart Sales (RM)" when a tab has no Grab column.
 
+## Company policies (30 Oct, CEO)
+- **/policies** – read-only pages for **everyone logged in** (branch staff included; side menu group "Company policies" → Policies). Code: src/policies (index.js = the policy texts as data, routes.js), views policies.ejs / policy.ejs, styles .pol-*. No database, no migration.
+- First policy: **Annual Leave Carry-Forward Policy and Procedure** (HR_AL_301026, effective 30 Oct 2026, approved by Dr Aisyah) – typed in **exactly as approved** (do not reword; a new version = new text + new PDF). Signed PDF in src/policies/files, downloaded via /policies/:slug/pdf behind the login (not /public).
+- Adding a policy: a new entry in POLICIES (slug, docNo, title, area, dates, sections of { p } / { table }, **bold** allowed) + its PDF. Test (test/web/policies.test.js) checks access and that no policy mentions salaries.
+- This is a policy reader only – the Company wiki itself stays on hold (see above).
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

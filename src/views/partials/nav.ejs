@@ -58,6 +58,8 @@
            ['/admin/audit', '/admin/audit', 'Audit log', 'history changes'], ['status', '/status', 'Setup check', 'google sheet database']]]);
        }
      }
+     // 30 Oct: company policies (read only) for everyone, branch staff included.
+     groups.push(['Company policies', [['policies', '/policies', 'Policies', 'policy polisi hr leave cuti annual carry forward handbook']]]);
      // 28 Oct: everyone can ask for a change to the app (Mr 4DX builds it, the CEO approves).
      groups.push(['Improve the app', [['requests', '/requests', 'Request a change', 'improve suggest idea bug feature change mr 4dx']]]);
      const count = (n, what) => '<span class="sn-badge" aria-label="' + n + ' ' + what + '">' + n + '</span>';

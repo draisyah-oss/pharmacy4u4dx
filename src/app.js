@@ -15,6 +15,7 @@ const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
 const { wigRoutes } = require('./wig/routes');
 const { requestRoutes, agentApi } = require('./requests/routes');
+const { policyRoutes } = require('./policies/routes');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
@@ -136,6 +137,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(oosRoutes(db, { now, trackerStart }));
   app.use(wigRoutes(db, { now, trackerStart }));
   app.use(requestRoutes(db, { now }));
+  app.use(policyRoutes());
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

@@ -1,0 +1,22 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'policies' }) %>
+<main class="page oo-page pol-page">
+  <h1>Company policies</h1>
+  <p class="muted">Approved by Dr Aisyah. Read only – ask HR (Iman) if something isn’t clear.</p>
+  <% const areas = [...new Set(policies.map(function (p) { return p.area; }))]; %>
+  <% areas.forEach(function (a) { %>
+    <section class="oo-card" aria-label="<%= a %>">
+      <h2><%= a %></h2>
+      <% policies.filter(function (p) { return p.area === a; }).forEach(function (p) { %>
+        <a class="pol-item" href="/policies/<%= p.slug %>">
+          <b><%= p.title %></b>
+          <small class="muted"><%= p.docNo %> · effective <%= fmtDate(p.effective, { weekday: undefined, year: 'numeric' }) %></small>
+          <span><%= p.summary %></span>
+        </a>
+      <% }) %>
+    </section>
+  <% }) %>
+</main>
+</body>
+</html>
