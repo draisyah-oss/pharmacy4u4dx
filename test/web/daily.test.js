@@ -102,7 +102,7 @@ test('staff PIN: wrong PIN is refused, right PIN logs in', async () => {
   assert.match(bad.html, /PIN is not right/);
   const ok = await b.post('/login/pin', { username: 'hazera', pin: '1111', next: '/' });
   assert.equal(ok.status, 302);
-  assert.equal((await b.get('/')).location, '/daily');
+  assert.equal((await b.get('/')).status, 200); // 1 Nov: branch logins land on their own page
 });
 
 test('5 wrong PINs lock the login for 15 minutes, even with the right PIN', async () => {
@@ -372,4 +372,27 @@ test('29 Oct: +1 buttons at BR – each tap saved at once, −1 never below 0, c
   const wm = await pinLogin('hazera', '1111');
   assert.doesNotMatch((await wm.get('/daily')).html, /name="tally"/);
   assert.equal((await wm.postJson('/daily/tally', { _csrf: await wm.csrf(), date: '2026-10-20', tally: 'pwp:+1' })).status, 404);
+});
+
+test('1 Nov: the front page for branch staff – wins, shout-outs and focus from their own numbers', async () => {
+  const set = (u, col, v) => db.query(`UPDATE users SET ${col} = $1 WHERE username = $2`, [bcrypt.hashSync(v, 4), u]);
+  await set('nabihah', 'pin_hash', '4444');
+  const jh = await branchId('JH');
+  // Nabihah's WhatsApp follow-ups (15 a day): 3 days in a row on target, then a best day yesterday
+  const put = (d, k, v) => db.query(`INSERT INTO daily_entries (branch_id, entry_date, field_key, value) VALUES ($1, $2, $3, $4)
+    ON CONFLICT (branch_id, entry_date, field_key) DO UPDATE SET value = EXCLUDED.value`, [jh, d, k, v]);
+  for (const [d, v] of [['2026-10-12', 15], ['2026-10-13', 16], ['2026-10-14', 15], ['2026-10-15', 17], ['2026-10-16', 15], ['2026-10-17', 18], ['2026-10-18', 16], ['2026-10-19', 22], ['2026-10-20', 25]]) await put(d, 'fu', v); // today (20 Oct) is a best day
+  const b = await pinLogin('nabihah', '4444');
+  const html = (await b.get('/')).html;
+  assert.match(html, /Selamat (pagi|tengah hari|petang|malam), Nabihah/);
+  assert.match(html, /Wins to celebrate/);
+  assert.match(html, /You hit “WhatsApp customer follow-ups/);
+  assert.match(html, /\d+ days in a row on “WhatsApp customer follow-ups/);
+  assert.match(html, /New personal best: 25/);
+  assert.match(html, /Focus this week/);
+  assert.match(html, /Grab active inventory/, 'a target that is behind shows in Focus');
+  assert.match(html, /Write my commitment/);
+  assert.match(html, /href="\/scoreboard\/trace\?type=measure&amp;code=/);
+  // HQ and admin keep their own home pages
+  assert.equal((await pinLogin('hazera', '1111').then((x) => x.get('/'))).status, 200);
 });

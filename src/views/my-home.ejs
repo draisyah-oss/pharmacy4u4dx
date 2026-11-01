@@ -1,0 +1,101 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'home' }) %>
+<%
+  const icon = { target: '✔', streak: '🔥', best: '🏆', commit: '🤝', branch: '📈', team: '👏' };
+  const statusText = { off_track: 'Behind', watch: 'Nearly there', on_track: 'On track' };
+  const s = sales;
+  const barPct = s && s.monthTarget ? Math.min(100, Math.round((s.mtd / s.monthTarget) * 100)) : 0;
+  const pacePct = s && s.monthTarget && s.paceTarget ? Math.min(100, Math.round((s.paceTarget / s.monthTarget) * 100)) : null;
+%>
+<main class="page mh-page">
+  <section class="mh-hero" aria-labelledby="mh-hi">
+    <p class="mh-branch"><%= branch.name %></p>
+    <h1 id="mh-hi"><%= greeting %>, <%= name %></h1>
+    <p class="mh-line">“<%= line %>”</p>
+    <% if (s && s.monthTarget) { %>
+      <div class="mh-month">
+        <div class="mh-month-top"><span>Month sales</span><b><%= fmt.money(s.mtd) %> <span class="mh-of">of <%= fmt.money(s.monthTarget) %></span></b></div>
+        <div class="mh-bar" role="img" aria-label="<%= fmt.pct(s.pct) %> of the month target<%= pacePct !== null ? ', pace mark at ' + pacePct + '%' : '' %>">
+          <span class="mh-fill" style="width: <%= barPct %>%"></span>
+          <% if (pacePct !== null) { %><span class="mh-pace" style="left: <%= pacePct %>%"></span><% } %>
+        </div>
+        <p class="mh-month-sub"><%= s.status === 'on_track' ? 'Ahead of pace – great work, team!' : s.perDay ? fmt.money(s.perDay) + ' a day gets us there' : '' %></p>
+      </div>
+    <% } %>
+    <% if (wig) { %><p class="mh-wig"><b>Our WIG:</b> <%= wig %></p><% } %>
+  </section>
+
+  <nav class="mh-actions" aria-label="Quick actions">
+    <a class="button<%= enteredToday ? ' secondary' : '' %>" href="/daily"><%= enteredToday ? '✔ Today’s numbers are in – check them' : 'Enter today’s numbers' %></a>
+    <a class="button secondary" href="/my-week">My week</a>
+    <a class="button secondary" href="/scoreboard"><%= branch.code %> scoreboard</a>
+  </nav>
+
+  <section class="mh-card" aria-labelledby="mh-wins">
+    <h2 id="mh-wins">🎉 Wins to celebrate</h2>
+    <% if (!wins.length) { %>
+      <p class="muted">Your first win is one good day away. Enter today’s numbers, hit one target, and it shows up here tomorrow.</p>
+    <% } %>
+    <ul class="mh-list">
+      <% wins.forEach(function (w) { %>
+        <li class="mh-win is-<%= w.kind %>">
+          <span class="mh-ic" aria-hidden="true"><%= icon[w.kind] || '★' %></span>
+          <a href="<%= w.href %>"><b><%= w.title %></b><% if (w.sub) { %><span><%= w.sub %></span><% } %></a>
+        </li>
+      <% }) %>
+    </ul>
+  </section>
+
+  <% if (shoutouts.length) { %>
+  <section class="mh-card" aria-labelledby="mh-shout">
+    <h2 id="mh-shout">👏 Shout-outs from last week</h2>
+    <ul class="mh-list">
+      <% shoutouts.forEach(function (p) { %>
+        <li class="mh-shout"><span class="mh-avatar" aria-hidden="true"><%= p.name.slice(0, 1) %></span><span><b><%= p.name %></b> hit <%= p.n %> target<%= p.n === 1 ? '' : 's' %><br><small class="muted"><%= p.labels %></small></span></li>
+      <% }) %>
+    </ul>
+    <p class="muted small">Say well done at Tuesday’s WIG session.</p>
+  </section>
+  <% } %>
+
+  <section class="mh-card" aria-labelledby="mh-focus">
+    <h2 id="mh-focus">🎯 Focus this week</h2>
+    <% if (!focus.length) { %>
+      <p class="muted"><%= mineCount ? 'All your targets are on track so far this week – keep it going!' : 'No targets of your own this week – help the team hit theirs.' %></p>
+    <% } %>
+    <ul class="mh-list">
+      <% focus.forEach(function (f) { %>
+        <li class="mh-focus">
+          <a href="<%= f.href %>">
+            <span class="mh-focus-top"><b><%= f.title %></b><span class="mh-chip s-<%= f.status %>"><%= statusText[f.status] %></span></span>
+            <span class="muted small"><%= f.now %></span>
+            <% if (f.plan) { %><span class="mh-plan">→ <%= f.plan %></span><% } %>
+          </a>
+        </li>
+      <% }) %>
+    </ul>
+    <div class="mh-commit">
+      <% if (myCommit) { %>
+        <p><b>My commitment:</b> <%= myCommit.commitment %><% if (myCommit.result === 'yes') { %> <span class="mh-chip s-on_track">Done</span><% } %></p>
+        <a href="/my-week" class="small">Update it in My week ›</a>
+      <% } else { %>
+        <p><b>No commitment yet this week.</b> One thing you’ll do to move a number – write it now.</p>
+        <a href="/my-week" class="button secondary">Write my commitment</a>
+      <% } %>
+    </div>
+  </section>
+
+  <% if (isManager && teamFocus.length) { %>
+  <section class="mh-card" aria-labelledby="mh-team">
+    <h2 id="mh-team">🧭 Team focus – where to coach</h2>
+    <ul class="mh-list">
+      <% teamFocus.forEach(function (f) { %>
+        <li class="mh-focus"><a href="<%= f.href %>"><span class="mh-focus-top"><b><%= f.title %></b><span class="mh-chip s-<%= f.status %>"><%= statusText[f.status] %></span></span><span class="muted small"><%= f.owner %> · <%= f.now %></span></a></li>
+      <% }) %>
+    </ul>
+  </section>
+  <% } %>
+</main>
+</body>
+</html>

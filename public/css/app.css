@@ -1049,3 +1049,42 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .pol-table th, .pol-table td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
 .pol-table th { background: var(--page); font-size: 0.82rem; color: var(--ink-soft); }
 .pol-table td.num { text-align: center; }
+
+/* 1 Nov: personal front page for branch staff and managers */
+.mh-page { max-width: 720px; display: flex; flex-direction: column; gap: 16px; }
+.mh-hero { background: var(--brand); color: #fff; border-radius: 20px; padding: 22px 20px; }
+.mh-hero h1 { margin: 2px 0 6px; font-size: 1.6rem; color: #fff; }
+.mh-branch { margin: 0; opacity: 0.85; font-size: 0.9rem; }
+.mh-line { margin: 0 0 14px; font-style: italic; opacity: 0.95; }
+.mh-month { background: rgba(255, 255, 255, 0.12); border-radius: 14px; padding: 12px 14px; }
+.mh-month-top { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.mh-of { font-weight: 400; opacity: 0.85; font-size: 0.9rem; }
+.mh-bar { position: relative; height: 12px; background: rgba(255, 255, 255, 0.25); border-radius: 999px; margin: 8px 0 6px; overflow: visible; }
+.mh-fill { position: absolute; inset: 0 auto 0 0; background: #ffffff; border-radius: 999px; }
+.mh-pace { position: absolute; top: -4px; width: 3px; height: 20px; background: #ffd27a; border-radius: 2px; }
+.mh-month-sub, .mh-wig { margin: 0; font-size: 0.9rem; }
+.mh-wig { margin-top: 10px; }
+.mh-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.mh-actions .button { flex: 1 1 200px; text-align: center; }
+.mh-card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; }
+.mh-card h2 { margin: 0 0 10px; font-size: 1.15rem; }
+.mh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.mh-win { display: flex; gap: 12px; align-items: flex-start; background: var(--good-tint); border-radius: 14px; padding: 12px; }
+.mh-win.is-streak { background: #fff1e0; }
+.mh-win.is-best { background: #fff6d6; }
+.mh-win.is-branch, .mh-win.is-team { background: var(--brand-tint); }
+.mh-win a, .mh-focus a { color: var(--ink); text-decoration: none; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mh-win a span { color: var(--ink-soft); font-size: 0.9rem; }
+.mh-ic { font-size: 1.4rem; line-height: 1.2; flex: 0 0 auto; }
+.mh-win.is-target .mh-ic { color: var(--good); font-weight: 700; }
+.mh-shout { display: flex; gap: 12px; align-items: center; }
+.mh-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--brand-tint); color: var(--brand); display: grid; place-items: center; font-weight: 700; flex: 0 0 auto; }
+.mh-focus { border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.mh-focus-top { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.mh-plan { color: var(--brand); font-weight: 700; margin-top: 4px; }
+.mh-chip { font-size: 0.75rem; font-weight: 700; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.mh-chip.s-off_track { background: var(--short); color: #fff; }
+.mh-chip.s-watch { background: #fdf0d8; color: #7a4a00; }
+.mh-chip.s-on_track { background: var(--good-tint); color: var(--good); }
+.mh-commit { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.mh-commit p { margin: 0 0 8px; }

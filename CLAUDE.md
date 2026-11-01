@@ -273,6 +273,14 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Adding a policy: a new entry in POLICIES (slug, docNo, title, area, dates, sections of { p } / { table }, **bold** allowed) + its PDF. Test (test/web/policies.test.js) checks access and that no policy mentions salaries.
 - This is a policy reader only – the Company wiki itself stays on hold (see above).
 
+## Personal front page (1 Nov, CEO: "motivational, celebrate wins, focus on what to improve")
+- Branch staff and managers now land on **their own page at /** (src/home/mypage.js buildMyPage, views/my-home.ejs; before, / redirected to /daily). HQ staff still go to /hq/today; HQ / admin keep the branches home.
+- **Hero**: Malay greeting by time of day (Selamat pagi / tengah hari / petang / malam) + name, one short original line of the day (rotates by date), the branch's month sales vs target with a pace mark and "RM x a day gets us there" / "Ahead of pace", the branch WIG text. Buttons: Enter today's numbers (or ✔ in), My week, <branch> scoreboard.
+- **🎉 Wins** (up to 5, all worked out from the entries): my measures on track last week, **streaks** (3+ days in a row on my daily target, to the last day entered), **new personal best** (the last day entered is my highest since the tracker started, 7+ days of data), last week's commitment kept, branch ahead of pace this month, the team's targets hit last week. No wins → an encouraging line.
+- **👏 Shout-outs**: teammates (not Team, not me) with targets on track last week, most first, max 4 – "say well done at Tuesday's WIG".
+- **🎯 Focus this week**: my measures behind (✕ / ▲), worst first, max 3 – "x so far · goal y this week → n more by Sunday – about m a day" (sum; per day only for daily targets and ≥ 1; counts rounded up), % measures "Aim for …" / "Keep it at … or more"; my commitment this week (or "Write my commitment"). Managers also get **🧭 Team focus** – the top-section measures (WIG / leads) behind this week that aren't theirs.
+- Every win / focus line links to its trace (/scoreboard/trace?type=measure…). No new tables.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

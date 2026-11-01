@@ -114,7 +114,13 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   // Home: staff and managers go straight to their branch; HQ and admin pick a branch.
   app.get('/', async (req, res, next) => {
     try {
-      if (req.user.role === 'branch_staff' || req.user.role === 'branch_manager') return res.redirect('/daily');
+      // 1 Nov (CEO): branch staff and managers land on their own page – wins, shout-outs, focus.
+      if ((req.user.role === 'branch_staff' || req.user.role === 'branch_manager') && req.user.branch_code) {
+        const { loadBranch } = require('./daily/data');
+        const branch = await loadBranch(db, req.user.branch_code);
+        const page = await require('./home/mypage').buildMyPage(db, { user: req.user, branch, now, trackerStart: await trackerStart() });
+        return res.render('my-home', { title: 'My page', ...page, fmt, navActive: 'home' });
+      }
       if (req.user.role === 'hq_staff') return res.redirect('/hq/today');
       const today = calc.todayInMalaysia(now());
       const branches = (await db.query(
