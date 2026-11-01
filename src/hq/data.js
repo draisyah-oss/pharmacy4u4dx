@@ -178,5 +178,5 @@ function inputValue(m, entry, field = 'value') {
 }
 
 module.exports = {
-  loadHqMeasures, loadHqWeek, saveHqWeek, buildHqScoreboard, canEditMeasure, weekDenied, parseEntry, targetFor, show, inputValue,
+  loadHqMeasures, loadHqEntries, loadHqWeek, saveHqWeek, buildHqScoreboard, canEditMeasure, weekDenied, parseEntry, targetFor, show, inputValue,
 };

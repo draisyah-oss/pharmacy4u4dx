@@ -1,0 +1,16 @@
+<%# Monthly review tabs. here: home | branch | hq | conclusion %>
+<nav class="rv-tabs" aria-label="Monthly review">
+  <a href="/review?month=<%= month %>"<%- here === 'home' ? ' aria-current="page"' : '' %>>How it runs</a>
+  <% if (user.role !== 'hq_staff') { %><a href="/review/branch?month=<%= month %>"<%- here === 'branch' ? ' aria-current="page"' : '' %>>Branch review</a><% } %>
+  <% if (user.role !== 'branch_manager') { %><a href="/review/hq?month=<%= month %>"<%- here === 'hq' ? ' aria-current="page"' : '' %>>HQ review</a><% } %>
+  <a href="/review/conclusion?month=<%= month %>"<%- here === 'conclusion' ? ' aria-current="page"' : '' %>><%= nextName.split(' ')[0] %> goals</a>
+</nav>
+<% if (months.length > 1) { %>
+<form method="get" class="rv-month" action="">
+  <% if (typeof branch !== 'undefined' && branch && here === 'branch') { %><input type="hidden" name="branch" value="<%= branch.code %>"><% } %>
+  <label>Month reviewed
+    <select name="month"><% months.forEach(function (mm) { %><option value="<%= mm %>"<%= mm === month ? ' selected' : '' %>><%= new Date(mm + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' }) %></option><% }) %></select>
+  </label>
+  <button class="button secondary small" type="submit">Show</button>
+</form>
+<% } %>

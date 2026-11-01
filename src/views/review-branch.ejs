@@ -1,0 +1,104 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'review' }) %>
+<%
+  const ro = !canEdit;
+  const imp = vals.imp || {};
+  const short = monthName.split(' ')[0]; const nshort = nextName.split(' ')[0];
+  const chip = function (s) { return '<span class="mh-chip s-' + s + '">' + (fmt.symbol(s) ? fmt.symbol(s) + ' ' : '') + (statusWord[s] || '') + '</span>'; };
+  const err = function (k) { return errors[k] ? '<p class="wk-error">' + errors[k] + '</p>' : ''; };
+%>
+<main class="page oo-page rv-page">
+  <h1><%= branch.name %> – <%= short %> review</h1>
+  <p class="muted">Worked out from the daily numbers (<%= fmtDate(m.from) %> – <%= fmtDate(m.to) %>). Tap any number to see the days behind it.</p>
+  <%- include('partials/review-tabs', { here: 'branch' }) %>
+  <% if (branches.length && user.role !== 'branch_manager') { %>
+    <nav class="rv-pills" aria-label="Branch"><% branches.forEach(function (b) { %><a href="/review/branch?branch=<%= b.code %>&month=<%= month %>"<%- b.code === branch.code ? ' aria-current="page"' : '' %>><%= b.code %></a><% }) %></nav>
+  <% } %>
+  <% if (ok) { %><p class="alert alert-good"><%= ok === 'submitted' ? 'Sent – HQ can see your review. You can still change it until the meeting.' : 'Saved as a draft.' %></p><% } %>
+  <% if (Object.keys(errors).length) { %><p class="alert alert-bad">Not saved – please fix the boxes in red.</p><% } %>
+  <% if (saved.review && saved.review.submitted_at) { %><p class="muted small">Sent by <%= saved.review.submitted_by_name %> · <%= new Date(saved.review.submitted_at).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) %></p><% } %>
+
+  <form method="post" action="/review/branch">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="branch" value="<%= branch.code %>">
+    <input type="hidden" name="month" value="<%= month %>">
+
+    <section class="oo-card rv-sales">
+      <h2>1 · <%= short %> sales</h2>
+      <a class="rv-big" href="<%= m.sales.href %>"><b><%= fmt.money(m.sales.actual) %></b><% if (m.sales.target !== null) { %> <span class="muted">of <%= fmt.money(m.sales.target) %> · <%= fmt.pct(m.sales.pct) %></span> <%- chip(m.sales.status) %><% } %></a>
+      <% if (!m.sales.complete) { %><p class="muted small">Month not finished – numbers to <%= fmtDate(m.to) %>.</p><% } %>
+    </section>
+
+    <section class="oo-card">
+      <h2>2 · WIG and lead measures</h2>
+      <p class="muted small">✔ on track (100%+) · ▲ nearly (90–99%) · ✕ off track. For each one: what will we do better in <%= nshort %>?</p>
+      <ul class="rv-measures">
+        <% m.rows.concat(m.zakat).forEach(function (r) { const k = r.ref.replace(':', '_'); %>
+          <li class="rv-m is-<%= r.status %>">
+            <div class="rv-m-top">
+              <span><b><%= r.label %></b><br><small class="muted"><%= r.kind %> · <%= r.owner %></small></span>
+              <a href="<%= r.href %>" class="rv-m-num"><b><%= r.actual %></b><small class="muted"><%= r.target === 'track only' ? 'track only' : 'target ' + r.target %></small></a>
+              <%- chip(r.status) %>
+            </div>
+            <label class="rv-imp"><span class="sr-only">Improvement for <%= r.label %></span>
+              <input type="text" name="imp[<%= k %>]" value="<%= imp[k] || '' %>" maxlength="300" placeholder="<%= r.status === 'on_track' ? 'Keep it up – what worked?' : 'Improvement for ' + nshort + '…' %>"<%= ro ? ' readonly' : '' %>></label>
+            <%- err('imp_' + k) %>
+          </li>
+        <% }) %>
+      </ul>
+    </section>
+
+    <section class="oo-card">
+      <h2>3 · Out of stock in <%= short %></h2>
+      <div class="rv-tiles">
+        <div><b><%= m.oos.reported %></b><span>reported</span></div>
+        <div><b><%= m.oos.within3 %></b><span>fixed within 3 days</span></div>
+        <div><b><%= m.oos.over3Pct === null ? '–' : fmt.pct(m.oos.over3Pct) %></b><span>took over 3 days or still open<br><small>goal: 5% in <%= nshort %></small></span></div>
+        <div><b><%= m.oos.openNow %></b><span>still open now</span></div>
+        <div><b><%= m.oos.customers %></b><span>customers asking</span></div>
+      </div>
+      <label class="rv-imp">How we cut out-of-stock in <%= nshort %>
+        <input type="text" name="imp[oos]" value="<%= imp.oos || '' %>" maxlength="300" placeholder="e.g. report before it runs out, check min/max every Monday"<%= ro ? ' readonly' : '' %>></label>
+      <%- err('imp_oos') %>
+      <a class="small" href="/oos">Open the out-of-stock list ›</a>
+    </section>
+
+    <section class="oo-card">
+      <h2>4 · Can we hit <%= nshort %>?</h2>
+      <% if (m.next.target !== null) { %>
+        <p class="rv-big"><b><%= fmt.money(m.next.target) %></b> <span class="muted">= <%= fmt.money(m.next.perDay) %> a day · <%= m.next.vsLast >= 0 ? fmt.money(m.next.vsLast) + ' more than ' + short : fmt.money(-m.next.vsLast) + ' less than ' + short %></span></p>
+      <% } else { %><p class="muted">No <%= nshort %> target set yet.</p><% } %>
+      <fieldset class="rv-canhit"><legend>Can we hit it?</legend>
+        <% ['Yes', 'At risk', 'No'].forEach(function (v) { %><label><input type="radio" name="can_hit" value="<%= v %>"<%= vals.can_hit === v ? ' checked' : '' %><%= ro ? ' disabled' : '' %>> <%= v %></label><% }) %>
+      </fieldset>
+      <label>Our plan to hit it <textarea name="plan" rows="3" maxlength="1000"<%= ro ? ' readonly' : '' %>><%= vals.plan || '' %></textarea></label><%- err('plan') %>
+      <div class="rv-ssk">
+        <label>Stop <textarea name="stop" rows="2" maxlength="500" placeholder="what doesn’t work"<%= ro ? ' readonly' : '' %>><%= vals.stop || '' %></textarea></label>
+        <label>Start <textarea name="start" rows="2" maxlength="500" placeholder="something new to try"<%= ro ? ' readonly' : '' %>><%= vals.start || '' %></textarea></label>
+        <label>Keep <textarea name="keep" rows="2" maxlength="500" placeholder="what worked"<%= ro ? ' readonly' : '' %>><%= vals.keep || '' %></textarea></label>
+      </div>
+      <%- err('stop') %><%- err('start') %><%- err('keep') %>
+      <label>What we need from HQ <textarea name="needs" rows="2" maxlength="800" placeholder="stock, payment to a supplier, a person, a decision…"<%= ro ? ' readonly' : '' %>><%= vals.needs || '' %></textarea></label><%- err('needs') %>
+    </section>
+
+    <% if (canEdit) { %>
+      <div class="rv-save">
+        <button class="button secondary" type="submit" name="submit" value="0">Save draft</button>
+        <button class="button" type="submit" name="submit" value="1"><%= saved.review && saved.review.submitted_at ? 'Save – already sent' : 'Send to HQ' %></button>
+      </div>
+    <% } else { %><p class="muted">Read only – the branch manager fills this in.</p><% } %>
+  </form>
+
+  <details class="oo-card rv-copy">
+    <summary>Copy as a table for Google Sheets</summary>
+    <p class="muted small">Tap Copy, then paste into a sheet – each value lands in its own cell.</p>
+    <textarea readonly rows="6" id="rv-sheet"><%= sheet %></textarea>
+    <button type="button" class="button secondary" data-copy="rv-sheet">Copy</button>
+  </details>
+
+  <%- include('partials/month-goals', { monthGoals: goals }) %>
+</main>
+<script src="/js/review.js" defer></script>
+</body>
+</html>

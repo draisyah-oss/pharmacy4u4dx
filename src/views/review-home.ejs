@@ -1,0 +1,48 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'review' }) %>
+<%
+  const fmtTime = function (t) { return t ? new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''; };
+  const day = function (d) { return new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'short' }); };
+%>
+<main class="page oo-page rv-page">
+  <h1>Monthly review – <%= monthName %></h1>
+  <p class="muted">On the first Monday of the month the weekly WIG sessions become one review: how <%= monthName.split(' ')[0] %> went and how we hit <%= nextName.split(' ')[0] %>.</p>
+  <%- include('partials/review-tabs', { here: 'home' }) %>
+
+  <section class="oo-card">
+    <h2>How it runs – <%= day(firstMonday) %></h2>
+    <ol class="rv-steps">
+      <li><b>10 am · HQ review</b> (instead of the HQ WIG). Each HQ person: their measures for the month, one improvement each, their focus for <%= nextName.split(' ')[0] %>. Then HQ ticks the goals it agrees with.</li>
+      <li><b>4 pm · Branch managers’ review</b> (instead of the Monday update). Each manager fills in the branch review before 4 pm: the month’s numbers are already worked out – add an improvement per measure, “can we hit <%= nextName.split(' ')[0] %>?”, the plan, stop / start / keep, what you need from HQ. At the meeting the managers tick the same goals.</li>
+      <li><b>One conclusion.</b> When HQ and the managers have agreed every goal, Dr Aisyah locks it. The goals then show on everyone’s front page, HQ day and the branch WIG.</li>
+      <li><b>Tuesday · Branch WIG</b> as usual – the manager shares the goals with the team and everyone writes a commitment that moves them.</li>
+    </ol>
+  </section>
+
+  <div class="oo-cols">
+    <section class="oo-card">
+      <h2>Branch reviews</h2>
+      <ul class="rv-who">
+        <% status.branches.forEach(function (b) { %>
+          <li><a href="/review/branch?branch=<%= b.code %>&month=<%= month %>"><b><%= b.code %></b> <%= b.name %></a>
+            <% if (b.submitted_at) { %><span class="mh-chip s-on_track">Sent <%= fmtTime(b.submitted_at) %></span><% } else { %><span class="mh-chip s-watch">Not sent</span><% } %></li>
+        <% }) %>
+      </ul>
+    </section>
+    <section class="oo-card">
+      <h2>HQ reviews</h2>
+      <% if (!hqDone.length) { %><p class="muted">None sent yet.</p><% } %>
+      <ul class="rv-who"><% hqDone.forEach(function (h) { %><li><b><%= h.name %></b> <% if (h.submitted_at) { %><span class="mh-chip s-on_track">Sent</span><% } else { %><span class="mh-chip s-watch">Draft</span><% } %></li><% }) %></ul>
+      <% if (user.role !== 'branch_manager') { %><a class="button secondary" href="/review/hq?month=<%= month %>">Open the HQ review</a><% } %>
+    </section>
+  </div>
+
+  <section class="oo-card">
+    <h2><%= nextName.split(' ')[0] %> goals <% if (goals.locked) { %><span class="mh-chip s-on_track">Locked by Dr Aisyah</span><% } else { %><span class="mh-chip s-watch"><%= goals.agreedBoth %> of <%= goals.goals.length %> agreed by both</span><% } %></h2>
+    <ol class="rv-goal-mini"><% goals.goals.forEach(function (g) { %><li><b><%= g.title %></b> <span class="muted small"><%= g.hq_agreed_at ? '✔ HQ' : '– HQ' %> · <%= g.mgr_agreed_at ? '✔ managers' : '– managers' %></span></li><% }) %></ol>
+    <a class="button" href="/review/conclusion?month=<%= month %>">Open the goals</a>
+  </section>
+</main>
+</body>
+</html>

@@ -1,0 +1,63 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'review' }) %>
+<%
+  const short = monthName.split(' ')[0]; const nshort = nextName.split(' ')[0];
+  const chip = function (s) { return '<span class="mh-chip s-' + s + '">' + (fmt.symbol(s) ? fmt.symbol(s) + ' ' : '') + (statusWord[s] || '') + '</span>'; };
+  const groups = hq.groups.slice().sort(function (a, b) { return (b.person.id === mine) - (a.person.id === mine); });
+%>
+<main class="page oo-page rv-page">
+  <h1>HQ – <%= short %> review</h1>
+  <p class="muted">Each HQ measure over the <%= hq.weeks.length %> weeks of <%= short %> (a week counts in the month its Thursday falls in): weeks on track out of weeks entered. ✔ = 3 in 4 weeks or better, ▲ = half, ✕ = less.</p>
+  <%- include('partials/review-tabs', { here: 'hq' }) %>
+  <% if (ok) { %><p class="alert alert-good"><%= ok === 'submitted' ? 'Sent.' : 'Saved as a draft.' %></p><% } %>
+
+  <% groups.forEach(function (g) {
+       const pid = g.person.id; const edit = canEditFor(pid);
+       const rv = reviews[pid] || { review: null, items: {} };
+       const t = typed && typed[pid] ? typed[pid] : null;
+       const v = t || rv.review || {};
+       const impOf = function (ref) { return t ? ((t.imp || {})[ref.replace(':', '_')] || '') : (rv.items[ref] || ''); };
+       const errs = errors[pid] || {}; %>
+    <section class="oo-card" id="p<%= pid %>">
+      <h2><%= g.person.name %> <small class="muted"><%= g.person.role || '' %></small>
+        <% if (rv.review && rv.review.submitted_at) { %><span class="mh-chip s-on_track">Sent</span><% } %></h2>
+      <form method="post" action="/review/hq">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="hidden" name="month" value="<%= month %>"><input type="hidden" name="person" value="<%= pid %>">
+        <ul class="rv-measures">
+          <% g.rows.forEach(function (r) { const k = r.ref.replace(':', '_'); %>
+            <li class="rv-m is-<%= r.status %>">
+              <div class="rv-m-top">
+                <span><b><%= r.label %></b><br><small class="muted">target <%= r.target %> · last week <%= r.last %></small></span>
+                <span class="rv-m-num"><b><%= r.weeksOn %> of <%= r.weeksEntered %></b><small class="muted">weeks on track</small></span>
+                <%- chip(r.status) %>
+              </div>
+              <% if (edit) { %><input class="rv-imp" type="text" name="imp[<%= k %>]" value="<%= impOf(r.ref) %>" maxlength="300" aria-label="Improvement for <%= r.label %>" placeholder="Improvement for <%= nshort %>…"><% } else if (impOf(r.ref)) { %><p class="small">→ <%= impOf(r.ref) %></p><% } %>
+              <% if (errs['imp_' + k]) { %><p class="wk-error"><%= errs['imp_' + k] %></p><% } %>
+            </li>
+          <% }) %>
+        </ul>
+        <% if (edit) { %>
+          <label>My focus for <%= nshort %> <input type="text" name="focus" value="<%= v.focus || '' %>" maxlength="300" placeholder="the one thing that moves the goals most"></label>
+          <% if (errs.focus) { %><p class="wk-error"><%= errs.focus %></p><% } %>
+          <label>What I need (from the team or the CEO) <input type="text" name="needs" value="<%= v.needs || '' %>" maxlength="800"></label>
+          <div class="rv-save"><button class="button secondary" name="submit" value="0">Save draft</button><button class="button" name="submit" value="1">Send</button></div>
+        <% } else if (v.focus) { %><p><b><%= nshort %> focus:</b> <%= v.focus %></p><% } %>
+      </form>
+    </section>
+  <% }) %>
+  <% if (hq.other.length) { %>
+    <section class="oo-card"><h2>Other HQ measures</h2><ul class="rv-measures"><% hq.other.forEach(function (r) { %><li class="rv-m"><div class="rv-m-top"><span><b><%= r.label %></b> <small class="muted"><%= r.owner %></small></span><span class="rv-m-num"><b><%= r.weeksOn %> of <%= r.weeksEntered %></b></span><%- chip(r.status) %></div></li><% }) %></ul></section>
+  <% } %>
+
+  <details class="oo-card rv-copy">
+    <summary>Copy as a table for Google Sheets</summary>
+    <textarea readonly rows="6" id="rv-sheet"><%= sheet %></textarea>
+    <button type="button" class="button secondary" data-copy="rv-sheet">Copy</button>
+  </details>
+  <%- include('partials/month-goals', { monthGoals: goals }) %>
+</main>
+<script src="/js/review.js" defer></script>
+</body>
+</html>

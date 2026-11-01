@@ -58,6 +58,11 @@
            ['/admin/audit', '/admin/audit', 'Audit log', 'history changes'], ['status', '/status', 'Setup check', 'google sheet database']]]);
        }
      }
+     // 1 Nov: Monthly Performance Review (first Monday of the month) – managers, HQ, HQ staff, admin.
+     if (role !== 'branch_staff') groups.push(['Monthly review', [['review', '/review', 'Monthly review', 'month performance review first monday october november goals conclusion stop start keep'],
+       ...(role !== 'hq_staff' ? [['reviewbranch', '/review/branch' + bq, 'Branch review', 'month branch manager plan', 'sub']] : []),
+       ...(role !== 'branch_manager' ? [['reviewhq', '/review/hq', 'HQ review', 'month hq', 'sub']] : []),
+       ['reviewgoals', '/review/conclusion', 'Month goals', 'conclusion agree lock', 'sub']]]);
      // 30 Oct: company policies (read only) for everyone, branch staff included.
      groups.push(['Company policies', [['policies', '/policies', 'Policies', 'policy polisi hr leave cuti annual carry forward handbook']]]);
      // 28 Oct: everyone can ask for a change to the app (Mr 4DX builds it, the CEO approves).

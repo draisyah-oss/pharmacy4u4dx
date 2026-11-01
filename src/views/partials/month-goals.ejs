@@ -1,0 +1,10 @@
+<%# The month's goals agreed at the monthly review (src/review). monthGoals = loadGoals() result or null. %>
+<% if (typeof monthGoals !== 'undefined' && monthGoals && monthGoals.goals.length) { %>
+<section class="rv-goalstrip" aria-labelledby="rv-gs">
+  <h2 id="rv-gs">🎯 <%= monthGoals.name.split(' ')[0] %> goals <% if (monthGoals.locked) { %><span class="mh-chip s-on_track">Agreed</span><% } else { %><span class="mh-chip s-watch">Draft – agreed at the monthly review</span><% } %></h2>
+  <ol>
+    <% monthGoals.goals.forEach(function (g) { %><li><b><%= g.title %></b><% if (g.owner) { %> <span class="muted small">· <%= g.owner %><%= g.due ? ' · ' + g.due : '' %></span><% } %></li><% }) %>
+  </ol>
+  <a class="small" href="/review/conclusion?month=<%= monthGoals.reviewMonth %>">See the goals ›</a>
+</section>
+<% } %>

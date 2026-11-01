@@ -1,0 +1,80 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'review' }) %>
+<%
+  const short = monthName.split(' ')[0]; const nshort = nextName.split(' ')[0];
+  const locked = goals.locked;
+  const editable = can.edit && (!locked || can.lock);
+  const when = function (t) { return t ? new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''; };
+  const hitChip = { 'Yes': 's-on_track', 'At risk': 's-watch', 'No': 's-off_track' };
+%>
+<main class="page oo-page rv-page">
+  <h1><%= nshort %> goals – one conclusion</h1>
+  <p class="muted">HQ (10 am) and the branch managers (4 pm) review <%= short %> separately and agree the same goals. When both have agreed, Dr Aisyah locks them.</p>
+  <%- include('partials/review-tabs', { here: 'conclusion' }) %>
+  <% if (ok) { %><p class="alert alert-good"><%= ok === 'locked' ? 'Locked – the goals now show on everyone’s pages.' : ok === 'unlocked' ? 'Unlocked.' : 'Saved.' %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <% if (locked) { %><p class="alert alert-info">🔒 Locked by <%= goals.conclusion.locked_by_name %> · <%= when(goals.conclusion.locked_at) %></p><% } %>
+
+  <div class="oo-cols">
+    <section class="oo-card">
+      <h2>What the branches said</h2>
+      <ul class="rv-said">
+        <% branchReviews.forEach(function (b) { %>
+          <li><b><%= b.code %></b> <% if (b.can_hit) { %><span class="mh-chip <%= hitChip[b.can_hit] %>">Can hit <%= nshort %>: <%= b.can_hit %></span><% } else { %><span class="muted small">no review yet</span><% } %>
+            <% if (b.plan) { %><br><small>Plan: <%= b.plan %></small><% } %><% if (b.needs) { %><br><small>Needs from HQ: <%= b.needs %></small><% } %>
+            <br><a class="small" href="/review/branch?branch=<%= b.code %>&month=<%= month %>">Open ›</a></li>
+        <% }) %>
+      </ul>
+    </section>
+    <section class="oo-card">
+      <h2>HQ focus for <%= nshort %></h2>
+      <% if (!hqReviews.length) { %><p class="muted">No HQ reviews yet.</p><% } %>
+      <ul class="rv-said"><% hqReviews.forEach(function (h) { %><li><b><%= h.name %></b> – <%= h.focus || '…' %></li><% }) %></ul>
+    </section>
+  </div>
+
+  <form method="post" action="/review/conclusion">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="month" value="<%= month %>">
+    <% goals.goals.forEach(function (g) { const k = 's' + g.slot; %>
+      <section class="oo-card rv-goal<%= g.hq_agreed_at && g.mgr_agreed_at ? ' is-agreed' : '' %>">
+        <% if (editable) { %>
+          <label class="rv-goal-title"><span class="rv-n"><%= g.slot %></span><input type="text" name="g[<%= k %>][title]" value="<%= g.title %>" maxlength="160" aria-label="Goal <%= g.slot %>"></label>
+          <label>Detail <textarea name="g[<%= k %>][detail]" rows="2" maxlength="600"><%= g.detail || '' %></textarea></label>
+          <div class="rv-goal-meta">
+            <label>Owner <input type="text" name="g[<%= k %>][owner]" value="<%= g.owner || '' %>" maxlength="120"></label>
+            <label>By when <input type="text" name="g[<%= k %>][due]" value="<%= g.due || '' %>" maxlength="60"></label>
+            <label>How we measure it <input type="text" name="g[<%= k %>][how]" value="<%= g.how_measured || '' %>" maxlength="300"></label>
+          </div>
+        <% } else { %>
+          <h2><span class="rv-n"><%= g.slot %></span> <%= g.title %></h2>
+          <% if (g.detail) { %><p><%= g.detail %></p><% } %>
+          <p class="muted small"><%= g.owner ? 'Owner: ' + g.owner : 'Owner to name' %><%= g.due ? ' · by ' + g.due : '' %><%= g.how_measured ? ' · measured by ' + g.how_measured : '' %></p>
+        <% } %>
+        <div class="rv-agree">
+          <label><% if (can.hq && !locked) { %><input type="hidden" name="agree_hq[<%= k %>]" value="0"><input type="checkbox" name="agree_hq[<%= k %>]" value="1"<%= g.hq_agreed_at ? ' checked' : '' %>><% } else { %><span aria-hidden="true"><%= g.hq_agreed_at ? '✔' : '–' %></span><% } %>
+            HQ agrees<% if (g.hq_agreed_at) { %> <small class="muted">(<%= g.hq_by %>, <%= when(g.hq_agreed_at) %>)</small><% } %></label>
+          <label><% if (can.mgr && !locked) { %><input type="hidden" name="agree_mgr[<%= k %>]" value="0"><input type="checkbox" name="agree_mgr[<%= k %>]" value="1"<%= g.mgr_agreed_at ? ' checked' : '' %>><% } else { %><span aria-hidden="true"><%= g.mgr_agreed_at ? '✔' : '–' %></span><% } %>
+            Branch managers agree<% if (g.mgr_agreed_at) { %> <small class="muted">(<%= g.mgr_by %>, <%= when(g.mgr_agreed_at) %>)</small><% } %></label>
+        </div>
+      </section>
+    <% }) %>
+    <% if (editable) { %>
+      <details class="oo-card"><summary>Add a goal</summary>
+        <label>Goal <input type="text" name="g[new][title]" maxlength="160"></label>
+        <label>Detail <textarea name="g[new][detail]" rows="2" maxlength="600"></textarea></label>
+        <div class="rv-goal-meta"><label>Owner <input type="text" name="g[new][owner]" maxlength="120"></label><label>By when <input type="text" name="g[new][due]" maxlength="60"></label><label>How we measure it <input type="text" name="g[new][how]" maxlength="300"></label></div>
+      </details>
+      <section class="oo-card"><h2>Other decisions</h2><textarea name="notes" rows="3" maxlength="2000" aria-label="Other decisions"><%= goals.conclusion && goals.conclusion.notes || '' %></textarea></section>
+    <% } else if (goals.conclusion && goals.conclusion.notes) { %>
+      <section class="oo-card"><h2>Other decisions</h2><p><%= goals.conclusion.notes %></p></section>
+    <% } %>
+    <div class="rv-save">
+      <% if (!locked && (can.edit || can.hq || can.mgr)) { %><button class="button" type="submit">Save</button><% } %>
+      <% if (can.lock && !locked) { %><button class="button secondary" type="submit" name="lock" value="1"><%= goals.agreedBoth === goals.goals.length ? '🔒 Lock the goals' : '🔒 Lock anyway (' + goals.agreedBoth + ' of ' + goals.goals.length + ' agreed by both)' %></button><% } %>
+      <% if (can.lock && locked) { %><button class="button secondary" type="submit" name="lock" value="0">Unlock to change</button><% } %>
+    </div>
+  </form>
+</main>
+</body>
+</html>

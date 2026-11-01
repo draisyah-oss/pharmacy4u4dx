@@ -16,6 +16,7 @@ const { oosRoutes } = require('./oos/routes');
 const { wigRoutes } = require('./wig/routes');
 const { requestRoutes, agentApi } = require('./requests/routes');
 const { policyRoutes } = require('./policies/routes');
+const { reviewRoutes } = require('./review/routes');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
@@ -119,7 +120,8 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
         const { loadBranch } = require('./daily/data');
         const branch = await loadBranch(db, req.user.branch_code);
         const page = await require('./home/mypage').buildMyPage(db, { user: req.user, branch, now, trackerStart: await trackerStart() });
-        return res.render('my-home', { title: 'My page', ...page, fmt, navActive: 'home' });
+        const monthGoals = await require('./review/data').currentGoals(db, calc.todayInMalaysia(now()));
+        return res.render('my-home', { title: 'My page', ...page, monthGoals, fmt, navActive: 'home' });
       }
       if (req.user.role === 'hq_staff') return res.redirect('/hq/today');
       const today = calc.todayInMalaysia(now());
@@ -144,6 +146,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(wigRoutes(db, { now, trackerStart }));
   app.use(requestRoutes(db, { now }));
   app.use(policyRoutes());
+  app.use(reviewRoutes(db, { now, trackerStart }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

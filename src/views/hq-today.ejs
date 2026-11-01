@@ -29,6 +29,7 @@
     <h1><%= person.name %> <span class="board-week"><%= date === today ? 'today' : fmtDate(date, { weekday: 'long', month: 'long' }) %></span></h1>
     <p class="muted"><%= person.role || '' %> · tick each task by 11 am on working days. A day counts when every task is done.</p>
   </header>
+  <%- include('partials/month-goals') %>
 
   <section class="focus-card<%= focus.length ? '' : ' is-empty' %>" aria-label="This week’s focus">
     <span class="wk-k">This week’s focus</span>

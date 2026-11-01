@@ -1088,3 +1088,52 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .mh-chip.s-on_track { background: var(--good-tint); color: var(--good); }
 .mh-commit { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 .mh-commit p { margin: 0 0 8px; }
+
+/* ── Monthly review (1 Nov) ── */
+.rv-page { max-width: 980px; }
+.rv-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 6px 0 12px; }
+.rv-tabs a { padding: 8px 14px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); text-decoration: none; color: var(--ink); font-weight: 600; }
+.rv-tabs a[aria-current="page"] { background: var(--brand); border-color: var(--brand); color: #fff; }
+.rv-month { display: flex; gap: 8px; align-items: end; margin: 0 0 12px; }
+.rv-month label { display: flex; gap: 8px; align-items: center; font-size: 0.9rem; }
+.rv-pills { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 12px; }
+.rv-pills a { padding: 6px 12px; border-radius: 999px; border: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.rv-pills a[aria-current="page"] { background: var(--brand-deep); color: #fff; border-color: var(--brand-deep); }
+.rv-steps li { margin: 0 0 8px; }
+.rv-who, .rv-said, .rv-measures { list-style: none; margin: 0; padding: 0; }
+.rv-who li, .rv-said li { padding: 8px 0; border-bottom: 1px solid var(--line); display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.rv-said li { display: block; }
+.rv-big { display: block; font-size: 1.25rem; text-decoration: none; color: var(--ink); margin: 4px 0; }
+.rv-m { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.rv-m-top { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; }
+.rv-m-num { display: flex; flex-direction: column; align-items: flex-end; text-decoration: none; color: var(--ink); white-space: nowrap; }
+.rv-m.is-off_track { border-left: 3px solid var(--short); padding-left: 8px; }
+.rv-m.is-watch { border-left: 3px solid #e2a23b; padding-left: 8px; }
+.rv-imp { display: block; margin-top: 6px; }
+.rv-imp input, input.rv-imp { width: 100%; }
+.rv-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin: 0 0 10px; }
+.rv-tiles div { background: var(--page, #f4f6fa); border-radius: 12px; padding: 10px; display: flex; flex-direction: column; }
+.rv-tiles b { font-size: 1.3rem; }
+.rv-tiles span { font-size: 0.82rem; color: var(--muted, #5b6575); }
+.rv-canhit { border: 0; padding: 0; margin: 8px 0; display: flex; gap: 14px; flex-wrap: wrap; }
+.rv-canhit legend { font-weight: 700; margin-bottom: 4px; }
+.rv-canhit label { display: flex; gap: 6px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 999px; }
+.rv-page textarea, .rv-page input[type="text"] { width: 100%; box-sizing: border-box; }
+.rv-page label { display: block; margin: 8px 0; }
+.rv-ssk { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.rv-save { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 16px; }
+.rv-copy textarea { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+.rv-goal-title { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+.rv-n { display: inline-grid; place-items: center; min-width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; font-weight: 700; font-size: 0.9rem; }
+.rv-goal-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.rv-agree { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 6px; }
+.rv-agree label { display: flex; gap: 6px; align-items: center; margin: 0; }
+.rv-goal.is-agreed { border-color: var(--good); }
+.rv-goal-mini li { margin: 4px 0; }
+.rv-goalstrip { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--brand); border-radius: 14px; padding: 12px 16px; margin: 0 0 14px; }
+.rv-goalstrip h2 { font-size: 1.05rem; margin: 0 0 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rv-goalstrip ol { margin: 0 0 6px; padding-left: 20px; }
+@media (max-width: 560px) { .rv-m-top { grid-template-columns: 1fr auto; } .rv-m-top .mh-chip { grid-column: 1 / -1; justify-self: start; } }
+.rv-page textarea, .rv-page input[type="text"], .rv-page select { font: inherit; font-size: 1rem; padding: 9px 11px; border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink); }
+.rv-page .rv-copy textarea { font-family: ui-monospace, monospace; font-size: 0.8rem; }
+.rv-goal-title input { font-weight: 700; }

@@ -81,7 +81,8 @@ async function forCeo(db, today, add) {
     const by = {}; for (const r of late) by[r.name || 'No owner'] = (by[r.name || 'No owner'] || 0) + 1;
     add('late', late.length, 'Branch actions overdue', Object.entries(by).map(([k, v]) => `${k} ${v}`).join(' · '), '/hq/update');
   }
-  if (dow(today) === 1 || dow(today) === 2) {
+  const rw = reviewWindow(today);
+  if ((dow(today) === 1 || dow(today) === 2) && !(rw.inWindow && today >= rw.monday)) {
     const missing = (await db.query(`SELECT b.code FROM branches b WHERE b.active AND NOT EXISTS
       (SELECT 1 FROM weekly_checkins c WHERE c.branch_id = b.id AND c.week_start = $1) ORDER BY b.sort_order`, [prev])).rows.map((r) => r.code);
     if (missing.length) add(dow(today) === 1 ? 'todo' : 'late', missing.length, 'Branch updates not sent', `${missing.join(', ')} · meeting Monday 4 pm`, `/hq/update?week=${prev}`);
@@ -102,7 +103,9 @@ async function forBranch(db, user, today, at, add) {
   if (w.req) add('today', w.req, 'Inventory asked about a new item', 'reply or send a photo', '/oos/new-items');
   if (user.role === 'branch_manager') {
     const sent = await one(db, 'SELECT count(*) AS n FROM weekly_checkins WHERE branch_id = $1 AND week_start = $2', [branchId, prev]);
-    if (!sent && dow(today) >= 1 && dow(today) <= 2) {
+    const rw = reviewWindow(today);
+    const reviewWeek = rw.inWindow && today >= rw.monday; // the first Monday's update is the monthly review
+    if (!sent && !reviewWeek && dow(today) >= 1 && dow(today) <= 2) {
       add(dow(today) === 1 ? 'today' : 'late', 1, 'Weekly update to HQ', dow(today) === 1 ? 'due today, 4 pm meeting' : 'not sent – the meeting was Monday', `/weekly?week=${prev}`);
     }
     const lateOos = await one(db, `SELECT count(*) AS n FROM oos_items WHERE branch_id = $1 AND status IN ('Open', 'Ordered', 'On the way', 'Substitute offered')
@@ -119,6 +122,42 @@ async function forBranch(db, user, today, at, add) {
   } else if (user.person_id) {
     const mine = await one(db, 'SELECT count(*) AS n FROM commitments WHERE person_id = $1 AND week_start = $2', [user.person_id, week]);
     if (!mine) add('todo', 1, 'My commitment this week', 'write it, or your manager does at Tuesday’s WIG', '/my-week');
+  }
+}
+
+// 1 Nov: Monthly Performance Review – the first Monday of the month (src/review). From the 1st up to
+// the Tuesday after the first Monday, managers and HQ people fill in their review of last month;
+// the CEO locks the goals from the first Monday until they are locked.
+function reviewWindow(today) {
+  const rv = require('../review/data');
+  const month = calc.monthOf(today);
+  const monday = rv.firstMonday(month);
+  const inWindow = today >= calc.monthStart(month) && today <= calc.addDays(monday, 1);
+  return { inWindow, monday, reviewed: rv.prevMonth(month), month, name: rv.MONTH_NAME(rv.prevMonth(month)).split(' ')[0] };
+}
+const tracked = async (db, month) => {
+  const r = (await db.query("SELECT value FROM app_settings WHERE key = 'tracker_start_date'")).rows[0];
+  return month >= calc.monthOf((r && r.value) || '2026-10-12');
+};
+
+async function forReview(db, user, today, add) {
+  const w = reviewWindow(today);
+  if (!(await tracked(db, w.reviewed))) return;
+  const level = today < w.monday ? 'todo' : today === w.monday ? 'today' : 'late';
+  const q = `month=${w.reviewed}`;
+  if (w.inWindow && user.role === 'branch_manager' && user.branch_id) {
+    const sent = await one(db, "SELECT count(*) AS n FROM monthly_reviews WHERE scope = 'branch' AND branch_id = $1 AND month = $2 AND submitted_at IS NOT NULL", [user.branch_id, w.reviewed]);
+    if (!sent) add(level, 1, `Monthly review – ${w.name}`, today <= w.monday ? 'send before the 4 pm review' : 'not sent – the review was Monday', `/review/branch?${q}`);
+  }
+  if (w.inWindow && (user.role === 'hq' || user.role === 'hq_staff') && user.person_id) {
+    const owns = await one(db, 'SELECT count(*) AS n FROM hq_measures WHERE active AND person_id = $1', [user.person_id]);
+    const sent = await one(db, "SELECT count(*) AS n FROM monthly_reviews WHERE scope = 'hq' AND person_id = $1 AND month = $2 AND submitted_at IS NOT NULL", [user.person_id, w.reviewed]);
+    if (owns && !sent) add(level, 1, `My monthly review – ${w.name}`, 'before the 10 am HQ review', `/review/hq?${q}`);
+  }
+  if (user.role === 'admin' && user.is_super && today >= w.monday) {
+    const goals = await one(db, 'SELECT count(*) AS n FROM month_goals WHERE month = $1', [w.month]);
+    const locked = await one(db, 'SELECT count(*) AS n FROM month_conclusions WHERE month = $1 AND locked_at IS NOT NULL', [w.month]);
+    if (goals && !locked) add(today === w.monday ? 'today' : 'late', 1, 'Lock the month goals', 'when HQ and the managers have agreed', `/review/conclusion?${q}`);
   }
 }
 
@@ -139,6 +178,7 @@ async function buildNeeds(db, user, { at }) {
   if (user.role === 'admin' && user.is_super) await forCeo(db, today, add);
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);
   if ((user.role === 'branch_manager' || user.role === 'branch_staff') && user.branch_id) await forBranch(db, user, today, at, add);
+  try { await forReview(db, user, today, add); } catch (err) { console.error('Needs you – review:', err.message); }
   // 28 Oct: change requests – the CEO approves, other admins see new ones, the asker checks previews.
   const cr = await db.query(`SELECT count(*) FILTER (WHERE status = 'Waiting for approval')::int AS approval,
       count(*) FILTER (WHERE status = 'New')::int AS fresh,

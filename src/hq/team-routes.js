@@ -45,6 +45,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
     const actions = (await wig.openActionsFor(db, ctx.person.id)).map((a) => ({ ...a, canClose: wig.canCloseAction(req.user, a) }));
     res.render('hq-today', {
       title: ctx.person.id === req.user.person_id ? 'My day' : `${ctx.person.name} – daily tasks`, ...ctx, ...page, fmt, focus, actions,
+      monthGoals: await require('../review/data').currentGoals(db, ctx.today),
       strip: dateStrip(ctx.today, ctx.start).map((d) => ({ date: d, filled: page.filled.has(d) })),
       blocked: team.dayEditDenied(req.user, ctx.person.id, ctx.date, ctx.today, ctx.start),
       canManage: team.canActFor(req.user, ctx.person.id), ...flash(req),

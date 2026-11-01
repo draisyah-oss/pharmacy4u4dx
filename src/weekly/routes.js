@@ -121,6 +121,7 @@ function weeklyRoutes(db, { now, trackerStart }) {
     const page = await loadCommitmentsPage(db, { branch: ctx.branch, week: ctx.week, today: ctx.today, trackerStart: ctx.start });
     res.status(extra.status || 200).render('commitments', {
       title: `${ctx.branch.name} – branch WIG session`, ...ctx, ...page, fmt,
+      monthGoals: await require('../review/data').currentGoals(db, ctx.today),
       weekEnd: calc.addDays(ctx.week, 6), pills: weekPills(ctx, '/commitments'),
       blocked: editDenied(req.user, ctx.branch, ctx.week, ctx.today),
       typed: extra.typed || null, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || null,

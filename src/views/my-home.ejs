@@ -32,6 +32,8 @@
     <a class="button secondary" href="/scoreboard"><%= branch.code %> scoreboard</a>
   </nav>
 
+  <%- include('partials/month-goals') %>
+
   <section class="mh-card" aria-labelledby="mh-wins">
     <h2 id="mh-wins">🎉 Wins to celebrate</h2>
     <% if (!wins.length) { %>
