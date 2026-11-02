@@ -31,6 +31,8 @@ async function prepareDatabase(db, { log = console.log } = {}) {
       'jh_no_target_v1', 'JH: 7 boxes with no target removed (CEO, 28 Oct) – out-of-stock logged / sales lost, zakat claims RM, RFQ invitations / approved, TikTok commission, Grab cancelled orders', log);
     await brOct29Once(db, readSeed(), log);
     await ampangOct29Once(db, readSeed(), log);
+    await bangiNov2Once(db, log);
+    await tallyAllOnce(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -586,6 +588,52 @@ async function addAdminLoginsOnce(db, seed, log) {
 }
 
 // Add a person (with a staff login, PIN set in Admin → People) to a branch once.
+// 2 Nov (CEO): Bangi – Aimi (branch manager) had no boxes left after the neuropathy lead moved to BR,
+// so the Team boxes (walk-in, transactions, 3+ items, PWP, target products) are now hers; staff can
+// still type them. Siti and Salasilah are the same person: Siti's Grab boxes go to Salasilah, Siti's
+// commitments move to Salasilah (where she has none that week), and the Siti login is switched off
+// (if only Siti's login had a PIN, Salasilah's login takes it). History is kept.
+async function bangiNov2Once(db, log) {
+  const flag = 'bangi_2nov_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const b = (await tx.query("SELECT id FROM branches WHERE code = 'Bangi'")).rows[0];
+    if (b) {
+      const pid = async (name) => (await tx.query('SELECT id FROM people WHERE branch_id = $1 AND lower(name) = lower($2) ORDER BY active DESC, id LIMIT 1', [b.id, name])).rows[0]?.id || null;
+      const aimi = await pid('Aimi'); const sal = await pid('Salasilah'); const siti = await pid('Siti');
+      if (aimi) {
+        await tx.query("UPDATE daily_fields SET owner_name = 'Aimi', person_id = $2 WHERE branch_id = $1 AND owner_name = 'Team'", [b.id, aimi]);
+        await tx.query("UPDATE measures SET owner_name = 'Aimi', person_id = $2 WHERE branch_id = $1 AND owner_name = 'Team'", [b.id, aimi]);
+      }
+      if (sal && siti) {
+        await tx.query("UPDATE daily_fields SET owner_name = 'Salasilah', person_id = $2 WHERE branch_id = $1 AND (owner_name = 'Siti' OR person_id = $3)", [b.id, sal, siti]);
+        await tx.query("UPDATE measures SET owner_name = 'Salasilah', person_id = $2 WHERE branch_id = $1 AND (owner_name = 'Siti' OR person_id = $3)", [b.id, sal, siti]);
+        await tx.query(`UPDATE commitments c SET person_id = $1 WHERE c.person_id = $2
+          AND NOT EXISTS (SELECT 1 FROM commitments x WHERE x.person_id = $1 AND x.week_start = c.week_start)`, [sal, siti]);
+        const su = (await tx.query('SELECT id, pin_hash FROM users WHERE person_id = $1', [siti])).rows[0];
+        const lu = (await tx.query('SELECT id, pin_hash FROM users WHERE person_id = $1', [sal])).rows[0];
+        if (su && lu && su.pin_hash && !lu.pin_hash) await tx.query('UPDATE users SET pin_hash = $2 WHERE id = $1', [lu.id, su.pin_hash]);
+        await tx.query('UPDATE people SET active = false WHERE id = $1', [siti]);
+        await tx.query('UPDATE users SET active = false WHERE person_id = $1', [siti]);
+        await tx.query("DELETE FROM sessions WHERE (data->>'userId')::int IN (SELECT id FROM users WHERE person_id = $1)", [siti]);
+      }
+    }
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Bangi: Team boxes → Aimi; Siti = Salasilah (Grab boxes to Salasilah, Siti login off) (2 Nov)', NULL)");
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+  log('Bangi 2 Nov: Team boxes → Aimi; Siti merged into Salasilah.');
+}
+
+// 2 Nov (CEO): the −1 / +1 buttons on Daily entry for every branch (was BR only).
+async function tallyAllOnce(db, seed, log) {
+  const flag = 'tally_all_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const all = (await db.query('SELECT code FROM branches WHERE active ORDER BY sort_order')).rows.map((r) => r.code);
+  await db.query(`INSERT INTO app_settings (key, value) VALUES ('tally_branches', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [JSON.stringify(all)]);
+  await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  log('+1 buttons on for every branch.');
+}
+
 async function addBranchPersonOnce(db, code, person, flag, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
   const branch = (await db.query('SELECT * FROM branches WHERE code = $1', [code])).rows[0];
@@ -743,4 +791,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

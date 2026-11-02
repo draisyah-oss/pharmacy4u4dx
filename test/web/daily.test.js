@@ -368,10 +368,17 @@ test('29 Oct: +1 buttons at BR – each tap saved at once, −1 never below 0, c
   assert.equal(plain.status, 302);
   assert.match(plain.location, /#f_p1$/);
   assert.equal(Number(await entry('BR', '2026-10-20', 'p1')), 1, 'adds 1 to the saved number, not to what was typed');
-  // Branches without +1 buttons: none on the page, and the route refuses
+  // 2 Nov: every branch has the +1 buttons now
   const wm = await pinLogin('hazera', '1111');
+  assert.match((await wm.get('/daily')).html, /name="tally"/);
+  const r = await wm.postJson('/daily/tally', { _csrf: await wm.csrf(), date: '2026-10-20', tally: 'pwp:+1' });
+  assert.equal(r.status, 200);
+  assert.equal(r.body.key, 'pwp');
+  // A branch not in tally_branches: none on the page, and the route refuses
+  await db.query("UPDATE app_settings SET value = '[\"BR\"]' WHERE key = 'tally_branches'");
   assert.doesNotMatch((await wm.get('/daily')).html, /name="tally"/);
   assert.equal((await wm.postJson('/daily/tally', { _csrf: await wm.csrf(), date: '2026-10-20', tally: 'pwp:+1' })).status, 404);
+  await db.query("UPDATE app_settings SET value = '[\"WM\",\"JH\",\"BR\",\"Bangi\",\"Ampang\"]' WHERE key = 'tally_branches'");
 });
 
 test('1 Nov: the front page for branch staff – wins, shout-outs and focus from their own numbers', async () => {

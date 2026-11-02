@@ -217,7 +217,7 @@ test('22 Oct: Ampang target product Oat → Eldon strip; JH WhatsApp is customer
 
 test('22 Oct: every branch tracks Grab active inventory % (above 50%) instead of Grab menu items', async () => {
   const s = readSeed();
-  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Aqilah', Bangi: 'Siti', Ampang: 'Aishah' }; // 27 Oct: Siti took Bangi's Grab
+  const owners = { WM: 'Zawiyah', JH: 'Nabihah', BR: 'Aqilah', Bangi: 'Salasilah', Ampang: 'Aishah' }; // 27 Oct: Siti took Bangi's Grab; 2 Nov: Siti = Salasilah
   for (const b of s.branches) {
     const f = b.daily_fields.find((x) => x.key === 'grabinv');
     const m = b.measures.find((x) => x.id === 'GI');
@@ -269,7 +269,7 @@ test('27 Oct: Bangi – Siti on Grab, Androchi / Canberra, neuropathy lead moved
   const s = readSeed();
   const bangi = s.branches.find((b) => b.code === 'Bangi');
   const br = s.branches.find((b) => b.code === 'BR');
-  assert.ok(bangi.people.some((p) => p.name === 'Siti'));
+  assert.ok(!bangi.people.some((p) => p.name === 'Siti'), '2 Nov: Siti and Salasilah are the same person');
   assert.ok(bangi.measures.some((m) => m.label === 'Target product: Androchi'));
   assert.ok(bangi.measures.some((m) => m.label === 'Target product: Canberra'));
   assert.ok(!bangi.measures.some((m) => m.numerator_field === 'neuro'));
@@ -294,6 +294,23 @@ test('27 Oct: Bangi – Siti on Grab, Androchi / Canberra, neuropathy lead moved
   const np = await q("SELECT m.owner_name, m.person_id, t.target FROM measures m JOIN branches b ON b.id = m.branch_id JOIN measure_targets t ON t.measure_id = m.id WHERE b.code = 'BR' AND m.code = 'NP' AND t.month = '2026-11'");
   assert.equal(np[0].owner_name, 'Amirah'); assert.ok(np[0].person_id); assert.equal(Number(np[0].target), 1);
   assert.equal((await q("SELECT count(*)::int AS n FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'BR' AND f.key = 'neuro' AND f.active"))[0].n, 1);
+  // 2 Nov: Team boxes → Aimi (manager); Siti merged into Salasilah (her PIN carries over, Siti's login off)
+  const { bangiNov2Once } = require('../../src/db/setup');
+  await old.query("UPDATE users SET pin_hash = 'hash-of-siti' WHERE person_id = $1", [siti[0].id]);
+  await old.query("UPDATE users SET pin_hash = NULL WHERE username = 'salasilah'");
+  await old.query("DELETE FROM app_settings WHERE key = 'bangi_2nov_v1'"); // set by loadSeed for fresh databases
+  await bangiNov2Once(old, () => {});
+  await bangiNov2Once(old, () => {});
+  const aimi = (await q("SELECT p.id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = 'Bangi' AND p.name = 'Aimi'"))[0].id;
+  const sal = (await q("SELECT p.id FROM people p JOIN branches b ON b.id = p.branch_id WHERE b.code = 'Bangi' AND p.name = 'Salasilah'"))[0].id;
+  const owners = await q("SELECT f.key, f.owner_name, f.person_id FROM daily_fields f JOIN branches b ON b.id = f.branch_id WHERE b.code = 'Bangi' AND f.active");
+  for (const k of ['walkin', 'tx', 'two', 'pwp', 'p1']) { const f = owners.find((x) => x.key === k); assert.equal(f.owner_name, 'Aimi', k); assert.equal(f.person_id, aimi); }
+  for (const k of ['grabon', 'grab']) { const f = owners.find((x) => x.key === k); assert.equal(f.owner_name, 'Salasilah', k); assert.equal(f.person_id, sal); }
+  assert.ok(!owners.some((f) => f.owner_name === 'Team' || f.owner_name === 'Siti'));
+  const ms = await q("SELECT m.owner_name FROM measures m JOIN branches b ON b.id = m.branch_id WHERE b.code = 'Bangi' AND m.active");
+  assert.ok(!ms.some((m) => m.owner_name === 'Team' || m.owner_name === 'Siti'));
+  assert.deepEqual(await q(`SELECT p.active, u.active AS login FROM people p JOIN users u ON u.person_id = p.id WHERE p.id = ${siti[0].id}`), [{ active: false, login: false }]);
+  assert.equal((await q("SELECT pin_hash FROM users WHERE username = 'salasilah'"))[0].pin_hash, 'hash-of-siti');
   await old.close();
 });
 
