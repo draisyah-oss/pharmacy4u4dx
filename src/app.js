@@ -17,6 +17,7 @@ const { wigRoutes } = require('./wig/routes');
 const { requestRoutes, agentApi } = require('./requests/routes');
 const { policyRoutes } = require('./policies/routes');
 const { reviewRoutes } = require('./review/routes');
+const { monthRoutes } = require('./month/routes');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
@@ -147,6 +148,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(requestRoutes(db, { now }));
   app.use(policyRoutes());
   app.use(reviewRoutes(db, { now, trackerStart }));
+  app.use(monthRoutes(db, { now, trackerStart }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

@@ -1,5 +1,6 @@
 <%# Monthly review tabs. here: home | branch | hq | conclusion %>
 <nav class="rv-tabs" aria-label="Monthly review">
+  <a href="/month?month=<%= month %>">Month scoreboard</a>
   <a href="/review?month=<%= month %>"<%- here === 'home' ? ' aria-current="page"' : '' %>>How it runs</a>
   <% if (user.role !== 'hq_staff') { %><a href="/review/branch?month=<%= month %>"<%- here === 'branch' ? ' aria-current="page"' : '' %>>Branch review</a><% } %>
   <% if (user.role !== 'branch_manager') { %><a href="/review/hq?month=<%= month %>"<%- here === 'hq' ? ' aria-current="page"' : '' %>>HQ review</a><% } %>

@@ -1,0 +1,32 @@
+<%# Notes on one section of the monthly scoreboard. scope, ref, label. Brought-forward notes first. %>
+<% const nk = scope + '|' + ref; const nn = notes[nk] || { forward: [], here: [] }; const can = canNote(scope, ref);
+   const anchor = (scope + '-' + ref).replace(/[^\w-]/g, '_');
+   const mname = function (m) { return new Date(m + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }); }; %>
+<div class="mn-notes" id="<%= anchor %>">
+  <% if (nn.forward.length) { %>
+    <p class="mn-k">Brought forward</p>
+    <ul class="mn-list">
+      <% nn.forward.forEach(function (n) { %>
+        <li class="<%= n.done_at ? 'is-done' : '' %>">
+          <% if (can) { %><form method="post" action="/month/notes/<%= n.id %>" class="mn-tick"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="month" value="<%= month %>"><input type="hidden" name="done" value="<%= n.done_at ? '0' : '1' %>"><button type="submit" class="mn-box" aria-label="<%= n.done_at ? 'Mark not done' : 'Mark done' %>"><%= n.done_at ? '✔' : '' %></button></form><% } else { %><span class="mn-box" aria-hidden="true"><%= n.done_at ? '✔' : '' %></span><% } %>
+          <span><%= n.note %> <small class="muted">· from <%= mname(n.month) %>, <%= n.by_name || '' %><%= n.done_at ? ' · done by ' + (n.done_name || '') : '' %></small></span>
+        </li>
+      <% }) %>
+    </ul>
+  <% } %>
+  <% if (nn.here.length) { %>
+    <p class="mn-k">Notes</p>
+    <ul class="mn-list">
+      <% nn.here.forEach(function (n) { %><li><span class="mn-dot" aria-hidden="true">•</span><span><%= n.note %> <small class="muted">· <%= n.by_name || '' %><%= n.bring_forward ? ' · ➜ next month' : '' %></small></span></li><% }) %>
+    </ul>
+  <% } %>
+  <% if (can) { %>
+    <form method="post" action="/month/notes" class="mn-add">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="month" value="<%= month %>">
+      <input type="hidden" name="scope" value="<%= scope %>"><input type="hidden" name="ref" value="<%= ref %>">
+      <input type="text" name="note" maxlength="600" placeholder="Note on <%= label %>…" aria-label="Note on <%= label %>">
+      <label class="mn-fwd"><input type="checkbox" name="forward" value="1" checked> Bring forward</label>
+      <button class="button secondary small" type="submit">Add</button>
+    </form>
+  <% } %>
+</div>

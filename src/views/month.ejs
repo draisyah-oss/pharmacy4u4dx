@@ -1,0 +1,113 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'month' }) %>
+<%
+  const d = data; const W = d.weeks;
+  const chip = function (s, txt) { return '<span class="mh-chip s-' + s + '">' + (fmt.symbol(s) || '') + (txt ? ' ' + txt : '') + '</span>'; };
+  const cell = function (p) { if (!p || p.shown === null || p.shown === undefined) return '<td class="mo-c muted">–</td>';
+    return '<td class="mo-c s-' + p.status + '">' + (p.href ? '<a href="' + p.href + '">' : '') + p.shown + ' <span aria-hidden="true">' + (fmt.symbol(p.status) || '') + '</span>' + (p.href ? '</a>' : '') + '</td>'; };
+  const arr = function (t, title) { return t ? '<span class="mo-tr is-' + t + '" title="' + (title || '') + '">' + arrow[t] + '</span>' : '<span class="muted">·</span>'; };
+  const rate = function (x) { return x.of ? x.on + '/' + x.of : '–'; };
+  const pctTxt = function (x) { return x.of ? Math.round(x.on / x.of * 100) + '%' : '–'; };
+  const level = function (x) { if (!x.of) return 'no_data'; const r = x.on / x.of; return r >= 0.75 ? 'on_track' : r >= 0.5 ? 'watch' : 'off_track'; };
+  const people = d.branches.flatMap(function (b) { return b.persons; }).concat(d.hqPersons);
+%>
+<main class="page oo-page mo-page">
+  <h1><%= d.name %> scoreboard</h1>
+  <p class="muted">The whole month at a glance – how each number moved week by week (<%= W.map(function (w) { return 'w/c ' + w.name; }).join(' · ') %>) and where it ended. <%= d.complete ? '' : 'Month not finished – numbers to ' + fmtDate(d.to) + '.' %> ↑ improved through the month · ↓ slipped · → about the same. Tap a number to see the days behind it.</p>
+  <form method="get" class="rv-month"><label>Month <select name="month"><% months.forEach(function (mm) { %><option value="<%= mm %>"<%= mm === month ? ' selected' : '' %>><%= new Date(mm + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long', year: 'numeric' }) %></option><% }) %></select></label><button class="button secondary small">Show</button>
+    <a class="small" href="/review?month=<%= month %>">Monthly review ›</a></form>
+  <nav class="rv-pills" aria-label="Sections">
+    <% if (d.company) { %><a href="#company">Company</a><% } %><% if (d.depts.length) { %><a href="#depts">HQ departments</a><% } %>
+    <% if (d.branches.length) { %><a href="#branches">Branches</a><% } %><% if (people.length) { %><a href="#people">People</a><% } %>
+  </nav>
+  <% if (ok) { %><p class="alert alert-good"><%= ok === 'note' ? 'Note added.' : 'Updated.' %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+
+  <% if (d.company) { const c = d.company; %>
+  <section class="oo-card" id="company">
+    <h2>Company</h2>
+    <p class="rv-big"><b><%= fmt.money(c.total) %></b><% if (c.target !== null) { %> <span class="muted">of <%= fmt.money(c.target) %> · <%= fmt.pct(c.pct) %></span> <%- chip(c.status) %><% } %>
+      <% if (c.prevPct !== null) { %><span class="muted small"> · <%= c.prevName %> was <%= fmt.pct(c.prevPct) %></span><% } %></p>
+    <p class="muted small">Branches <%= fmt.money(c.total - c.b2b) %> + B2B <%= fmt.money(c.b2b) %> (B2B weeks whose Thursday is in the month).</p>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Sales by week</th><% W.forEach(function (w) { %><th>w/c <%= w.name %></th><% }) %><th>Trend</th></tr></thead>
+      <tbody><tr><th>Company</th><% c.perWeek.forEach(function (p) { %><td class="mo-c"><%= p.total === null ? '–' : fmt.money(p.total) %></td><% }) %><td><%- arr(c.trend) %></td></tr>
+        <% d.league.forEach(function (b) { %><tr><th><%= b.code %></th><% b.sales.weeks.forEach(function (p) { %><td class="mo-c"><%= p.total === null ? '–' : fmt.money(p.total) %></td><% }) %><td><%- arr(b.sales.trend) %></td></tr><% }) %>
+      </tbody></table></div>
+    <h3>Branches side by side</h3>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Branch</th><th>Sales</th><th>% of target</th><th>WIG & leads on track</th><th>All targets on track</th><% W.forEach(function (w) { %><th>Hit w/c <%= w.name %></th><% }) %><th>Out of stock over 3 days</th></tr></thead>
+      <tbody><% d.league.forEach(function (b) { %>
+        <tr><th><% if (show.branches === 'all' || show.branches.includes(b.code)) { %><a href="#branch-<%= b.code %>"><%= b.code %></a><% } else { %><%= b.code %><% } %></th>
+          <td class="mo-c"><a href="<%= b.sales.href %>"><%= fmt.money(b.sales.actual) %></a></td>
+          <td class="mo-c s-<%= b.sales.status %>"><%= b.sales.pct === null ? '–' : fmt.pct(b.sales.pct) %> <%= fmt.symbol(b.sales.status) %></td>
+          <td class="mo-c s-<%= level({ on: b.topOn, of: b.topOf }) %>"><%= b.topOn %> of <%= b.topOf %></td>
+          <td class="mo-c s-<%= level(b) %>"><%= b.on %> of <%= b.of %></td>
+          <% b.weekHits.forEach(function (x) { %><td class="mo-c s-<%= level(x) %>"><%= pctTxt(x) %></td><% }) %>
+          <td class="mo-c"><%= b.oos.over3Pct === null ? '–' : fmt.pct(b.oos.over3Pct) %> <small class="muted">(<%= b.oos.reported %>)</small></td></tr>
+      <% }) %></tbody></table></div>
+    <%- include('partials/month-notes', { scope: 'company', ref: '', label: 'the company' }) %>
+  </section>
+  <% } %>
+
+  <% if (d.depts.length) { %>
+  <h2 class="mo-h" id="depts">HQ departments</h2>
+  <div class="oo-cols">
+    <% d.depts.forEach(function (dp) { %>
+      <section class="oo-card">
+        <h3><%= dp.name %> <%- chip(level(dp), dp.on + ' of ' + dp.of) %></h3>
+        <p class="muted small"><%= dp.people.map(function (p) { return p.name; }).join(', ') %> · measures on track for the month · commitments kept <%= dp.commitsKept %> of <%= dp.commits %></p>
+        <div class="mo-scroll"><table class="mo-t"><thead><tr><th></th><% W.forEach(function (w) { %><th>w/c <%= w.name %></th><% }) %><th>Trend</th></tr></thead>
+          <tbody><tr><th>On track</th><% dp.perWeek.forEach(function (x) { %><td class="mo-c s-<%= level(x) %>"><%= rate(x) %></td><% }) %><td><%- arr(dp.trend) %></td></tr>
+          <% dp.people.forEach(function (p) { %><tr><th><a href="#person-<%= p.id %>"><%= p.name %></a></th><% p.perWeek.forEach(function (x) { %><td class="mo-c s-<%= level(x) %>"><%= rate(x) %></td><% }) %><td><%- arr(p.trend) %></td></tr><% }) %></tbody></table></div>
+        <%- include('partials/month-notes', { scope: 'dept', ref: dp.name, label: dp.name }) %>
+      </section>
+    <% }) %>
+  </div>
+  <% } %>
+
+  <% if (d.branches.length) { %>
+  <h2 class="mo-h" id="branches">Branches</h2>
+  <% d.branches.forEach(function (b) { %>
+    <details class="oo-card mo-branch" id="branch-<%= b.code %>"<%= d.branches.length === 1 ? ' open' : '' %>>
+      <summary><b><%= b.name %></b> <%- chip(b.sales.status, b.sales.pct === null ? '' : fmt.pct(b.sales.pct) + ' of sales target') %> <span class="muted small">WIG & leads <%= b.topOn %>/<%= b.topOf %> · all <%= b.on %>/<%= b.of %></span></summary>
+      <div class="mo-scroll"><table class="mo-t mo-measures">
+        <thead><tr><th>Measure</th><% W.forEach(function (w) { %><th>w/c <%= w.name %></th><% }) %><th><%= d.short %></th><th>Target</th><th>Trend</th></tr></thead>
+        <tbody>
+          <tr class="mo-sales"><th>Sales (RM)</th><% b.sales.weeks.forEach(function (p) { %><td class="mo-c"><%= p.total === null ? '–' : fmt.money(p.total) %></td><% }) %><td class="mo-c s-<%= b.sales.status %>"><a href="<%= b.sales.href %>"><%= fmt.money(b.sales.actual) %></a> <%= fmt.symbol(b.sales.status) %></td><td class="mo-c"><%= b.sales.target === null ? '–' : fmt.money(b.sales.target) %></td><td><%- arr(b.sales.trend) %></td></tr>
+          <% b.top.forEach(function (r) { %>
+            <tr><th><b><%= r.label %></b><br><small class="muted"><%= r.owner %></small></th><% r.perWeek.forEach(function (p) { %><%- cell(p) %><% }) %>
+              <td class="mo-c s-<%= r.status %>"><a href="<%= r.href %>"><%= r.actual %></a> <%= fmt.symbol(r.status) %></td><td class="mo-c"><%= r.target %></td><td><%- arr(r.trend) %></td></tr>
+          <% }) %>
+          <% if (b.others.length) { %><tr class="mo-sep"><th colspan="<%= W.length + 4 %>">Other measures</th></tr><% } %>
+          <% b.others.forEach(function (r) { %>
+            <tr><th><%= r.label %><br><small class="muted"><%= r.owner %></small></th><% r.perWeek.forEach(function (p) { %><%- cell(p) %><% }) %>
+              <td class="mo-c s-<%= r.status %>"><a href="<%= r.href %>"><%= r.actual %></a> <%= fmt.symbol(r.status) %></td><td class="mo-c"><%= r.target %></td><td><%- arr(r.trend) %></td></tr>
+          <% }) %>
+        </tbody></table></div>
+      <p class="small">Out of stock: <%= b.oos.reported %> reported · <%= b.oos.within3 %> fixed within 3 days · <%= b.oos.over3Pct === null ? '–' : fmt.pct(b.oos.over3Pct) %> took longer or still open</p>
+      <%- include('partials/month-notes', { scope: 'branch', ref: b.code, label: b.code }) %>
+    </details>
+  <% }) %>
+  <% } %>
+
+  <% if (people.length) { %>
+  <h2 class="mo-h" id="people">People</h2>
+  <section class="oo-card">
+    <p class="muted small">Each person’s own targets: how many were on track each week and for the month, and weekly commitments kept.</p>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Person</th><th>Where</th><% W.forEach(function (w) { %><th>w/c <%= w.name %></th><% }) %><th><%= d.short %></th><th>Trend</th><th>Commitments kept</th><th>Best / behind</th></tr></thead>
+      <tbody><% people.forEach(function (p) { %>
+        <tr id="person-<%= p.id %>"><th><%= p.name %><br><small class="muted"><%= p.role || '' %></small></th><td><%= p.branch %></td>
+          <% p.perWeek.forEach(function (x) { %><td class="mo-c s-<%= level(x) %>"><%= rate(x) %></td><% }) %>
+          <td class="mo-c s-<%= level(p) %>"><b><%= rate(p) %></b></td><td><%- arr(p.trend) %></td>
+          <td class="mo-c"><%= p.commits ? p.commitsKept + ' of ' + p.commits : '–' %></td>
+          <td class="small"><% if (p.best.length) { %><span class="s-on_track">✔ <%= p.best.join(' · ') %></span><br><% } %><% if (p.behind.length) { %><span class="s-off_track">✕ <%= p.behind.join(' · ') %></span><% } %></td></tr>
+        <% if ((notes['person|' + p.id] || canNote('person', String(p.id)))) { %><% const pn = notes['person|' + p.id] || { forward: [], here: [] }; const pc = pn.forward.length + pn.here.length; %><tr class="mo-noterow"><td colspan="<%= W.length + 7 %>"><details<%= pc ? ' open' : '' %>><summary class="small">📝 Notes for <%= p.name %><%= pc ? ' (' + pc + ')' : '' %></summary><%- include('partials/month-notes', { scope: 'person', ref: String(p.id), label: p.name }) %></details></td></tr><% } %>
+      <% }) %></tbody></table></div>
+  </section>
+  <% } %>
+</main>
+</body>
+</html>

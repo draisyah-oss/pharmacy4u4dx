@@ -22,7 +22,7 @@
      if (role === 'branch_staff') {
        quick = [['daily', '/daily', 'Daily entry'], ['myweek', '/my-week', 'My week']];
        groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['scoreboard', '/scoreboard', 'Scoreboard', 'week lead'], ['myweek', '/my-week', 'My week', 'commitment wig'],
-         ['oos', '/oos', 'Out of stock', 'oos report restock']]], ['Company', [['group', '/group', 'Group scoreboard', 'branches']]]];
+         ['oos', '/oos', 'Out of stock', 'oos report restock'], ['month', '/month', 'Month scoreboard', 'monthly summary']]], ['Company', [['group', '/group', 'Group scoreboard', 'branches']]]];
      } else if (role === 'hq_staff') {
        quick = [['hqtoday', '/hq/today', 'My day'], ['hqcommit', '/hq', 'HQ WIG']];
        groups = [
@@ -59,7 +59,8 @@
        }
      }
      // 1 Nov: Monthly Performance Review (first Monday of the month) – managers, HQ, HQ staff, admin.
-     if (role !== 'branch_staff') groups.push(['Monthly review', [['review', '/review', 'Monthly review', 'month performance review first monday october november goals conclusion stop start keep'],
+     if (role !== 'branch_staff') groups.push(['Monthly review', [['month', '/month', 'Month scoreboard', 'monthly summary october improvement notes bring forward department individual'],
+       ['review', '/review', 'Monthly review', 'month performance review first monday october november goals conclusion stop start keep'],
        ...(role !== 'hq_staff' ? [['reviewbranch', '/review/branch' + bq, 'Branch review', 'month branch manager plan', 'sub']] : []),
        ...(role !== 'branch_manager' ? [['reviewhq', '/review/hq', 'HQ review', 'month hq', 'sub']] : []),
        ['reviewgoals', '/review/conclusion', 'Month goals', 'conclusion agree lock', 'sub']]]);

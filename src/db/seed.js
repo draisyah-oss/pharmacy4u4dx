@@ -353,6 +353,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       oos_targets: seed.company.oos_targets ? JSON.stringify(seed.company.oos_targets) : null,
       sheet_view_branches: seed.company.sheet_view_branches ? JSON.stringify(seed.company.sheet_view_branches) : null,
       tally_branches: seed.company.tally_branches ? JSON.stringify(seed.company.tally_branches) : null,
+      hq_departments: seed.hq && seed.hq.departments ? JSON.stringify(seed.hq.departments) : null,
     };
     for (const [key, value] of Object.entries(settings)) {
       if (value === null) continue;

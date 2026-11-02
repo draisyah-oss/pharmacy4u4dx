@@ -64,6 +64,7 @@ async function backfillNewSettings(db, seed, log) {
   await backfillHqTeam(db, seed, log);
   await ensureSetting(db, 'oos_targets', seed.company.oos_targets, log);
   await ensureSetting(db, 'sheet_view_branches', seed.company.sheet_view_branches, log);
+  await ensureSetting(db, 'hq_departments', seed.hq && seed.hq.departments, log);
   await ensureSetting(db, 'tally_branches', seed.company.tally_branches, log);
   await backfillHqAccess(db, seed, log);
   await backfillHqTasks(db, seed, log);

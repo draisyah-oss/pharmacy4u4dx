@@ -108,7 +108,7 @@ function reviewRoutes(db, { now, trackerStart }) {
     const u = req.user;
     if (!HQ_ROLES.includes(u.role)) return message(res, 403, 'The HQ review is for the HQ team.');
     const b = await base(req);
-    const hq = await rv.hqMonth(db, { month: b.month, today: b.today });
+    const hq = await rv.hqMonth(db, { month: b.month, today: b.today, trackerStart: b.ts });
     const all = u.role === 'admin' || Boolean(u.enters_all_hq);
     const reviews = {};
     for (const g of hq.groups) reviews[g.person.id] = await rv.loadReview(db, { scope: 'hq', personId: g.person.id, month: b.month });
@@ -134,7 +134,7 @@ function reviewRoutes(db, { now, trackerStart }) {
       const personId = Number(req.body.person);
       const all = u.role === 'admin' || Boolean(u.enters_all_hq);
       if (!all && u.person_id !== personId) return message(res, 403, 'You can fill in your own HQ review only.');
-      const hq = await rv.hqMonth(db, { month: b.month, today: b.today });
+      const hq = await rv.hqMonth(db, { month: b.month, today: b.today, trackerStart: b.ts });
       const g = hq.groups.find((x) => x.person.id === personId);
       if (!g) return message(res, 404, 'That person has no HQ measures.');
       const r = await rv.saveReview(db, u, { scope: 'hq', personId, month: b.month, refs: g.rows.map((x) => x.ref), body: req.body, now });

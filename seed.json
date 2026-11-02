@@ -450,6 +450,12 @@
     }
   ],
   "hq": {
+    "departments": [
+      { "name": "Leadership", "people": ["Dr Aisyah"] },
+      { "name": "Inventory, products & B2B", "people": ["Alia", "Syarafana", "Fariz"] },
+      { "name": "Accounts", "people": ["Azwani"] },
+      { "name": "Operations, HR & admin", "people": ["Hanin", "Iman"] }
+    ],
     "owners": [
       {"name": "Dr Aisyah", "role": "CEO", "login": false},
       {"name": "Alia", "role": "Inventory & Products, B2B", "access": "hq"},

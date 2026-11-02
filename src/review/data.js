@@ -117,10 +117,10 @@ async function branchMonth(db, { branch, month, today, trackerStart }) {
 
 // ─────────────── HQ ───────────────
 
-async function hqMonth(db, { month, today }) {
+async function hqMonth(db, { month, today, trackerStart = null }) {
   const weeks = [];
   for (let w = calc.weekStart(calc.monthStart(month)); w <= calc.monthEnd(month) && w <= calc.weekStart(today); w = calc.addDays(w, 7)) {
-    if (weekMonth(w) === month) weeks.push(w);
+    if (weekMonth(w) === month && (!trackerStart || calc.addDays(w, 6) >= trackerStart)) weeks.push(w);
   }
   const [measures, entries] = await Promise.all([loadHqMeasures(db), weeks.length ? loadHqEntries(db, weeks[0], weeks.at(-1)) : new Map()]);
   const people = (await db.query('SELECT id, name, role, sort_order FROM people WHERE branch_id IS NULL AND active ORDER BY sort_order')).rows;
@@ -140,6 +140,7 @@ async function hqMonth(db, { month, today }) {
       ref: `h:${m.id}`, code: m.code, label: m.label, owner: m.owner_name, person_id: m.person_id, kind: m.kind || 'Lead',
       target: target(m) === null ? 'track only' : hqShow(m, target(m)), last: last ? hqShow(m, last.ev.actual) : '–',
       weeksOn: on, weeksEntered: entered.length, weeks: weeks.length, status,
+      perWeek: res.map((x) => ({ week: x.week, shown: x.ev && x.ev.actual !== null && x.ev.actual !== undefined ? hqShow(m, x.ev.actual) : null, status: x.ev ? x.ev.status : 'no_data' })),
     };
   });
   const groups = [];
