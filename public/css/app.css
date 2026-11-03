@@ -1172,3 +1172,9 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .page.oo-page.mo-page { max-width: 1200px; }
 .page.oo-page.rv-page { max-width: 980px; }
 .mo-t td.small { min-width: 220px; white-space: normal; }
+/* Our measures (3 Nov) */
+.bm-row { border-bottom: 1px solid var(--line); padding: 8px 0; }
+.bm-row summary { cursor: pointer; }
+.bm-wait { border-bottom: 1px solid var(--line); padding: 8px 0; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.bm-wait p { flex: 1 1 100%; margin: 0; }
+.bm-wait input[type="text"] { flex: 1 1 200px; }

@@ -189,6 +189,10 @@ async function buildNeeds(db, user, { at }) {
       count(*) FILTER (WHERE status = 'New')::int AS fresh,
       count(*) FILTER (WHERE status = 'Ready to check' AND created_by = $1)::int AS mine FROM change_requests`, [user.id]);
   const c = cr.rows[0];
+  if (user.role === 'admin' && user.is_super) {
+    const lc = await one(db, "SELECT count(*) AS n FROM measure_changes WHERE status = 'Waiting'", []);
+    if (lc) add('today', lc, 'Lead measure changes to approve', 'from the branch managers', '/branch/measures#waiting');
+  }
   if (user.role === 'admin' && user.is_super && c.approval) add('today', c.approval, 'App changes waiting for your approval', 'checked by the person who asked', '/requests');
   if (user.role === 'admin' && !user.is_super && c.fresh) add('todo', c.fresh, 'New app change requests', 'Request a change', '/requests');
   if (c.mine) add('today', c.mine, 'Check a preview of your app change', 'looks right? / not right yet', '/requests');

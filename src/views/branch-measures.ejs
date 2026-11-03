@@ -1,0 +1,85 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'branchmeasures' }) %>
+<%
+  const mname = function (m) { return new Date(m + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }); };
+  const tv = function (r, v) { return v === null || v === undefined ? '' : r.pct ? Math.round(v * 1000) / 10 : v; };
+  const per = { day: 'a day', week: 'a week', month: 'a month' };
+  const tiers = [['wig', 'WIG', 'Locked – only Dr Aisyah changes the WIG.'], ['lead', 'Lead measures', 'Change them here – the change goes live when Dr Aisyah approves it.'], ['activity', 'Activities', 'Change them here – saved straight away.']];
+  const showChange = function (ch, calcType) {
+    const out = [];
+    if (ch.label) out.push('name → “' + ch.label + '”');
+    if (ch.field_label) out.push('box → “' + ch.field_label + '”');
+    if (ch.owner) out.push('owner → ' + ch.owner);
+    Object.keys(ch.targets || {}).forEach(function (mo) { const v = ch.targets[mo]; const pct = calcType === 'ratio_percent' || calcType === 'average_percent';
+      out.push(mname(mo) + ' target → ' + (v.t === null ? 'track only' : pct ? Math.round(v.t * 1000) / 10 + '%' : v.t) + (v.w !== null && v.w !== undefined ? ' (busy days ' + v.w + ')' : '')); });
+    return out.join(' · ');
+  };
+%>
+<main class="page oo-page rv-page">
+  <h1><%= branch.name %> – our measures</h1>
+  <p class="muted">Activities: change them yourself. Lead measures: changes wait for Dr Aisyah’s approval. WIG: locked.</p>
+  <% if (user.role !== 'branch_manager') { %><nav class="rv-pills" aria-label="Branch"><% branches.forEach(function (b) { %><a href="/branch/measures?branch=<%= b.code %>"<%- b.code === branch.code ? ' aria-current="page"' : '' %>><%= b.code %></a><% }) %></nav><% } %>
+  <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+
+  <% if (ceo && waiting.length) { %>
+  <section class="oo-card" id="waiting">
+    <h2>Lead changes waiting for you (<%= waiting.length %>)</h2>
+    <% waiting.forEach(function (c) { %>
+      <form method="post" action="/branch/measures/changes/<%= c.id %>" class="bm-wait">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+        <p><b><%= c.branch_code %> · <%= c.label %></b><br><%= showChange(c.change, c.calc) %><br><small class="muted">by <%= c.proposed_by_name %><%= c.reason ? ' – “' + c.reason + '”' : '' %></small></p>
+        <input type="text" name="note" maxlength="300" placeholder="Note (optional)" aria-label="Note">
+        <button class="button" name="decision" value="approve">Approve</button>
+        <button class="button secondary" name="decision" value="reject">Not approved</button>
+      </form>
+    <% }) %>
+  </section>
+  <% } %>
+
+  <% tiers.forEach(function (tier) { const list = rows.filter(function (r) { return r.tier === tier[0]; }); if (!list.length) return; %>
+  <section class="oo-card">
+    <h2><%= tier[1] %></h2>
+    <p class="muted small"><%= tier[2] %></p>
+    <% list.forEach(function (r) { const locked = !canEdit || (r.tier === 'wig' && user.role !== 'admin'); %>
+      <details class="bm-row" id="m<%= r.id %>"<%= r.pending.length ? ' open' : '' %>>
+        <summary><b><%= r.label %></b> <span class="muted small">· <%= r.owner %> · <%= months.map(function (mo) { const t = r.targets[mo].t; return mname(mo) + ' ' + (t === null ? 'track only' : (r.pct ? tv(r, t) + '%' : t) + ' ' + (per[r.targetPer] || '')); }).join(' · ') %></span>
+          <% if (r.pending.length) { %><span class="mh-chip s-watch">Waiting for approval</span><% } %></summary>
+        <% r.pending.forEach(function (c) { %><p class="small">⏳ <%= showChange(typeof c.change === 'string' ? JSON.parse(c.change) : c.change, r.calc) %> <span class="muted">– <%= c.proposed_by_name %></span></p><% }) %>
+        <% if (locked) { %>
+          <p class="muted small">Box on Daily entry: “<%= r.fieldLabel %>”.</p>
+        <% } else { %>
+        <form method="post" action="/branch/measures/<%= r.id %>">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+          <div class="rv-goal-meta">
+            <label>Measure name <input type="text" name="label" value="<%= r.label %>" maxlength="120"></label>
+            <label>Box name on Daily entry <input type="text" name="field_label" value="<%= r.fieldLabel %>" maxlength="120"></label>
+            <label>Owner <select name="owner"><% owners.forEach(function (o) { %><option<%= o === r.owner ? ' selected' : '' %>><%= o %></option><% }) %><% if (!owners.includes(r.owner)) { %><option selected><%= r.owner %></option><% } %></select></label>
+          </div>
+          <div class="rv-goal-meta">
+            <% months.forEach(function (mo) { const k = 'm' + mo.replace('-', ''); %>
+              <label><%= mname(mo) %> target <%= r.pct ? '(%)' : per[r.targetPer] || '' %> <input type="text" inputmode="decimal" name="t[<%= k %>][t]" value="<%= tv(r, r.targets[mo].t) %>" placeholder="blank = track only"></label>
+              <% if (r.busy) { %><label><%= mname(mo) %> busy days (<%= r.highDays %>) <input type="text" inputmode="decimal" name="t[<%= k %>][w]" value="<%= tv(r, r.targets[mo].w) %>" placeholder="same as other days"></label><% } %>
+            <% }) %>
+          </div>
+          <% if (r.tier === 'lead' && !ceo) { %><label>Why (for Dr Aisyah) <input type="text" name="reason" maxlength="300"></label><% } %>
+          <div class="rv-save">
+            <button class="button" type="submit"><%= r.tier === 'lead' && !ceo ? 'Send for approval' : 'Save' %></button>
+            <% if (r.tier === 'activity') { %><button class="button secondary" type="submit" name="retire" value="1">Take off (history kept)</button><% } %>
+          </div>
+        </form>
+        <% } %>
+      </details>
+    <% }) %>
+  </section>
+  <% }) %>
+
+  <% if (recent.length) { %>
+  <section class="oo-card"><h2>Decided lately</h2>
+    <ul class="rv-said"><% recent.forEach(function (c) { %><li><b><%= c.label %></b> – <span class="<%= c.status === 'Approved' ? 's-on_track' : 's-off_track' %>"><%= c.status %></span> by <%= c.decided_by_name %><%= c.decision_note ? ': ' + c.decision_note : '' %></li><% }) %></ul>
+  </section>
+  <% } %>
+</main>
+</body>
+</html>
