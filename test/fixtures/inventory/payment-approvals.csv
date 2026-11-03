@@ -1,0 +1,11 @@
+Week,Pay date (planned),Supplier,Proposed amount (RM),Approved? (Yes / No / Partial),Approved amount (RM),Paid? (Yes / No),Date paid,Notes
+EXAMPLE 2-8 Nov,05/11/2026,EXAMPLE SUPPLIER,1000,Yes,1000,Yes,05/11/2026,Dr Aisyah fills Approved; Azwani fills Paid. Mr Eve adds new rows every Monday.
+28 Oct-1 Nov,30/10/2026,AA Alive,15482,Yes,15482,,,Agreed in meeting 28 Oct - pay this week (all outlets). Then order
+28 Oct-1 Nov,30/10/2026,Teepham Medical,13606,Yes,13606,,,Agreed in meeting 28 Oct - pay this week (all outlets). Then order
+28 Oct-1 Nov,30/10/2026,YSP Industries,1567,Partial,,,,Meeting 28 Oct: RM1567 this week - YSP to reconfirm amount
+1-8 Nov,05/11/2026,Zuellig Pharma,41000,Yes,,,,Meeting 28 Oct: RM112k in first 2 weeks so the order is released. Part 1
+9-15 Nov,12/11/2026,Zuellig Pharma,71000,Yes,,,,Meeting 28 Oct: RM112k in first 2 weeks. Part 2 - needs the zakat payment RM31866 by 15 Nov
+16-22 Nov,19/11/2026,DKSH (104),35677,,,,,After Zuellig (meeting). SOA overdue RM55101 - about RM19.4k left for December. Then order
+16-22 Nov,19/11/2026,Redwood Pharma,5000,,,,,Instalment (meeting). RM17214 outstanding - RM5k a month
+16-22 Nov,19/11/2026,Pahang Pharmacy,2433,,,,,SOA: overdue (due Sep). Keeps the 90-day account clean
+16-22 Nov,19/11/2026,Kotra Pharma,1890,,,,,SOA: oldest overdue (due Jun + Aug). Then instalment

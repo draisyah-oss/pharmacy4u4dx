@@ -1234,3 +1234,47 @@ input.pp-ok { border-color: var(--good) !important; }
 .hl-tip p { margin: 2px 0; }
 .hl-tip-k { font-weight: 700; color: #8a5a00; text-transform: uppercase; letter-spacing: .03em; font-size: .72rem; }
 .pp-low { color: var(--bad, #b42318); font-weight: 600; }
+
+/* Inventory – ordering & payments (3 Nov) */
+.page.inv-page { max-width: 1200px; }
+.inv-take p { margin: 0; line-height: 1.55; max-width: 75ch; }
+.inv-warn { display: block; margin-top: 6px; color: var(--short); font-weight: 700; }
+.inv-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 10px; margin: 0 0 14px; }
+.inv-tile { display: grid; gap: 4px; align-content: start; background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; color: var(--ink); text-decoration: none; }
+.inv-tile:hover { border-color: var(--brand-light); }
+.inv-tile.is-warn { border-color: var(--short); background: var(--short-tint); }
+.inv-lab { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 700; }
+.inv-big { font-size: 1.6rem; font-weight: 700; line-height: 1.15; }
+.inv-t td, .inv-t th { font-size: 0.88rem; }
+.inv-t tbody th { min-width: 180px; }
+.inv-do { white-space: nowrap; font-size: 0.8rem !important; color: var(--ink-soft); }
+.inv-t tr.sec-urgent .inv-do { color: var(--short); font-weight: 700; }
+.inv-pill { display: inline-block; padding: 1px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; white-space: nowrap; border: 1px solid currentColor; }
+.inv-pill.g-open, .inv-pill.g-paid { color: var(--good); background: var(--good-tint); }
+.inv-pill.g-wait, .inv-pill.g-after_payment, .inv-pill.g-soa { color: #8a5a00; background: #fff4dc; }
+.inv-pill.g-hold, .inv-pill.g-late { color: var(--short); background: var(--short-tint); }
+.inv-pill.g-check, .inv-pill.g-none, .inv-pill.g-pending { color: var(--ink-soft); background: var(--info-tint); border-color: var(--line); }
+.inv-filters a { font-size: 0.9rem; }
+.inv-search { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 0 0 8px; }
+.inv-search input[type=search] { font: inherit; font-size: 0.95rem; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-input); flex: 1 1 220px; max-width: 360px; min-width: 0; }
+.inv-grid2 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.inv-fig { max-width: 760px; }
+.inv-fig { margin: 0; }
+.inv-chart { width: 100%; height: auto; display: block; }
+.inv-chart .inv-grid { stroke: var(--line); stroke-width: 1; }
+.inv-chart .inv-axis { fill: var(--ink-soft); font-size: 12px; font-family: var(--font); }
+.inv-chart .inv-bar { fill: #b8c7de; }
+.inv-chart .inv-line { fill: none; stroke: var(--brand-deep); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+.inv-chart .inv-dot { fill: var(--brand-deep); }
+.inv-chart .inv-dot.is-short { fill: var(--short); }
+.inv-chart .inv-floor { stroke: var(--short); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.inv-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 0.82rem; color: var(--ink-soft); margin: 0 0 6px; }
+.inv-sw { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+.inv-sw.sw-bar { background: #b8c7de; }
+.inv-sw.sw-line { height: 3px; vertical-align: 3px; background: var(--brand-deep); }
+.inv-sw.sw-floor { height: 0; vertical-align: 4px; border-top: 2px dashed var(--short); background: none; }
+.inv-short { color: var(--short); font-weight: 700; }
+.inv-refresh { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end; margin: 0 0 24px; }
+.inv-setup ol { padding-left: 1.2em; line-height: 1.6; }
+.inv-t td { min-width: 0; }
+.inv-t td.small { min-width: 200px; }

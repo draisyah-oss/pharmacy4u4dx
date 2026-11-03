@@ -818,6 +818,7 @@
     "wiki_approver": "Hanin",
     "inventory_team": ["Alia", "Syarafana", "Fariz"],
     "oos_needs_off": ["Alia"],
+    "inventory_board": {"viewers": ["Alia", "Azwani"], "inputs_folder_id": "1VXbTmy4QE_6aJXueJsIWkJVE-J_5DXZs", "payment_approvals_id": "1-TaTjY8vhSl0IioJTht2m9vnXmqKHMDTxeN1O8Cm9Ks", "plan_title_prefix": "Mr Eve Daily Plan"},
     "admin_logins": [{"username": "iman.admin", "name": "Iman (admin)"}, {"username": "hanin.admin", "name": "Hanin (admin)"}],
     "extra_moves": {"Dr Aisyah": ["Remove bottlenecks for staff"]},
     "wiki_checklist_due": {"P1": "2026-11-15", "P2": "2026-12-31", "P3": "2027-03-31"},

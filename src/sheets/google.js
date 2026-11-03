@@ -23,22 +23,23 @@ function loadServiceAccount(env = process.env) {
 
 const b64url = (buf) => Buffer.from(buf).toString('base64url');
 
-function signJwt({ email, privateKey }, nowSeconds = Math.floor(Date.now() / 1000)) {
+function signJwt({ email, privateKey }, nowSeconds = Math.floor(Date.now() / 1000), scope = SCOPE) {
   const header = b64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const claims = b64url(JSON.stringify({ iss: email, scope: SCOPE, aud: TOKEN_URL, iat: nowSeconds, exp: nowSeconds + 3600 }));
+  const claims = b64url(JSON.stringify({ iss: email, scope, aud: TOKEN_URL, iat: nowSeconds, exp: nowSeconds + 3600 }));
   const signature = crypto.sign('RSA-SHA256', Buffer.from(`${header}.${claims}`), privateKey);
   return `${header}.${claims}.${b64url(signature)}`;
 }
 
-async function getAccessToken(account, fetchImpl = fetch) {
+// scope: read-only Sheets by default; the Inventory page (3 Nov) asks for read-only Drive instead.
+async function getAccessToken(account, fetchImpl = fetch, scope = SCOPE) {
   const res = await fetchImpl(TOKEN_URL, {
     method: 'POST',
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: signJwt(account) }),
+    body: new URLSearchParams({ grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: signJwt(account, undefined, scope) }),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.access_token) {
-    throw new Error(`Google sign-in for the sales sheet failed: ${body.error_description || body.error || res.status}`);
+    throw new Error(`Google sign-in failed: ${body.error_description || body.error || res.status}`);
   }
   return body.access_token;
 }

@@ -97,6 +97,8 @@ async function backfillNewSettings(db, seed, log) {
   await wigWeekOnce(db, seed, log);
   await ensureSetting(db, 'inventory_team', seed.hq && seed.hq.inventory_team, log);
   await ensureSetting(db, 'oos_needs_off', seed.hq && seed.hq.oos_needs_off, log);
+  // 3 Nov: Inventory page – who sees it (+ admin) and where its Drive sheets are.
+  await ensureSetting(db, 'inventory_board', seed.hq && seed.hq.inventory_board, log);
   await ensureSetting(db, 'hq_extra_moves', seed.hq && seed.hq.extra_moves, log);
   await addBranchPersonOnce(db, 'Ampang', { name: 'Anis', job: 'Intern' }, 'ampang_anis_v1', log);
   await projectStepsOnce(db, seed, log);

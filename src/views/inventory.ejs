@@ -1,0 +1,169 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'inventory' }) %>
+<%
+  const rm = function (n) { return n === null || n === undefined || isNaN(n) ? '–' : 'RM' + Math.round(n).toLocaleString('en-US'); };
+  const n0 = function (n) { return n === null || n === undefined || isNaN(n) ? '' : Math.round(n).toLocaleString('en-US'); };
+  const s = data ? data.summary : null;
+  const monthName = plan ? new Date(plan.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' }) : '';
+  const href = function (show, query) { const p = new URLSearchParams(); if (show && show !== 'all') p.set('show', show); if (query) p.set('q', query); const t = p.toString(); return '/inventory' + (t ? '?' + t : '') + '#today'; };
+  const payClass = { 'Paid': 'paid', 'Approved, to pay': 'open', 'Not marked paid': 'late', 'Waiting for approval': 'pending', 'Not approved': 'hold' };
+%>
+<main class="page oo-page inv-page">
+  <h1>Inventory – ordering &amp; payments</h1>
+  <p class="muted">For Alia (orders), Azwani (payments) and Dr Aisyah (approvals). <b>Read only</b> – nothing here places an order or pays anyone.
+    <% if (planFile) { %>Today’s list is <b><%= planFile.name %></b> (saved <%= planFile.when %>).<% } %></p>
+
+  <% if (ok === 'refreshed' && !error) { %><p class="alert alert-good">Checked Google Drive<%= fetchedAt ? ' – ' + fetchedAt : '' %>.</p><% } %>
+
+  <% if (error === 'not_configured') { %>
+    <section class="oo-card inv-setup">
+      <h2>Not connected to Google Drive yet</h2>
+      <% if (isAdmin) { %>
+        <p>The page reads Mr Eve’s newest daily plan and the Payment_Approvals sheet from the Inventory Agent Inputs folder. To switch it on:</p>
+        <ol>
+          <li>In Google Cloud, open the service account for Mr You (or the sales sheet’s <code>p4u-dashboard</code>) and turn on the <b>Google Drive API</b> for its project.</li>
+          <li>Share the <b>Inventory Agent Inputs</b> folder with the service account’s email – <b>Viewer</b>, untick Notify.</li>
+          <li>On Railway, 4DX service → Variables: add <code>INVENTORY_GOOGLE_SERVICE_ACCOUNT_JSON</code> and paste the whole key file’s text (skip this if you use the sales sheet’s key – it is used when this one is missing).</li>
+          <li>Railway restarts the app. Open this page again.</li>
+        </ol>
+        <% if (sourceStatus.keyError) { %><p class="alert alert-bad">The key couldn’t be read: <%= sourceStatus.keyError %></p><% } %>
+      <% } else { %>
+        <p>Dr Aisyah is setting up the link to Google Drive. The November payment plan below is already here.</p>
+      <% } %>
+    </section>
+  <% } else if (error) { %>
+    <section class="oo-card">
+      <p class="alert alert-bad">Couldn’t read Google Drive just now: <%= error %></p>
+      <form method="post" action="/inventory/refresh"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button secondary small">Try again</button></form>
+    </section>
+  <% } %>
+
+  <% if (data) { %>
+    <% const miss = [].concat(data.missing.plan.map(function (c) { return 'daily plan: ' + c; }), data.missing.payments.map(function (c) { return 'Payment_Approvals: ' + c; })); %>
+    <% if (miss.length) { %><p class="alert alert-info">Some columns weren’t found, so those boxes are empty (<%= miss.join(', ') %>). Check the sheet’s header row.</p><% } %>
+
+    <section class="oo-card inv-take" aria-label="Today in short">
+      <p>Today: <b><%= s.counts.order_now %></b> items to order now from open suppliers (about <b><%= rm(s.orderNowRm) %></b>), and <b><%= s.counts.transfer %></b> transfers to do first, which cost no cash.
+        <% if (s.next) { %>Next supplier payment: <b><%= s.next.supplier %> <%= rm(s.next.amount) %></b> on <b><%= s.next.payDate %></b>.<% } %>
+        <% if (s.late.lines) { %><span class="inv-warn"><%= s.late.lines %> approved payment<%= s.late.lines === 1 ? ' is' : 's are' %> past the pay date and not marked Paid.</span><% } %></p>
+    </section>
+
+    <section class="inv-tiles" aria-label="Today in numbers">
+      <a class="inv-tile" href="<%= href('transfer') %>"><span class="inv-lab">1 · Transfer first</span><span class="inv-big"><%= s.counts.transfer %></span><span class="muted small">lines to move from HQ or another outlet. No cash needed.</span></a>
+      <a class="inv-tile" href="<%= href('order_now') %>"><span class="inv-lab">2 · Order now</span><span class="inv-big"><%= rm(s.orderNowRm) %></span><span class="muted small"><%= s.counts.order_now %> lines · <%= s.orderSuppliers %> supplier<%= s.orderSuppliers === 1 ? '' : 's' %> open now.</span></a>
+      <a class="inv-tile" href="<%= href('check') %>"><span class="inv-lab">3 · Check terms first</span><span class="inv-big"><%= rm(s.checkRm) %></span><span class="muted small"><%= s.counts.check %> lines from other suppliers. Check the account with Azwani.</span></a>
+      <a class="inv-tile" href="<%= href('wait') %>"><span class="inv-lab">4 · Wait for payment</span><span class="inv-big"><%= rm(s.waitRm) %></span><span class="muted small"><%= s.counts.wait %> lines held until the supplier is paid. Offer a transfer or a substitute.</span></a>
+      <a class="inv-tile<%= s.late.lines ? ' is-warn' : '' %>" href="#approvals"><span class="inv-lab">Approved, not marked paid</span><span class="inv-big"><%= rm(s.late.rm) %></span><span class="muted small"><%= s.late.lines %> approved line<%= s.late.lines === 1 ? '' : 's' %> past the pay date. Azwani marks Paid in Payment_Approvals.</span></a>
+    </section>
+
+    <section class="oo-card" id="suppliers">
+      <h2>Can I order from this supplier?</h2>
+      <p class="muted small">A supplier waiting for payment shows <b>Open (paid)</b> once every line for it in Payment_Approvals is marked Paid. <%= monthName %> PO budget split from the <%= plan ? plan.agreed : '' %>.</p>
+      <div class="mo-scroll">
+        <table class="mo-t inv-t">
+          <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c"><%= monthName %> PO budget (RM)</th><th>Falls due</th></tr></thead>
+          <tbody>
+            <% data.suppliers.forEach(function (r) { %>
+              <tr><th scope="row"><%= r.supplier %></th><td><span class="inv-pill g-<%= r.gate %>"><%= r.label %></span></td><td><%= r.when %></td><td><%= r.terms %></td>
+                <td class="mo-c"><%= r.todayLines %></td><td class="mo-c"><%= n0(r.todayRm) %></td><td class="mo-c"><%= n0(r.poBudget) %></td><td><%= r.fallsDue %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted small">Total <%= monthName %> PO budget: <b><%= rm(s.poBudgetTotal) %></b>. Buy in this order: out-of-stock A items, A items at reorder point, then B items under 2 weeks. C items only when a customer asks, or by transfer.</p>
+    </section>
+
+    <section class="oo-card" id="today">
+      <h2>Today’s list</h2>
+      <nav class="rv-pills inv-filters" aria-label="Show">
+        <% Object.keys(views).forEach(function (k) { %>
+          <a href="<%= href(k, q) %>"<%- k === view ? ' aria-current="page"' : '' %>><%= views[k].label %> <span class="chip-count"><%= s.counts[k] %></span></a>
+        <% }) %>
+      </nav>
+      <form method="get" action="/inventory#today" class="inv-search" role="search">
+        <% if (view !== 'all') { %><input type="hidden" name="show" value="<%= view %>"><% } %>
+        <input type="search" name="q" value="<%= q %>" placeholder="Search item, outlet or supplier" aria-label="Search today’s list">
+        <button class="button secondary small">Search</button>
+        <% if (q) { %><a class="small" href="<%= href(view, '') %>">Clear</a><% } %>
+      </form>
+      <% if (!rows.length) { %>
+        <p class="muted">Nothing here<%= q ? ' for “' + q + '”' : '' %>.</p>
+      <% } else { %>
+      <div class="mo-scroll">
+        <table class="mo-t inv-t">
+          <thead><tr><th>Do</th><th>Item</th><th>Short at</th><th>Transfer from</th><th>Supplier</th><th>Supplier status</th><th class="mo-c">Order qty</th><th class="mo-c">Approx RM</th></tr></thead>
+          <tbody>
+            <% rows.forEach(function (r) { %>
+              <tr class="sec-<%= r.section %>"><td class="inv-do"><%= r.action %></td><th scope="row"><%= r.item %></th><td><%= r.shortAt %></td><td><%= r.transferFrom %></td><td><%= r.supplier %></td>
+                <td><% if (r.gate !== 'none') { %><span class="inv-pill g-<%= r.gate %>" title="<%= r.statusText %>"><%= r.gateLabel %></span><% } %></td>
+                <td class="mo-c"><%= r.qty === '0' ? '' : r.qty %></td><td class="mo-c"><%= r.rm ? n0(r.rm) : '' %></td></tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+      <p class="muted small">Outlets: WM = Wangsa Maju, JH = Jenderam Hilir (Dengkil), BR = Rinching, plus Bangi and Ampang. HQ Warehouse often holds stock, so transfer before ordering. Negative stock means the count needs fixing first.</p>
+    </section>
+  <% } %>
+
+  <section class="oo-card" id="payments">
+    <h2><%= monthName || 'Monthly' %> payment plan</h2>
+    <% if (!plan) { %>
+      <p class="muted">No payment plan in the app yet.</p>
+    <% } else { %>
+      <% if (!plan.isCurrent) { %><p class="alert alert-info">There is no payment plan for this month in the app yet – showing <%= monthName %>’s.</p><% } %>
+      <p class="muted small">Plan from the <%= plan.agreed %>. The bank must stay above <b><%= rm(cash.floor) %></b>. <%= plan.cutFirst %>
+        <% if (cash.lowest) { %>Tightest week: <b><%= cash.lowest.week %></b>, <%= rm(cash.lowest.cashEnd) %> left.<% } %></p>
+      <div class="inv-grid2">
+        <figure class="inv-fig">
+          <figcaption class="inv-legend"><span><i class="inv-sw sw-bar"></i>Supplier payments</span><span><i class="inv-sw sw-line"></i>Cash at week end</span><span><i class="inv-sw sw-floor"></i><%= rm(cash.floor) %> minimum</span></figcaption>
+          <%- chart %>
+        </figure>
+        <div class="mo-scroll">
+          <table class="mo-t inv-t">
+            <thead><tr><th>Week</th><th class="mo-c">Money in (RM)</th><th class="mo-c">Suppliers (RM)</th><th>Paying</th><th class="mo-c">Cash at end (RM)</th></tr></thead>
+            <tbody>
+              <% cash.weeks.forEach(function (w) { %>
+                <tr><th scope="row"><%= w.week %></th><td class="mo-c"><%= n0(w.moneyIn) %><% if (w.zakatIn) { %><br><small class="muted">incl. zakat <%= n0(w.zakatIn) %></small><% } %></td>
+                  <td class="mo-c"><%= n0(w.supplierOut) %></td><td class="small"><%= w.paying %></td>
+                  <td class="mo-c<%= w.short ? ' inv-short' : '' %>"><%= n0(w.cashEnd) %></td></tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% } %>
+  </section>
+
+  <% if (data) { %>
+  <section class="oo-card" id="approvals">
+    <h2>Payment approvals</h2>
+    <p class="muted small">From the Payment_Approvals sheet. Dr Aisyah fills Approved; Azwani fills Paid and the date, then writes PAID and the PV number in the supplier’s SOA file. A message in Telegram is not an approval.</p>
+    <% if (!data.pay.length) { %><p class="muted">No payment lines in the sheet yet.</p><% } else { %>
+    <div class="mo-scroll">
+      <table class="mo-t inv-t">
+        <thead><tr><th>Pay date</th><th>Supplier</th><th class="mo-c">Proposed (RM)</th><th>Approved?</th><th class="mo-c">Approved (RM)</th><th>Status</th><th>Notes</th></tr></thead>
+        <tbody>
+          <% data.pay.forEach(function (p) { %>
+            <tr><td><%= p.payDate %></td><th scope="row"><%= p.supplier %></th><td class="mo-c"><%= n0(p.proposed) %></td><td><%= p.approved %></td><td class="mo-c"><%= n0(p.approvedAmount) %></td>
+              <td><span class="inv-pill g-<%= payClass[p.state] || 'none' %>"><%= p.state %></span><% if (p.paid && p.datePaid) { %><br><small class="muted"><%= p.datePaid %></small><% } %></td><td class="small"><%= p.notes %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+    <p class="muted small">Approved and still to pay: <b><%= rm(s.approvedUnpaidRm) %></b>. Waiting for Dr Aisyah’s approval: <b><%= rm(s.pendingRm) %></b>.</p>
+  </section>
+  <% } %>
+
+  <% if (data || (error && error !== 'not_configured')) { %>
+  <form method="post" action="/inventory/refresh" class="inv-refresh">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <span class="muted small"><%= fetchedAt ? 'Read from Google Drive ' + fetchedAt + '. ' : '' %>Updates by itself every 5 minutes.</span>
+    <button class="button secondary small">Check Drive now</button>
+  </form>
+  <% } %>
+</main>
+</body>
+</html>

@@ -18,7 +18,7 @@ cd pharmacy4u-4dx
 npm install                 # first time only
 cp .env.example .env        # first time only
 open -e .env                # set ADMIN_PASSWORD (8+ characters), save, close
-npm test                    # should end with: pass 191, fail 0
+npm test                    # should end with: fail 0
 npm start
 ```
 
@@ -108,6 +108,26 @@ Set it up once (free, about 10 minutes):
    last sync or what went wrong.
 
 The key is never committed (`.gitignore`), and the app only asks for read-only access.
+
+## Inventory page (ordering & payments)
+
+Menu **Inventory → Ordering & payments** (/inventory) – for Dr Aisyah (admin), Alia and Azwani
+(more people: app_settings `inventory_board.viewers`). Read only. It reads Mr Eve's newest
+"Mr Eve Daily Plan …" sheet and the Payment_Approvals sheet from the **Inventory Agent Inputs**
+folder in Google Drive; the month's cash plan and PO budget are in `src/inventory/plans.js`.
+
+Set it up once:
+
+1. In Google Cloud, use the service account for Mr You (or the sales sheet's `p4u-dashboard`) and
+   enable the **Google Drive API** for its project.
+2. Share the **Inventory Agent Inputs** folder with the service account's email – **Viewer**.
+3. On Railway (4DX service → Variables) add `INVENTORY_GOOGLE_SERVICE_ACCOUNT_JSON` with the whole
+   key file's text. If it's missing, the sales sheet's `GOOGLE_SERVICE_ACCOUNT_JSON` is used.
+   On your Mac: `INVENTORY_GOOGLE_SERVICE_ACCOUNT_FILE=…json` in `.env`.
+4. The app restarts; the log says "Inventory page Drive link: on (…)".
+
+Each month needs its plan in `src/inventory/plans.js` (December before 1 Dec); until then the page
+shows the last month's plan with a note.
 
 ## Deploy to Railway
 
