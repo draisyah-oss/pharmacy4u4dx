@@ -411,8 +411,8 @@ test('3 Nov: front page – a branch sees its own WIG / lead targets, and one ta
   assert.deepEqual(tz.forDate('2026-11-03'), tz.forDate('2026-11-03'));
   const hz = await pinLogin('hazera', '1111');
   const html = (await hz.get('/')).html;
-  assert.match(html, /WM – \w+ targets/);
-  assert.match(html, /🏁 Walk-in sales/);
+  assert.match(html, /WM – \w+ lead measures/);
+  assert.doesNotMatch(html, /🏁 Walk-in sales/, 'the WIG is not repeated – leads only');
   assert.match(html, /hl-tazkirah/);
   assert.match(html, /Tip hari ini/);
   assert.ok(tz.TIPS.length >= 30 && tz.TIPS.every((t) => t.title && t.text));

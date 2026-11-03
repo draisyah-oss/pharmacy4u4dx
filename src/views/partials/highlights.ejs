@@ -64,8 +64,8 @@
 
 <% if (H.targets && H.targets.rows.length) { const T = H.targets; %>
 <section class="mh-card" aria-labelledby="hl-targets">
-  <h2 id="hl-targets">🎯 <%= T.code %> – <%= T.monthName %> targets</h2>
-  <p class="muted small">Our WIG and lead measures this month. Tap one to see the days behind it.</p>
+  <h2 id="hl-targets">🎯 <%= T.code %> – <%= T.monthName %> lead measures</h2>
+  <p class="muted small">The few things we do every day that move our sales. Tap one to see the days behind it.</p>
   <ul class="hl-targets">
     <% T.rows.forEach(function (r) { %>
       <li class="<%= r.wig ? 'is-wig' : '' %>"><a href="<%= r.href %>">

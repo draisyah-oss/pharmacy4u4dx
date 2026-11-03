@@ -153,7 +153,7 @@ async function branchTargets(db, { branchCode, today, trackerStart }) {
   const month = calc.monthOf(today);
   const from = [calc.monthStart(month), trackerStart].sort().pop();
   const lastDay = calc.addDays(today, -1);
-  const measures = (await loadMeasures(db, branch.id)).filter((m) => m.kind === 'WIG' || isTopMeasure(m, branch) || m.kind === 'Lead');
+  const measures = (await loadMeasures(db, branch.id)).filter((m) => m.kind !== 'WIG' && (isTopMeasure(m, branch) || m.kind === 'Lead')); // 3 Nov: the WIG is already in the hero – leads only
   const entries = calc.indexEntries((await db.query('SELECT entry_date, field_key, value FROM daily_entries WHERE branch_id = $1 AND entry_date BETWEEN $2 AND $3',
     [branch.id, from, today])).rows);
   const per = { day: 'a day', week: 'a week', month: 'a month' };
