@@ -557,4 +557,15 @@ test('3 Nov: items are picked from the Dynamod product list – search, report w
   const u = await products.upsertProducts(db, parsed.rows);
   assert.deepEqual(u, { added: 1, updated: 1, total: 2 });
   assert.equal((await products.search(db, 'brand new item')).length, 1);
+  // 3 Nov (CEO): Cost / Price 1 / Price 2 come in with the export – shown only with prices: true.
+  const wb2 = new ExcelJS.Workbook(); const ws2 = wb2.addWorksheet('Sheet');
+  ws2.addRow(['Active', 'Stock ID', 'Barcode', 'Description 1', 'UOM ID', 'Cost', 'Price 1', 'Price 2']);
+  ws2.addRow(['Y', '9999999', '9999999-1', 'BRAND NEW ITEM 1S', 'BOX', 10.5, 15, 14]);
+  assert.deepEqual(await products.upsertProducts(db, (await products.parseXlsx(Buffer.from(await wb2.xlsx.writeBuffer()))).rows), { added: 0, updated: 1, total: 1 });
+  const [priced] = await products.search(db, 'brand new item', { prices: true });
+  assert.equal(Number(priced.cost), 10.5); assert.equal(Number(priced.price1), 15); assert.equal(Number(priced.price2), 14);
+  assert.equal((await products.search(db, 'brand new item'))[0].cost, undefined, 'the branch picker never gets cost');
+  // A later export without the price columns keeps the prices.
+  await products.upsertProducts(db, [{ stock_id: '9999999', barcode: '9999999-1', description: 'BRAND NEW ITEM 1S', uom: 'BOX' }]);
+  assert.equal(Number((await products.search(db, 'brand new item', { prices: true }))[0].price1), 15);
 });

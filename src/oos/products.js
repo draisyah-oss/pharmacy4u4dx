@@ -13,19 +13,25 @@ async function upsertProducts(db, rows, { deactivateMissing = false } = {}) {
   let added = 0; let updated = 0;
   const seen = new Set();
   await db.transaction(async (tx) => {
-    const existing = new Map((await tx.query('SELECT id, barcode, description, uom, active FROM products')).rows.map((r) => [r.barcode, r]));
+    const existing = new Map((await tx.query('SELECT id, barcode, description, uom, active, cost, price1, price2 FROM products')).rows.map((r) => [r.barcode, r]));
+    // 3 Nov: Cost / Price 1 / Price 2 from the Dynamod export (blank = keep what we have).
+    const money = (v) => { if (v === undefined || v === null || String(v).trim() === '') return null; const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return Number.isFinite(n) ? n : null; };
+    const same = (a, b) => (a === null || a === undefined ? null : Number(a)) === b;
     for (const r of rows) {
       if (!r.barcode || !r.description || seen.has(r.barcode)) continue;
       if (mentionsSalary(r.description, r.generic || '')) continue;
       seen.add(r.barcode);
       const active = r.active !== 'N';
       const ex = existing.get(r.barcode);
-      const vals = [r.barcode, r.stock_id, r.description, r.uom || null, r.generic || null, r.brand || null, r.group_desc || null, r.category || null, active, searchText(r)];
+      const cost = money(r.cost); const p1 = money(r.price1); const p2 = money(r.price2);
+      const vals = [r.barcode, r.stock_id, r.description, r.uom || null, r.generic || null, r.brand || null, r.group_desc || null, r.category || null, active, searchText(r), cost, p1, p2];
       if (!ex) {
-        await tx.query(`INSERT INTO products (barcode, stock_id, description, uom, generic, brand, group_desc, category, active, search) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, vals);
+        await tx.query(`INSERT INTO products (barcode, stock_id, description, uom, generic, brand, group_desc, category, active, search, cost, price1, price2) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, vals);
         added++;
-      } else if (ex.description !== r.description || ex.uom !== (r.uom || null) || ex.active !== active) {
-        await tx.query(`UPDATE products SET stock_id = $2, description = $3, uom = $4, generic = $5, brand = $6, group_desc = $7, category = $8, active = $9, search = $10, updated_at = now() WHERE barcode = $1`, vals);
+      } else if (ex.description !== r.description || ex.uom !== (r.uom || null) || ex.active !== active
+        || (cost !== null && !same(ex.cost, cost)) || (p1 !== null && !same(ex.price1, p1)) || (p2 !== null && !same(ex.price2, p2))) {
+        await tx.query(`UPDATE products SET stock_id = $2, description = $3, uom = $4, generic = $5, brand = $6, group_desc = $7, category = $8, active = $9, search = $10,
+          cost = COALESCE($11, cost), price1 = COALESCE($12, price1), price2 = COALESCE($13, price2), updated_at = now() WHERE barcode = $1`, vals);
         updated++;
       }
     }
@@ -49,13 +55,14 @@ async function loadBundledOnce(db, log = () => {}) {
 
 // Every word must appear (description, generic, brand, stock ID or barcode); best first:
 // description starting with the first word, then shorter descriptions.
-async function search(db, q, { limit = 20 } = {}) {
+// prices: true adds cost / Price 1 / Price 2 – only for the Product list page (inventory team + admin).
+async function search(db, q, { limit = 20, prices = false } = {}) {
   const words = String(q || '').toLowerCase().replace(/[%_\\]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 6);
   if (!words.length || words.join('').length < 2) return [];
   const conds = words.map((_, i) => `search LIKE $${i + 1}`);
   const args = words.map((w) => `%${w}%`);
   const { rows } = await db.query(
-    `SELECT id, stock_id, barcode, description, uom, generic, brand FROM products
+    `SELECT id, stock_id, barcode, description, uom, generic, brand${prices ? ', cost, price1, price2' : ''} FROM products
      WHERE active AND ${conds.join(' AND ')}
      ORDER BY (lower(description) LIKE $${words.length + 1}) DESC, length(description), description LIMIT ${Number(limit) || 20}`,
     [...args, `${words[0]}%`]);
@@ -103,7 +110,8 @@ async function parseXlsx(buffer) {
     if (n === 1) return;
     rows.push({ active: val(row, 'Active') || 'Y', stock_id: val(row, 'Stock ID'), barcode: val(row, 'Barcode'), description: val(row, 'Description 1'),
       uom: val(row, 'UOM ID'), generic: val(row, 'Description 2'), brand: val(row, 'Brand Description') || val(row, 'Brand ID'),
-      group_desc: val(row, 'Group Description'), category: val(row, 'Category Description') || val(row, 'Category ID') });
+      group_desc: val(row, 'Group Description'), category: val(row, 'Category Description') || val(row, 'Category ID'),
+      cost: val(row, 'Cost'), price1: val(row, 'Price 1'), price2: val(row, 'Price 2') });
   });
   return { rows };
 }

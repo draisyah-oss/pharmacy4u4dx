@@ -414,7 +414,7 @@ test('3 Nov: front page – a branch sees its own WIG / lead targets, and one ta
   assert.match(html, /WM – \w+ lead measures/);
   assert.doesNotMatch(html, /🏁 Walk-in sales/, 'the WIG is not repeated – leads only');
   assert.match(html, /hl-tazkirah/);
-  assert.match(html, /Tip hari ini/);
+  assert.match(html, /Tip of the day/);
   assert.ok(tz.TIPS.length >= 30 && tz.TIPS.every((t) => t.title && t.text));
   assert.ok(tz.EFFECTIVE.length >= 30 && tz.EFFECTIVE.every((t) => t.title && t.text));
   // Alternates: one day a burnout / meaning tip, the next an effectiveness tip.

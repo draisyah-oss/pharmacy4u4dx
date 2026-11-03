@@ -8,17 +8,23 @@
   <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
   <section class="oo-card">
     <h2>Find a product</h2>
+    <p class="muted small">Cost and prices are for the inventory team and admin only – branches never see them. Margin = (Price 1 − cost) ÷ Price 1.
+      <% if (!priced) { %><b>No prices yet – upload the latest Dynamod masterlist below once to add cost, Price 1 and Price 2.</b><% } %></p>
     <form method="get" class="pp-find"><input type="search" name="q" value="<%= q %>" placeholder="name, generic, stock ID or barcode" aria-label="Search"><button class="button secondary">Search</button></form>
     <% if (q) { %>
       <% if (!found.length) { %><p class="muted">Nothing found.</p><% } else { %>
-      <div class="mo-scroll"><table class="mo-t"><thead><tr><th>Description</th><th>Stock ID</th><th>UOM</th><th>Barcode</th><th>Generic</th></tr></thead>
-        <tbody><% found.forEach(function (p) { %><tr><th><%= p.description %></th><td><%= p.stock_id %></td><td><%= p.uom %></td><td><%= p.barcode %></td><td><%= p.generic %></td></tr><% }) %></tbody></table></div>
+      <div class="mo-scroll"><table class="mo-t"><thead><tr><th>Description</th><th>Stock ID</th><th>UOM</th><th class="num">Cost (RM)</th><th class="num">Selling – Price 1 (RM)</th><th class="num">Price 2 (RM)</th><th class="num">Margin</th><th>Barcode</th><th>Generic</th></tr></thead>
+        <tbody><% const rm = function (v, d) { return v === null || v === undefined ? '–' : Number(v).toFixed(d); };
+          found.forEach(function (p) { const c = p.cost === null ? null : Number(p.cost); const s1 = p.price1 === null ? null : Number(p.price1);
+            const m = c !== null && s1 ? Math.round((s1 - c) / s1 * 100) : null; %><tr><th><%= p.description %></th><td><%= p.stock_id %></td><td><%= p.uom %></td>
+          <td class="num"><%= rm(p.cost, 2) %></td><td class="num"><b><%= rm(p.price1, 2) %></b></td><td class="num"><%= rm(p.price2, 2) %></td>
+          <td class="num<%= m !== null && m < 10 ? ' pp-low' : '' %>"><%= m === null ? '–' : m + '%' %></td><td><%= p.barcode %></td><td><%= p.generic %></td></tr><% }) %></tbody></table></div>
       <% } %>
     <% } %>
   </section>
   <section class="oo-card">
     <h2>Update from a new Dynamod export</h2>
-    <p class="muted small">Export the stock masterlist from Dynamod as Excel (.xlsx, same columns: Active, Stock ID, Barcode, Description 1, UOM ID …) and upload it. Products are matched by barcode; new ones are added, changed names updated.</p>
+    <p class="muted small">Export the stock masterlist from Dynamod as Excel (.xlsx, same columns: Active, Stock ID, Barcode, Description 1, UOM ID, Cost, Price 1, Price 2 …) and upload it. Products are matched by barcode; new ones are added, changed names updated.</p>
     <form method="post" action="/oos/products" class="oo-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="file"><input type="hidden" name="name">
       <label class="oo-label">Masterlist file<input type="file" accept=".xlsx" data-xlsx-upload required></label>

@@ -160,8 +160,9 @@ function oosRoutes(db, { now, trackerStart }) {
       const info = (await db.query("SELECT key, value FROM app_settings WHERE key IN ('products_20261102_v1', 'products_last_upload')")).rows;
       const last = info.find((r) => r.key === 'products_last_upload') || info.find((r) => r.key === 'products_20261102_v1');
       const stats = (await db.query('SELECT count(*) FILTER (WHERE active)::int AS active, count(*)::int AS total FROM products')).rows[0];
-      const found = req.query.q ? await products.search(db, req.query.q, { limit: 50 }) : [];
-      res.render('oos-products', { title: 'Product list', stats, last: last ? JSON.parse(last.value) : null, q: req.query.q || '', found,
+      const found = req.query.q ? await products.search(db, req.query.q, { limit: 50, prices: true }) : [];
+      const priced = (await db.query('SELECT count(*)::int AS n FROM products WHERE active AND price1 IS NOT NULL')).rows[0].n;
+      res.render('oos-products', { title: 'Product list', stats, priced, last: last ? JSON.parse(last.value) : null, q: req.query.q || '', found,
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'oosproducts' });
     } catch (err) { next(err); }
   });
