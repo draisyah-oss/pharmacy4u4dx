@@ -114,6 +114,9 @@ test('the four sections, worked out from the sheets', async () => {
   }
   assert.match(html, /data-fold="close">Fold all<\/button>/);
   assert.match(html, /<script src="\/js\/inventory\.js\?v=1" defer><\/script>/);
+  // Excel-style filters on the supplier table, today's list and approvals (public/js/table-filter.js)
+  assert.equal((html.match(/<table class="mo-t inv-t" data-xfilter/g) || []).length, 3);
+  assert.match(html, /<script src="\/js\/table-filter\.js\?v=1" defer><\/script>/);
   // 4 payment plan
   assert.match(html, /November payment plan/);
   assert.match(html, /<svg class="inv-chart"/);

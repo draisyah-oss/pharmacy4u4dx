@@ -14,7 +14,7 @@
   <p class="muted">For Alia (orders), Azwani (payments) and Dr Aisyah (approvals). <b>Read only</b> – nothing here places an order or pays anyone.
     <% if (planFile) { %>Today’s list is <b><%= planFile.name %></b> (saved <%= planFile.when %>).<% } %></p>
 
-  <p class="inv-foldbar" data-fold-bar hidden><span class="muted small">Tap a heading to fold it away.</span> <button type="button" class="link-button small" data-fold="close">Fold all</button> · <button type="button" class="link-button small" data-fold="open">Open all</button></p>
+  <p class="inv-foldbar" data-fold-bar hidden><span class="muted small">Tap a heading to fold it away · ▾ on a column to filter or sort it, like Excel.</span> <button type="button" class="link-button small" data-fold="close">Fold all</button> · <button type="button" class="link-button small" data-fold="open">Open all</button></p>
   <% if (ok === 'refreshed' && !error) { %><p class="alert alert-good">Checked Google Drive<%= fetchedAt ? ' – ' + fetchedAt : '' %>.</p><% } %>
 
   <% if (error === 'not_configured') { %>
@@ -65,7 +65,7 @@
       <summary><h2>Can I order from this supplier?</h2></summary>
       <p class="muted small">A supplier waiting for payment shows <b>Open (paid)</b> once every line for it in Payment_Approvals is marked Paid. <%= monthName %> PO budget<%= plan && plan.budgetUpdated ? ' as updated ' + plan.budgetUpdated : ' from the ' + (plan ? plan.agreed : '') %>.</p>
       <div class="mo-scroll">
-        <table class="mo-t inv-t">
+        <table class="mo-t inv-t" data-xfilter aria-label="Supplier ordering status">
           <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c"><%= monthName %> PO budget (RM)</th><th>Falls due</th></tr></thead>
           <tbody>
             <% data.suppliers.forEach(function (r) { %>
@@ -95,7 +95,7 @@
         <p class="muted">Nothing here<%= q ? ' for “' + q + '”' : '' %>.</p>
       <% } else { %>
       <div class="mo-scroll">
-        <table class="mo-t inv-t">
+        <table class="mo-t inv-t" data-xfilter aria-label="Today’s list">
           <thead><tr><th>Do</th><th>Item</th><th>Short at</th><th>Transfer from</th><th>Supplier</th><th>Supplier status</th><th class="mo-c">Order qty</th><th class="mo-c">Approx RM</th></tr></thead>
           <tbody>
             <% rows.forEach(function (r) { %>
@@ -146,7 +146,7 @@
     <p class="muted small">From the Payment_Approvals sheet. Dr Aisyah fills Approved; Azwani fills Paid and the date, then writes PAID and the PV number in the supplier’s SOA file. A message in Telegram is not an approval.</p>
     <% if (!data.pay.length) { %><p class="muted">No payment lines in the sheet yet.</p><% } else { %>
     <div class="mo-scroll">
-      <table class="mo-t inv-t">
+      <table class="mo-t inv-t" data-xfilter aria-label="Payment approvals">
         <thead><tr><th>Pay date</th><th>Supplier</th><th class="mo-c">Proposed (RM)</th><th>Approved?</th><th class="mo-c">Approved (RM)</th><th>Status</th><th>Notes</th></tr></thead>
         <tbody>
           <% data.pay.forEach(function (p) { %>
@@ -170,5 +170,6 @@
   <% } %>
 </main>
 <script src="/js/inventory.js?v=1" defer></script>
+<script src="/js/table-filter.js?v=1" defer></script>
 </body>
 </html>
