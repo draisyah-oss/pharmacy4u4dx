@@ -91,8 +91,20 @@ test('manager: Needs you, fills in the branch review, sends it; can’t open ano
   const r = await mgr.post('/review/branch', { branch: 'WM', month: '2026-10', can_hit: 'At risk', plan: 'Two PWP offers a day each', stop: 'Late closing log', start: 'Min/max check Monday', keep: 'Google review ask', needs: 'Stock for Shine', [`imp[${ref}]`]: 'Ask every customer about 3+ items', 'imp[oos]': 'Report before it runs out', submit: '1' });
   assert.equal(r.status, 302);
   assert.match(r.location, /ok=submitted/);
+  // 3 Nov: the review is also that Monday's weekly update – needs → an HQ action for w/c 26 Oct
+  const wm = (await db.query("SELECT id FROM branches WHERE code = 'WM'")).rows[0].id;
+  let acts = (await db.query("SELECT id, issue FROM hq_actions WHERE branch_id = $1 AND week_start = '2026-10-26'", [wm])).rows;
+  assert.deepEqual(acts.map((a) => a.issue), ['Stock for Shine']);
+  await mgr.post('/review/branch', { branch: 'WM', month: '2026-10', can_hit: 'At risk', plan: 'Two PWP offers a day each', needs: 'Stock for Shine and Loyuric', opening_stock_value: '120000', weekly_cogs: '30000', submit: '1' });
+  acts = (await db.query("SELECT id, issue FROM hq_actions WHERE branch_id = $1 AND week_start = '2026-10-26'", [wm])).rows;
+  assert.deepEqual(acts.map((a) => a.issue), ['Stock for Shine and Loyuric'], 'kept in step, not duplicated');
+  const ci = (await db.query("SELECT opening_stock_value, weekly_cogs, issue_needing_hq_help FROM weekly_checkins WHERE branch_id = $1 AND week_start = '2026-10-26'", [wm])).rows[0];
+  assert.equal(Number(ci.opening_stock_value), 120000); assert.equal(Number(ci.weekly_cogs), 30000);
+  assert.equal(ci.issue_needing_hq_help, 'Stock for Shine and Loyuric');
   page = await mgr.get('/review/branch?month=2026-10');
   assert.match(page.html, /Ask every customer about 3\+ items/);
+  assert.match(page.html, /Last week’s numbers/);
+  assert.match(page.html, /name="opening_stock_value" value="120000"/);
   assert.match(page.html, /Report before it runs out/);
   assert.match(page.html, /value="At risk" checked/);
   assert.doesNotMatch(page.html, /Monthly review – October<\/b>|Monthly review – October</, 'Needs you line gone once sent');
@@ -119,6 +131,8 @@ test('HQ review: each person their own measures; HQ staff can’t write for some
   assert.equal(ok.status, 302);
   const no = await a.post('/review/hq', { month: '2026-10', person: String(haninId), focus: 'x' });
   assert.equal(no.status, 403);
+  const f = (await db.query("SELECT focus, status FROM hq_focus WHERE week_start = '2026-11-02' AND person_id = $1", [aliaId])).rows;
+  assert.deepEqual(f, [{ focus: 'Payment plan with Azwani by 15 Nov', status: 'proposed' }], 'also this Monday’s HQ WIG focus');
   const c = await a.get('/review/conclusion');
   assert.match(c.html, /Payment plan with Azwani by 15 Nov/);
 });

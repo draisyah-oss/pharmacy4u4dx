@@ -348,6 +348,7 @@ async function loadSeed(db, seed, { adminPassword } = {}) {
       project_steps_v1: new Date().toISOString(),
       bangi_2nov_v1: new Date().toISOString(),
       tally_all_v1: new Date().toISOString(),
+      br_nov3_v1: new Date().toISOString(),
       inventory_team: seed.hq && seed.hq.inventory_team ? JSON.stringify(seed.hq.inventory_team) : null,
       oos_needs_off: seed.hq && seed.hq.oos_needs_off ? JSON.stringify(seed.hq.oos_needs_off) : null,
       hq_extra_moves: seed.hq && seed.hq.extra_moves ? JSON.stringify(seed.hq.extra_moves) : null,

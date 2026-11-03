@@ -79,7 +79,9 @@ function reviewRoutes(db, { now, trackerStart }) {
       [`${m.next.name} target`, m.next.target === null ? '' : fmt.money(m.next.target), 'a day', m.next.perDay === null ? '' : fmt.money(m.next.perDay)],
       ['Can we hit it?', vals.can_hit || ''], ['Plan', vals.plan || ''], ['Stop', vals.stop || ''], ['Start', vals.start || ''], ['Keep', vals.keep || ''], ['Need from HQ', vals.needs || ''],
     ]);
-    res.render('review-branch', {
+    const linked = await rv.loadLinkedCheckin(db, ctx.branch, b.month);
+    linked.editable = ctx.canEdit && !require('../weekly/access').editDenied(req.user, ctx.branch, linked.week, b.today);
+    res.render('review-branch', { linked,
       title: `${ctx.branch.code} monthly review`, ...b, ...ctx, m, saved, vals, errors, ok: ok || req.query.ok || null,
       goals, sheet, fmt, statusWord: rv.STATUS_WORD, navActive: 'review',
     });
@@ -99,6 +101,9 @@ function reviewRoutes(db, { now, trackerStart }) {
       const refs = [...m.rows, ...m.zakat].map((r) => r.ref).concat(['oos']);
       const r = await rv.saveReview(db, req.user, { scope: 'branch', branchId: ctx.branch.id, month: b.month, refs, body: req.body, now });
       if (r.errors) return branchPage(req, res, { errors: r.errors, typed: req.body });
+      // 3 Nov: the same page is that Monday's weekly update – last week's numbers + needs from HQ.
+      const link = await rv.linkBranchWeekly(db, req.user, { branch: ctx.branch, month: b.month, body: req.body, today: b.today });
+      if (link.errors) return branchPage(req, res, { errors: link.errors, typed: req.body });
       res.redirect(`/review/branch?branch=${encodeURIComponent(ctx.branch.code)}&${monthQs(b)}&ok=${r.submitted ? 'submitted' : 'saved'}`);
     } catch (err) { next(err); }
   });
@@ -139,6 +144,7 @@ function reviewRoutes(db, { now, trackerStart }) {
       if (!g) return message(res, 404, 'That person has no HQ measures.');
       const r = await rv.saveReview(db, u, { scope: 'hq', personId, month: b.month, refs: g.rows.map((x) => x.ref), body: req.body, now });
       if (r.errors) return hqPage(req, res, { errors: { [personId]: r.errors }, typed: { [personId]: req.body } });
+      await rv.linkHqFocus(db, u, { personId, month: b.month }); // 3 Nov: also that Monday's HQ WIG focus
       res.redirect(`/review/hq?${monthQs(b)}&ok=${r.submitted ? 'submitted' : 'saved'}#p${personId}`);
     } catch (err) { next(err); }
   });

@@ -43,11 +43,16 @@ async function forHqPerson(db, user, today, add) {
   if (late.length) add('late', late.length, 'Branch actions overdue', late.slice(0, 2).map((a) => `${a.code || 'HQ'} – ${a.issue}`).join(' · '), '/hq/today');
   if (due.length) add('today', due.length, 'Branch actions due today', due.slice(0, 2).map((a) => `${a.code || 'HQ'} – ${a.issue}`).join(' · '), '/hq/today');
   if (rest) add('todo', rest, 'Branch actions open', 'agreed at the Monday meeting', '/hq/today');
-  if (isWeekday(today)) {
-    const left = await one(db, `SELECT count(*) AS n FROM hq_daily_tasks t
-      WHERE t.person_id = $1 AND t.active AND NOT EXISTS (SELECT 1 FROM hq_daily_ticks k WHERE k.task_id = t.id AND k.entry_date = $2)`, [pid, today]);
-    if (left) add('todo', left, 'Daily tasks to tick', 'by 11 am', '/hq/today');
-  }
+  // 3 Nov: weekly check-in (one tick per item per week, on its Monday) – due Friday; last week's
+  // still open on Monday / Tuesday shows as late.
+  const week = calc.weekStart(today);
+  const left = async (w) => one(db, `SELECT count(*) AS n FROM hq_daily_tasks t
+    WHERE t.person_id = $1 AND t.active AND NOT EXISTS (SELECT 1 FROM hq_daily_ticks k WHERE k.task_id = t.id AND k.entry_date = $2)`, [pid, w]);
+  const prevWeek = calc.addDays(week, -7);
+  const lastLeft = dow(today) >= 1 && dow(today) <= 2 && prevWeek >= '2026-11-02' ? await left(prevWeek) : 0;
+  if (lastLeft) add('late', lastLeft, 'Last week’s check-in not done', 'tick it now', `/hq/today?week=${prevWeek}`);
+  const n = await left(week);
+  if (n) add(dow(today) === 5 ? 'today' : dow(today) === 6 || dow(today) === 0 ? 'late' : 'todo', n, 'Weekly check-in', 'tick by Friday', '/hq/today');
   // Wiki: pages waiting for the approver; the owner's pages past their date.
   const approver = (await db.query(`SELECT p.id FROM people p JOIN app_settings s ON s.key = 'wiki_approver'
     WHERE p.branch_id IS NULL AND p.active AND to_jsonb(p.name)::text = s.value`)).rows[0];

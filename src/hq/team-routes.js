@@ -32,22 +32,28 @@ function hqTeamRoutes(db, { now, trackerStart }) {
       const withTasks = (await db.query('SELECT DISTINCT person_id FROM hq_daily_tasks WHERE active')).rows.map((r) => r.person_id);
       person = people.find((p) => withTasks.includes(p.id)) || people[0] || null;
     }
-    let date = req.query.date || req.body?.date || today;
-    if (!isRealDate(date) || date > today) date = today;
-    return { user, today, start, people, person, date };
+    // 3 Nov: a weekly check-in – ?week=YYYY-MM-DD (a Monday); an old ?date= link opens its week.
+    const thisWeek = calc.weekStart(today);
+    let week = req.query.week || req.body?.week || req.query.date || req.body?.date || thisWeek;
+    if (!isRealDate(week)) week = thisWeek;
+    week = calc.weekStart(week);
+    if (week > thisWeek) week = thisWeek;
+    if (week < calc.weekStart(start)) week = calc.weekStart(start);
+    return { user, today, start, people, person, week, date: week };
   }
 
   // ─────────────── My day / HQ day ───────────────
 
   async function renderDay(req, res, ctx) {
-    const page = await team.loadDayPage(db, { person: ctx.person, date: ctx.date, today: ctx.today });
-    const focus = await wig.loadFocus(db, calc.weekStart(ctx.date), ctx.person.id);
+    const page = await team.loadWeekPage(db, { person: ctx.person, week: ctx.week });
+    const focus = await wig.loadFocus(db, ctx.week, ctx.person.id);
     const actions = (await wig.openActionsFor(db, ctx.person.id)).map((a) => ({ ...a, canClose: wig.canCloseAction(req.user, a) }));
+    const thisWeek = calc.weekStart(ctx.today);
     res.render('hq-today', {
-      title: ctx.person.id === req.user.person_id ? 'My day' : `${ctx.person.name} – daily tasks`, ...ctx, ...page, fmt, focus, actions,
-      monthGoals: await require('../review/data').currentGoals(db, ctx.today),
-      strip: dateStrip(ctx.today, ctx.start).map((d) => ({ date: d, filled: page.filled.has(d) })),
-      blocked: team.dayEditDenied(req.user, ctx.person.id, ctx.date, ctx.today, ctx.start),
+      title: ctx.person.id === req.user.person_id ? 'My week' : `${ctx.person.name} – weekly check-in`, ...ctx, ...page, fmt, focus, actions,
+      monthGoals: await require('../review/data').currentGoals(db, ctx.today), thisWeek,
+      strip: page.history.filter((h) => h.week >= calc.weekStart(ctx.start)),
+      blocked: team.weekEditDenied(req.user, ctx.person.id, ctx.week, ctx.today, ctx.start),
       canManage: team.canActFor(req.user, ctx.person.id), ...flash(req),
     });
   }
@@ -56,7 +62,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
     try {
       if (!isHqUser(req.user)) return deny(res);
       const ctx = await whoAndWhen(req);
-      if (!ctx.person) return res.render('message', { title: 'My day', message: 'Your login isn’t linked to an HQ person yet – ask admin.' });
+      if (!ctx.person) return res.render('message', { title: 'My week', message: 'Your login isn’t linked to an HQ person yet – ask admin.' });
       await renderDay(req, res, ctx);
     } catch (err) { next(err); }
   });
@@ -66,10 +72,10 @@ function hqTeamRoutes(db, { now, trackerStart }) {
       if (!isHqUser(req.user)) return deny(res);
       const ctx = await whoAndWhen(req);
       if (!ctx.person || Number(req.body.person) !== ctx.person.id) return deny(res);
-      const blocked = team.dayEditDenied(req.user, ctx.person.id, ctx.date, ctx.today, ctx.start);
+      const blocked = team.weekEditDenied(req.user, ctx.person.id, ctx.week, ctx.today, ctx.start);
       if (blocked) return res.status(403).render('message', { title: 'Can’t save', message: blocked });
-      const r = await team.saveTicks(db, req.user, { person: ctx.person, date: ctx.date, body: req.body });
-      res.redirect(`/hq/today?person=${ctx.person.id}&date=${ctx.date}&ok=${encodeURIComponent(r.saved ? 'Saved.' : 'No changes to save.')}`);
+      const r = await team.saveTicks(db, req.user, { person: ctx.person, date: ctx.week, body: req.body });
+      res.redirect(`/hq/today?person=${ctx.person.id}&week=${ctx.week}&ok=${encodeURIComponent(r.saved ? 'Saved.' : 'No changes to save.')}`);
     } catch (err) { next(err); }
   });
 
@@ -81,7 +87,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
       const r = req.body.retire
         ? await team.retireTask(db, req.user, { person: ctx.person, taskId: Number(req.body.retire) })
         : await team.addTask(db, req.user, { person: ctx.person, label: req.body.label });
-      res.redirect(`/hq/today?person=${ctx.person.id}&date=${ctx.date}&${msg(r, 'Saved.')}#tasks`);
+      res.redirect(`/hq/today?person=${ctx.person.id}&week=${ctx.week}&${msg(r, 'Saved.')}#tasks`);
     } catch (err) { next(err); }
   });
 

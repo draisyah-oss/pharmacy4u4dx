@@ -59,7 +59,7 @@ const isWeekday = (date) => !calc.isWeekend(date);
 const tickState = (r) => (!r ? null : r.na ? 'na' : r.done ? 'yes' : 'no');
 
 // Working days (Mon–Fri) of a week up to `through`; a day counts as fully done when every
-// task is ticked Yes or N/A (doesn't apply that day). Pure.
+// task is ticked Yes or N/A (doesn't apply that day). Pure. (Daily ticks – before 3 Nov.)
 function dailyWeekSummary({ tasks, ticks, weekStart, through }) {
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -73,6 +73,29 @@ function dailyWeekSummary({ tasks, ticks, weekStart, through }) {
   }
   const full = days.filter((d) => d.full).length;
   return { days, fullDays: full, workingDays: days.length, pct: days.length && tasks.length ? full / days.length : null };
+}
+
+// 3 Nov (CEO): HQ checks in once a WEEK, not every day. A week's tick is stored on its Monday.
+// pct = Done ÷ (tasks − N/A). Pure.
+function weekCheck({ tasks, ticks, week }) {
+  const states = tasks.map((t) => tickState(ticks.get(`${t.id}|${week}`)));
+  const done = states.filter((x) => x === 'yes').length;
+  const na = states.filter((x) => x === 'na').length;
+  const notDone = states.filter((x) => x === 'no').length;
+  const ticked = states.filter((x) => x !== null).length;
+  const counted = tasks.length - na;
+  return { week, done, na, notDone, ticked, total: tasks.length, counted, pct: ticked && counted > 0 ? done / counted : null,
+    complete: tasks.length > 0 && ticked === tasks.length };
+}
+
+// The check-in for `week` can be changed this week and last week (admin: any week since the tracker).
+function weekEditDenied(user, personId, week, today, trackerStart) {
+  if (!canActFor(user, personId)) return 'You can only tick your own check-in.';
+  const thisWeek = calc.weekStart(today);
+  if (week > thisWeek) return 'This week hasn’t started yet.';
+  if (week < calc.weekStart(trackerStart)) return 'The tracker starts on ' + trackerStart + '.';
+  if (user.role !== 'admin' && week < calc.addDays(thisWeek, -7)) return 'Only this week and last week can be changed. Ask admin to fix older weeks.';
+  return null;
 }
 
 function dayEditDenied(user, personId, date, today, trackerStart) {
@@ -102,7 +125,7 @@ async function saveTicks(db, user, { person, date, body }) {
            ON CONFLICT (task_id, entry_date) DO UPDATE SET done = EXCLUDED.done, na = EXCLUDED.na, entered_by = EXCLUDED.entered_by, updated_at = now()`,
           [t.id, date, next === 'yes', next === 'na', user.id]);
       }
-      await audit(tx, user, oldV === null ? 'insert' : next === null ? 'delete' : 'update', 'hq_daily_ticks', `${person.name} ${date} ${t.label}`, oldV, next);
+      await audit(tx, user, oldV === null ? 'insert' : next === null ? 'delete' : 'update', 'hq_daily_ticks', `${person.name} week ${date} ${t.label}`, oldV, next);
       saved++;
     }
   });
@@ -114,7 +137,7 @@ async function addTask(db, user, { person, label }) {
   if (l.error) return { error: l.error };
   if (!l.value) return { error: 'Type the task.' };
   const count = (await db.query('SELECT count(*)::int AS n FROM hq_daily_tasks WHERE person_id = $1 AND active', [person.id])).rows[0].n;
-  if (count >= 10) return { error: 'Keep it to 10 daily tasks at most – retire one first.' };
+  if (count >= 10) return { error: 'Keep it to 10 check-in items at most – remove one first.' };
   await db.transaction(async (tx) => {
     await tx.query('INSERT INTO hq_daily_tasks (person_id, label, sort_order) VALUES ($1, $2, $3)', [person.id, l.value, count + 1]);
     await audit(tx, user, 'insert', 'hq_daily_tasks', `${person.name} task`, null, l.value);
@@ -132,15 +155,15 @@ async function retireTask(db, user, { person, taskId }) {
   return { ok: `Removed “${t.label}”. Past ticks are kept.` };
 }
 
-async function loadDayPage(db, { person, date, today }) {
+async function loadWeekPage(db, { person, week }) {
   const tasks = await loadTasks(db, person.id);
-  const weekStart = calc.weekStart(date);
-  const through = today < calc.addDays(weekStart, 6) ? today : calc.addDays(weekStart, 6);
-  const ticks = await loadTicks(db, tasks.map((t) => t.id), calc.addDays(date, -6) < weekStart ? calc.addDays(date, -6) : weekStart, through > date ? through : date);
+  const ticks = await loadTicks(db, tasks.map((t) => t.id), calc.addDays(week, -35), week);
+  const weeks = [];
+  for (let i = 5; i >= 0; i--) weeks.push(calc.addDays(week, -7 * i));
   return {
-    tasks: tasks.map((t) => ({ ...t, tick: ticks.get(`${t.id}|${date}`) || null })),
-    week: dailyWeekSummary({ tasks, ticks, weekStart, through }),
-    filled: new Set([...ticks.values()].map((r) => r.entry_date)),
+    tasks: tasks.map((t) => ({ ...t, tick: ticks.get(`${t.id}|${week}`) || null })),
+    check: weekCheck({ tasks, ticks, week }),
+    history: weeks.map((w) => weekCheck({ tasks, ticks, week: w })),
   };
 }
 
@@ -472,10 +495,10 @@ async function teamSummary(db, { week, today }) {
   const rows = [];
   for (const p of people) {
     const tasks = await loadTasks(db, p.id);
-    const ticks = await loadTicks(db, tasks.map((t) => t.id), week, through);
+    const ticks = await loadTicks(db, tasks.map((t) => t.id), week, week);
     rows.push({
       person: p, tasks: tasks.length,
-      daily: tasks.length ? dailyWeekSummary({ tasks, ticks, weekStart: week, through }) : null,
+      check: tasks.length ? weekCheck({ tasks, ticks, week }) : null,
       lastCommitment: last.find((c) => c.person_id === p.id) || null,
       thisCommitment: now.find((c) => c.person_id === p.id) || null,
       lastCommitments: last.filter((c) => c.person_id === p.id),
@@ -497,7 +520,7 @@ async function teamSummary(db, { week, today }) {
 module.exports = {
   tickState,
   PROJECT_STATUSES, DONE_VALUES, actsForAll, canActFor, seesEveryone, hqPeople, visiblePeople,
-  loadTasks, loadTicks, dailyWeekSummary, dayEditDenied, saveTicks, addTask, retireTask, loadDayPage,
+  loadTasks, loadTicks, dailyWeekSummary, weekCheck, weekEditDenied, dayEditDenied, saveTicks, addTask, retireTask, loadWeekPage,
   loadCommitmentWeek, movesFor, keptSummary, saveCommitments,
   loadProjects, ownsProject, canEditProject, updateProject, addProject, projectState, teamSummary,
   STEP_STATUSES, loadSteps, ownsStep, canTickStep, stepState, stepSummary, tickStep, updateStep, addStep, removeStep, insertSeedSteps, stepMenu,

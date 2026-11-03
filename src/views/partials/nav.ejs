@@ -24,9 +24,9 @@
        groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['scoreboard', '/scoreboard', 'Scoreboard', 'week lead'], ['myweek', '/my-week', 'My week', 'commitment wig'],
          ['oos', '/oos', 'Out of stock', 'oos report restock'], ['month', '/month', 'Month scoreboard', 'monthly summary']]], ['Company', [['group', '/group', 'Group scoreboard', 'branches']]]];
      } else if (role === 'hq_staff') {
-       quick = [['hqtoday', '/hq/today', 'My day'], ['hqcommit', '/hq', 'HQ WIG']];
+       quick = [['hqtoday', '/hq/today', 'My week'], ['hqcommit', '/hq', 'HQ WIG']];
        groups = [
-         ['My work', [['hqtoday', '/hq/today', 'My day', 'tasks daily'],
+         ['My work', [['hqtoday', '/hq/today', 'Weekly check-in', 'tasks weekly my week day'],
            ['hqcommit', '/hq', 'HQ WIG session', 'my kpis input numbers weekly commitments focus monday']]],
          ...inventory,
          projects,
@@ -34,7 +34,7 @@
            ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'], ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];
      } else {
-       quick = role === 'hq' ? [[inv ? 'oosinbox' : 'hqtoday', inv ? '/oos/inbox' : '/hq/today', inv ? 'Out of stock' : 'HQ day'], ['group', '/group', 'Group'], ['sales', '/sales', 'Sales']]
+       quick = role === 'hq' ? [[inv ? 'oosinbox' : 'hqtoday', inv ? '/oos/inbox' : '/hq/today', inv ? 'Out of stock' : 'Check-in'], ['group', '/group', 'Group'], ['sales', '/sales', 'Sales']]
          : [['daily', '/daily' + bq, 'Daily entry'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard']];
        groups = [
          ['Branch', [['daily', '/daily' + bq, 'Daily entry', 'log today walk-in'], ['scoreboard', '/scoreboard' + bq, 'Scoreboard', 'week lead'],
@@ -45,7 +45,7 @@
            ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];
        if (many) {
-         groups.push(['HQ', [['hqtoday', '/hq/today', 'HQ day', 'tasks daily'],
+         groups.push(['HQ', [['hqtoday', '/hq/today', 'HQ weekly check-in', 'tasks weekly day'],
            ['hqcommit', '/hq', 'HQ WIG session', 'hq input kpi numbers b2b weekly commitments focus monday 10am'],
            ['hqupdate', '/hq/update', 'Weekly Branch Manager Meeting', 'managers monday 4pm branches actions update'],
            ['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi']]]);
@@ -68,6 +68,10 @@
      groups.push(['Company policies', [['policies', '/policies', 'Policies', 'policy polisi hr leave cuti annual carry forward handbook']]]);
      // 28 Oct: everyone can ask for a change to the app (Mr 4DX builds it, the CEO approves).
      groups.push(['Improve the app', [['requests', '/requests', 'Request a change', 'improve suggest idea bug feature change mr 4dx']]]);
+     // 3 Nov (CEO): the menu groups in this order.
+     const ORDER = ['Company', 'Scoreboards', 'Branch', 'My work', 'HQ', 'Monthly review', 'Inventory', 'Company policies', 'Projects', 'Improve the app', 'Admin'];
+     const rank = (g) => { const i = ORDER.indexOf(g[0]); return i < 0 ? ORDER.length : i; };
+     groups = groups.map(function (g, i) { return [g, i]; }).sort(function (a, b) { return rank(a[0]) - rank(b[0]) || a[1] - b[1]; }).map(function (x) { return x[0]; });
      const count = (n, what) => '<span class="sn-badge" aria-label="' + n + ' ' + what + '">' + n + '</span>';
      const badge = (key) => (key === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount ? count(oosCount, 'to answer')
        : '');

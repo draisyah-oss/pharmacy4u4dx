@@ -33,6 +33,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await ampangOct29Once(db, readSeed(), log);
     await bangiNov2Once(db, log);
     await tallyAllOnce(db, readSeed(), log);
+    await brNov3Once(db, readSeed(), log);
     return { seeded: false };
   }
 
@@ -624,6 +625,38 @@ async function bangiNov2Once(db, log) {
   log('Bangi 2 Nov: Team boxes → Aimi; Siti merged into Salasilah.');
 }
 
+// 3 Nov (CEO): BR from November – retail (walk-in, WIG T1) RM 45k a month and the other channels make
+// up the rest of a RM 55k month total. Walk-in keeps BR's Sun–Mon busy days: Nov RM 1,355 / 1,790
+// (= 45,000), Dec RM 1,340 / 1,775 (= 45,020). YTD month-end targets follow (+55k a month).
+// Values come from seed.json; only months still at the old numbers are changed (Admin edits kept).
+async function brNov3Once(db, seed, log) {
+  const flag = 'br_nov3_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const sb = seed.branches.find((b) => b.code === 'BR');
+  const br = (await db.query("SELECT id FROM branches WHERE code = 'BR'")).rows[0];
+  await db.transaction(async (tx) => {
+    if (sb && br) {
+      const old = { '2026-11': { total: 61600, ytd: 707400, t: 1250, w: 1650 }, '2026-12': { total: 69000, ytd: 776400, t: 1250, w: 1650 } };
+      const t1 = sb.measures.find((m) => m.id === 'T1');
+      const mid = (await tx.query("SELECT id FROM measures WHERE branch_id = $1 AND code = 'T1'", [br.id])).rows[0]?.id;
+      for (const [month, o] of Object.entries(old)) {
+        await tx.query(`UPDATE branch_month_targets SET total_sales_target = $3 WHERE branch_id = $1 AND month = $2 AND total_sales_target = $4`,
+          [br.id, month, sb.monthly_total_target[month], o.total]);
+        await tx.query(`UPDATE branch_month_targets SET ytd_target_month_end = $3 WHERE branch_id = $1 AND month = $2 AND ytd_target_month_end = $4`,
+          [br.id, month, sb.before_tracker.ytd_target_month_end[month], o.ytd]);
+        if (mid) {
+          await tx.query(`UPDATE measure_targets SET target = $3, weekend_target = $4 WHERE measure_id = $1 AND month = $2 AND target = $5 AND weekend_target = $6`,
+            [mid, month, t1.targets[month], t1.weekend_targets[month], o.t, o.w]);
+        }
+      }
+      await tx.query('UPDATE branches SET wig = $2 WHERE id = $1', [br.id, sb.wig]);
+    }
+    await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'branch_month_targets', 'BR from Nov: retail RM 45k, total RM 55k a month (3 Nov)', NULL)");
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+  log('BR from November: retail RM 45k, total RM 55k a month.');
+}
+
 // 2 Nov (CEO): the −1 / +1 buttons on Daily entry for every branch (was BR only).
 async function tallyAllOnce(db, seed, log) {
   const flag = 'tally_all_v1';
@@ -791,4 +824,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

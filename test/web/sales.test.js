@@ -110,7 +110,7 @@ test('side menu: managers get branch + company items, not HQ or admin; staff get
   assert.match(html, /class="menu-btn"/);
   const hqs = await as('/login/pin', { username: 'syarafana', pin: '2468' });
   const h2 = (await hqs('/sales')).html;
-  assert.match(h2, />My day</);
+  assert.match(h2, />Weekly check-in</);
   assert.doesNotMatch(h2, /href="\/daily"/);
 });
 

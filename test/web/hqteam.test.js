@@ -148,7 +148,7 @@ test('daily tasks: a day counts when every task is done (Mon–Fri only)', () =>
   assert.equal(w.pct, 0.2);
 });
 
-test('Iman ticks her HR daily checks; HQ staff only their own; changes are audited', async () => {
+test('Iman ticks her HR checks once a week (3 Nov: weekly check-in); HQ staff only their own; changes are audited', async () => {
   const im = await iman();
   const page = (await im.get('/hq/today')).html;
   assert.match(page, /Attendance &amp; roster checked by 10 am/);
@@ -159,14 +159,15 @@ test('Iman ticks her HR daily checks; HQ staff only their own; changes are audit
   assert.equal((await im.post('/hq/today', body)).status, 302);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND done', [THIS])).rows[0].n, 7);
   assert.equal((await lastAudit('hq_daily_ticks')).username, 'iman');
-  assert.match((await im.get(`/hq/today?date=${THIS}`)).html, /1 of 2/, 'Mon fully done, Tue not yet');
-  // N/A: a task that doesn't apply that day still lets the day count
+  assert.match((await im.get(`/hq/today?week=${THIS}`)).html, /7 of 7/, 'the whole week ticked once, on its Monday');
+  assert.match((await im.get('/hq/today')).html, /weekly check-in/);
+  // N/A: an item that didn't apply this week isn't counted
   assert.match((await im.get('/hq/today')).html, /value="na"/);
   const tue = { person: String(ids.Iman), date: TODAY };
   tasks.forEach((t, i) => { tue[`t[k${t.id}]`] = i === 0 ? 'na' : 'yes'; });
   assert.equal((await im.post('/hq/today', tue)).status, 302);
-  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND na', [TODAY])).rows[0].n, 1);
-  assert.match((await im.get('/hq/today')).html, /2 of 2/, 'N/A counts as done');
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM hq_daily_ticks WHERE entry_date = $1 AND na', [THIS])).rows[0].n, 1, 'stored on the week’s Monday');
+  assert.match((await im.get('/hq/today')).html, /6 of 6/, 'N/A not counted');
   assert.match((await im.get('/hq/today')).html, /value="na" checked/);
   tue[`t[k${tasks[0].id}]`] = 'no';
   await im.post('/hq/today', tue);
@@ -255,7 +256,7 @@ test('projects: seeded from the HQ Tracker; owners update their own; HQ adds mil
 test('HQ scoreboard shows the team: daily tasks, commitments, projects', async () => {
   const html = (await (await alia()).get(`/hq/scoreboard?week=${THIS}`)).html;
   assert.match(html, /Team this week/);
-  assert.match(html, /Iman[\s\S]*1 of 2 days/);
+  assert.match(html, /Iman[\s\S]*6 of 7 done/);
   assert.match(html, /Partly/);
   assert.match(html, /milestones done/);
 });

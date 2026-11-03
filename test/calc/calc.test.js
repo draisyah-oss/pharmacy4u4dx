@@ -332,22 +332,24 @@ test('BR walk-in (29 Oct): RM 1,250 Tuesday–Saturday, RM 1,650 on the busy day
   const t1 = measure('BR', 'T1');
   assert.equal(t1.high_days, 'Sun,Mon');
   const day = (d) => calc.dailyTarget(t1.targets, 'day', d, t1.weekend_targets, t1.high_days);
-  assert.equal(day('2026-11-03'), 1250); // Tuesday
-  assert.equal(day('2026-11-07'), 1250); // Saturday – no longer a high day
-  assert.equal(day('2026-11-08'), 1650); // Sunday
-  assert.equal(day('2026-11-09'), 1650); // Monday
-  assert.equal(day('2026-12-14'), 1650); // Monday in December – same amounts every month
-  assert.equal(day('2026-12-15'), 1250);
+  assert.equal(day('2026-10-20'), 1250); // Tuesday
+  assert.equal(day('2026-10-24'), 1250); // Saturday – no longer a high day
+  assert.equal(day('2026-10-25'), 1650); // Sunday
+  assert.equal(day('2026-10-26'), 1650); // Monday
+  // 3 Nov (CEO): retail RM 45k a month from November – Nov 1,355 / 1,790, Dec 1,340 / 1,775
+  assert.equal(day('2026-11-03'), 1355); assert.equal(day('2026-11-07'), 1355);
+  assert.equal(day('2026-11-08'), 1790); assert.equal(day('2026-11-09'), 1790);
+  assert.equal(day('2026-12-14'), 1775); assert.equal(day('2026-12-15'), 1340);
   // Without high_days the weekend figure still applies on Saturday and Sunday (other branches)
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-07', t1.weekend_targets), 1650);
-  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-11-09', t1.weekend_targets), 1250);
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-24', t1.weekend_targets), 1650);
+  assert.equal(calc.dailyTarget(t1.targets, 'day', '2026-10-26', t1.weekend_targets), 1250);
   assert.equal(calc.highDaysLabel('Sun,Mon'), 'Sun–Mon');
   assert.equal(calc.highDaysLabel(null), 'Sat–Sun');
 });
 
-test('BR walk-in week 2–8 Nov: 5 × 1,250 + 2 × 1,650 = RM 9,550', () => {
+test('BR walk-in week 2–8 Nov: 5 × 1,355 + 2 × 1,790 = RM 10,355 (3 Nov: RM 45k a month)', () => {
   const r = calc.evaluateMeasure({ measure: measure('BR', 'T1'), entries: NO_ENTRIES, from: '2026-11-02', to: '2026-11-08', trackerStart: START });
-  near(r.target, 9550);
+  near(r.target, 10355);
 });
 
 test('BR POCT lead (29 Oct): 6 a week with product recommendations, any day', () => {

@@ -4,6 +4,7 @@
 <%
   const ro = !canEdit;
   const imp = vals.imp || {};
+  const typedNums = Object.keys(errors).length ? vals : null;
   const short = monthName.split(' ')[0]; const nshort = nextName.split(' ')[0];
   const chip = function (s) { return '<span class="mh-chip s-' + s + '">' + (fmt.symbol(s) ? fmt.symbol(s) + ' ' : '') + (statusWord[s] || '') + '</span>'; };
   const err = function (k) { return errors[k] ? '<p class="wk-error">' + errors[k] + '</p>' : ''; };
@@ -80,6 +81,18 @@
       </div>
       <%- err('stop') %><%- err('start') %><%- err('keep') %>
       <label>What we need from HQ <textarea name="needs" rows="2" maxlength="800" placeholder="stock, payment to a supplier, a person, a decision…"<%= ro ? ' readonly' : '' %>><%= vals.needs || '' %></textarea></label><%- err('needs') %>
+    </section>
+
+    <section class="oo-card">
+      <h2>5 · Last week’s numbers <small class="muted">(w/c <%= fmtDate(linked.week, { weekday: undefined }) %>)</small></h2>
+      <p class="muted small">Today’s review is also this Monday’s weekly update to HQ – fill these in here, no need to open the weekly update. What you need from HQ (above) becomes an HQ action for the 4 pm meeting.</p>
+      <div class="rv-goal-meta">
+        <% linked.numbers.forEach(function (n) { const v = typedNums && typedNums[n.key] !== undefined ? typedNums[n.key] : (linked.checkin && linked.checkin[n.key] !== null && linked.checkin[n.key] !== undefined ? Number(linked.checkin[n.key]) : ''); %>
+          <label><%= n.label %><input type="text" inputmode="decimal" name="<%= n.key %>" value="<%= v %>"<%= linked.editable ? '' : ' readonly' %>><small class="muted"><%= n.hint %></small></label>
+          <%- err(n.key) %>
+        <% }) %>
+      </div>
+      <% if (!linked.editable && canEdit) { %><p class="muted small">That week can’t be changed any more – ask admin.</p><% } %>
     </section>
 
     <% if (canEdit) { %>

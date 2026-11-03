@@ -347,7 +347,7 @@ test('29 Oct: BR 4DX adjustment – an older database ends up the same as a fres
   }
   const target = async (code, month) => (await q(`SELECT t.target::float, t.weekend_target::float FROM measure_targets t JOIN measures m ON m.id = t.measure_id
     WHERE m.branch_id = $1 AND m.code = $2 AND t.month = $3`, [br, code, month]))[0];
-  assert.deepEqual(await target('T1', '2026-12'), { target: 1250, weekend_target: 1650 });
+  assert.deepEqual(await target('T1', '2026-12'), { target: 1340, weekend_target: 1775 }); // 3 Nov: retail RM 45k a month
   assert.equal(measures.find((m) => m.code === 'T1').high_days, 'Sun,Mon');
   assert.deepEqual((await q("SELECT code FROM measures WHERE branch_id = $1 AND score_by = 'month' ORDER BY code", [br])).map((r) => r.code), ['A5', 'AL', 'G0']);
   assert.deepEqual(await target('N1', '2026-11'), { target: 6, weekend_target: null });
@@ -357,11 +357,11 @@ test('29 Oct: BR 4DX adjustment – an older database ends up the same as a fres
   assert.equal(Number((await q("SELECT end_target FROM running_totals WHERE branch_id = $1 AND code = 'GR'", [br]))[0].end_target), 200);
   // History of the removed boxes is kept
   assert.equal((await q("SELECT 1 FROM daily_entries WHERE branch_id = $1 AND field_key IN ('pwp', 'p3')", [br])).length, 2);
-  // The scoreboard uses the new walk-in days: week of 2 Nov = 5 × 1,250 + Sun 8 + Mon 2 Nov at 1,650
+  // The scoreboard uses the walk-in days: week of 2 Nov = 5 × 1,355 + Sun 8 + Mon 2 Nov at 1,790 (3 Nov targets)
   const branch = await loadBranch(old, 'BR');
   const board = await buildScoreboard(old, { branch, weekStart: '2026-11-02', today: '2026-11-09', trackerStart: '2026-10-12' });
   const t1 = [...board.top, ...board.groups.flatMap((g) => g.rows)].find((r) => r.code === 'T1');
-  assert.equal(t1.week.target, 9550);
+  assert.equal(t1.week.target, 5 * 1355 + 2 * 1790);
   assert.equal(t1.highDays, 'Sun,Mon');
   await old.close();
 });
@@ -387,5 +387,32 @@ test('29 Oct: Ampang target products – an older database ends up the same as a
   assert.deepEqual(measures.map((m) => m.code).sort(), sb.measures.map((m) => m.id).sort());
   for (const m of sb.measures) assert.equal(measures.find((x) => x.code === m.id).label, m.label);
   assert.equal((await q("SELECT 1 FROM daily_entries WHERE branch_id = $1 AND field_key = 'p3'", [id])).length, 1, 'Eldon strip history kept');
+  await old.close();
+});
+
+test('3 Nov: BR from November – retail (walk-in) RM 45k, total RM 55k a month; older databases once', async () => {
+  const calc = require('../../src/calc');
+  const s = readSeed();
+  const br = s.branches.find((b) => b.code === 'BR');
+  assert.deepEqual(br.monthly_total_target, { '2026-10': 60000, '2026-11': 55000, '2026-12': 55000 });
+  const t1 = br.measures.find((m) => m.id === 'T1');
+  const month = (m) => calc.dateRange(calc.monthStart(m), calc.monthEnd(m)).reduce((a, d) => a + calc.dailyTarget(t1.targets, 'day', d, t1.weekend_targets, t1.high_days), 0);
+  assert.equal(month('2026-11'), 45000);
+  assert.equal(Math.round(month('2026-12') / 100), 450);
+  const { brNov3Once } = require('../../src/db/setup');
+  const old = await createDb({ url: '', localDir: 'memory' });
+  await migrate(old);
+  await loadSeed(old, s, { adminPassword: 'admin-pass-1' });
+  const id = (await old.query("SELECT id FROM branches WHERE code = 'BR'")).rows[0].id;
+  const mid = (await old.query("SELECT id FROM measures WHERE branch_id = $1 AND code = 'T1'", [id])).rows[0].id;
+  await old.query("UPDATE branch_month_targets SET total_sales_target = 61600, ytd_target_month_end = 707400 WHERE branch_id = $1 AND month = '2026-11'", [id]);
+  await old.query("UPDATE measure_targets SET target = 1250, weekend_target = 1650 WHERE measure_id = $1 AND month = '2026-11'", [mid]);
+  await old.query("UPDATE branch_month_targets SET total_sales_target = 70000 WHERE branch_id = $1 AND month = '2026-12'", [id]); // an Admin edit – kept
+  await old.query("DELETE FROM app_settings WHERE key = 'br_nov3_v1'");
+  await brNov3Once(old, s, () => {});
+  const q = async (sql, a) => (await old.query(sql, a)).rows;
+  assert.deepEqual((await q("SELECT month, total_sales_target::int AS t FROM branch_month_targets WHERE branch_id = $1 AND month >= '2026-11' ORDER BY month", [id])).map((r) => r.t), [55000, 70000]);
+  const nov = (await q("SELECT target::int AS t, weekend_target::int AS w FROM measure_targets WHERE measure_id = $1 AND month = '2026-11'", [mid]))[0];
+  assert.deepEqual(nov, { t: 1355, w: 1790 });
   await old.close();
 });

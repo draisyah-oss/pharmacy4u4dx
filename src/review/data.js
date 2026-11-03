@@ -310,3 +310,65 @@ module.exports = {
   branchMonth, hqMonth, loadReview, currentGoals, saveReview, loadGoals, saveGoals, reviewStatus,
   canEditGoals, canAgreeHq, canAgreeMgr, isCeo,
 };
+
+// ─────────────── Linked to the weekly WIG (3 Nov, CEO: "so they don't have to do it twice") ───────────────
+// The review of `month` happens on the first Monday of the next month, in place of that Monday's
+// HQ WIG and managers' update. The update it replaces is for the week just ended:
+const linkedWeek = (month) => calc.addDays(firstMonday(nextMonth(month)), -7);
+
+// Branch: last week's numbers typed on the review page go into that week's weekly update
+// (weekly_checkins – the stock / SKU / zakat boxes), and "what we need from HQ" becomes an HQ
+// action for that week (owner and date agreed at the 4 pm meeting), kept in step on every save.
+async function linkBranchWeekly(db, user, { branch, month, body, today }) {
+  const week = linkedWeek(month);
+  const { editDenied } = require('../weekly/access');
+  if (editDenied(user, branch, week, today)) return { skipped: true };
+  const weekly = require('../weekly/data');
+  const nums = {};
+  for (const n of weekly.NUMBERS.filter((x) => !x.zakat || branch.zakat_field)) if (body[n.key] !== undefined) nums[n.key] = body[n.key];
+  const r = Object.keys(nums).length ? await weekly.saveCheckin(db, user, branch, week, nums) : { saved: 0 };
+  if (r.errors) return { errors: r.errors };
+  const rev = (await db.query("SELECT id, needs, hq_action_id FROM monthly_reviews WHERE scope = 'branch' AND branch_id = $1 AND month = $2", [branch.id, month])).rows[0];
+  if (!rev) return { saved: r.saved };
+  const act = rev.hq_action_id ? (await db.query('SELECT * FROM hq_actions WHERE id = $1', [rev.hq_action_id])).rows[0] : null;
+  const issue = rev.needs ? rev.needs.slice(0, 300) : null;
+  await db.transaction(async (tx) => {
+    if (issue && !act) {
+      const id = (await tx.query(
+        'INSERT INTO hq_actions (branch_id, week_start, issue, raised_by, updated_by) VALUES ($1, $2, $3, $4, $4) RETURNING id',
+        [branch.id, week, issue, user.id])).rows[0].id;
+      await tx.query('UPDATE monthly_reviews SET hq_action_id = $2 WHERE id = $1', [rev.id, id]);
+    } else if (issue && act && !act.agreed && act.issue !== issue) {
+      await tx.query('UPDATE hq_actions SET issue = $2, updated_by = $3, updated_at = now() WHERE id = $1', [act.id, issue, user.id]);
+    } else if (!issue && act && !act.agreed) {
+      await tx.query('UPDATE monthly_reviews SET hq_action_id = NULL WHERE id = $1', [rev.id]);
+      await tx.query('DELETE FROM hq_actions WHERE id = $1', [act.id]);
+    }
+    const asks = (await tx.query('SELECT issue FROM hq_actions WHERE branch_id = $1 AND week_start = $2 ORDER BY id', [branch.id, week])).rows.map((x) => x.issue);
+    await tx.query(
+      `INSERT INTO weekly_checkins (branch_id, week_start, issue_needing_hq_help, submitted_by) VALUES ($1, $2, $3, $4)
+       ON CONFLICT (branch_id, week_start) DO UPDATE SET issue_needing_hq_help = EXCLUDED.issue_needing_hq_help, updated_at = now()`,
+      [branch.id, week, asks.join(' · ').slice(0, 500) || null, user.id]);
+  });
+  return { saved: r.saved };
+}
+
+async function loadLinkedCheckin(db, branch, month) {
+  const weekly = require('../weekly/data');
+  const week = linkedWeek(month);
+  return { week, checkin: await weekly.loadCheckin(db, branch.id, week), numbers: weekly.NUMBERS.filter((x) => !x.zakat || branch.zakat_field) };
+}
+
+// HQ: the focus for next month written in the HQ review is also that Monday's HQ WIG focus
+// (proposed, the CEO approves it as usual) – only when the person has no focus for that week yet.
+async function linkHqFocus(db, user, { personId, month }) {
+  const rev = (await db.query("SELECT focus FROM monthly_reviews WHERE scope = 'hq' AND person_id = $1 AND month = $2", [personId, month])).rows[0];
+  if (!rev || !rev.focus) return;
+  const week = firstMonday(nextMonth(month));
+  const has = (await db.query('SELECT 1 FROM hq_focus WHERE week_start = $1 AND person_id = $2', [week, personId])).rows.length;
+  if (has) return;
+  await db.query(`INSERT INTO hq_focus (week_start, person_id, focus, status, proposed_by, slot) VALUES ($1, $2, $3, 'proposed', $4, 1)`,
+    [week, personId, rev.focus, user.id]);
+}
+
+Object.assign(module.exports, { linkedWeek, linkBranchWeekly, loadLinkedCheckin, linkHqFocus });

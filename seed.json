@@ -205,9 +205,9 @@
         {"name": "Alya", "role": "Assistant Pharmacist"},
         {"name": "Aqilah", "role": "Sales Assistant"}
       ],
-      "wig": "Walk-in sales RM 1,250 a day Tuesday–Saturday and RM 1,650 Sunday–Monday, every day to 31 Dec 2026",
+      "wig": "Retail (walk-in) RM 45k a month from November – RM 1,355 a day Tuesday–Saturday and RM 1,790 Sunday–Monday (Dec 1,340 / 1,775) – BR total RM 55k a month",
       "wig_detail": "BR plan (29 Oct): walk-in RM 1,250 Tue–Sat, RM 1,650 Sun–Mon (Sunday and Monday are BR's busy days). Every month: Shopee RM 7.5k (about 1.5k a week, entered Sundays – Ainur), zakat RM 10k (Amirah), Alpine RM 0.5k (Alya), Grabmart RM 1.5k (Aqilah). Lead 1: 6 POCT with product recommendations a week incl. Vibrasense (Amirah). Lead 2: 5 new members a day (Ainur). 5 focus items (Alya): Beecrobes 2/day, Nature Pharmacy / Proponeem soap bar 0.5/day, Androchi 0.5/day, Nurvi 0.5/day, Acevis 1/day.",
-      "monthly_total_target": {"2026-10": 60000, "2026-11": 61600, "2026-12": 69000},
+      "monthly_total_target": {"2026-10": 60000, "2026-11": 55000, "2026-12": 55000},
       "total_sales_fields": ["walkin", "zakat", "shopee", "grab", "alpine"],
       "online_sales_fields": ["shopee", "grab"],
       "sales_sheet": {
@@ -259,7 +259,7 @@
         {"key": "grab", "label": "Grabmart sales (RM)", "owner": "Aqilah", "type": "money"}
       ],
       "measures": [
-        {"id": "T1", "owner": "Team", "label": "Walk-in sales (branch WIG)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1250, "2026-11": 1250, "2026-12": 1250}, "numerator_field": "walkin", "denominator_field": null, "note": "29 Oct (CEO, BR 4DX adjustment): RM 1,250 Tuesday–Saturday, RM 1,650 on the busy days Sunday and Monday, the same every month (was Sat–Sun, with Nov 1,330 / 1,750 and Dec 1,520 / 2,000).", "weekend_targets": {"2026-10": 1650, "2026-11": 1650, "2026-12": 1650}, "high_days": "Sun,Mon"},
+        {"id": "T1", "owner": "Team", "label": "Walk-in sales (branch WIG)", "kind": "WIG", "unit": "RM", "target_per": "day", "calc": "sum", "targets": {"2026-10": 1250, "2026-11": 1355, "2026-12": 1340}, "numerator_field": "walkin", "denominator_field": null, "note": "29 Oct (CEO, BR 4DX adjustment): RM 1,250 Tuesday–Saturday, RM 1,650 on the busy days Sunday and Monday, the same every month (was Sat–Sun, with Nov 1,330 / 1,750 and Dec 1,520 / 2,000).", "weekend_targets": {"2026-10": 1650, "2026-11": 1790, "2026-12": 1775}, "high_days": "Sun,Mon"},
         {"id": "P1", "owner": "Alya", "label": "Focus item: Beecrobes", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 2, "2026-11": 2, "2026-12": 2}, "numerator_field": "p1", "denominator_field": null, "note": "29 Oct (CEO, BR 4DX adjustment): 5 focus items, Alya. 2 a day (60 a month)."},
         {"id": "P2", "owner": "Alya", "label": "Focus item: Nature Pharmacy / Proponeem soap bar", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "p2", "denominator_field": null, "note": "29 Oct (CEO, BR 4DX adjustment): 5 focus items, Alya. 0.5 a day (15 a month) – limited stock."},
         {"id": "P4", "owner": "Alya", "label": "Focus item: Androchi", "kind": "Routine", "unit": "units", "target_per": "day", "calc": "sum", "targets": {"2026-10": 0.5, "2026-11": 0.5, "2026-12": 0.5}, "numerator_field": "p4", "denominator_field": null, "note": "29 Oct (CEO, BR 4DX adjustment): 5 focus items, Alya. 0.5 a day (15 a month)."},
@@ -282,7 +282,7 @@
         {"id": "AL", "owner": "Alya", "label": "Alpine sales", "kind": "Stream", "unit": "RM", "target_per": "month", "calc": "sum", "targets": {"2026-10": 500, "2026-11": 500, "2026-12": 500}, "numerator_field": "alpine", "denominator_field": null, "note": "RM 500 a month, counted in total branch revenue (core JD revision 14 Oct). Alya also handles Alpine coins collection (9th/18th/27th).", "score_by": "month"}
       ],
       "running_totals": [{"id": "GR", "label": "Google reviews total (145 on 12 Oct → 200 by 31 Dec)", "field": "reviews", "start_value": 145, "end_target": 200}],
-      "before_tracker": {"sales_1_to_11_oct": 21637, "ytd_sales_to_11_oct": 424031, "ytd_target_month_end": {"2026-10": 645800, "2026-11": 707400, "2026-12": 776400}},
+      "before_tracker": {"sales_1_to_11_oct": 21637, "ytd_sales_to_11_oct": 424031, "ytd_target_month_end": {"2026-10": 645800, "2026-11": 700800, "2026-12": 755800}},
       "stock_turnover_target_per_week": 0.23,
       "sku_sold_target_per_month": 900
     },

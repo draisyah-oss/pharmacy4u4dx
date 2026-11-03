@@ -13,6 +13,7 @@ const team = require('./team');
 const wikilist = require('./wikilist');
 
 // measure code → which of the owner's daily tasks it is counted from
+const WEEKLY_FROM = '2026-11-02'; // first week of the weekly HQ check-in
 const FROM_TASKS = {
   quotes: { task: /quote/i, kind: 'pair', what: 'days you ticked “quotes sent within 24 hours” Done, out of days ticked' },
   po: { task: /\bPOs?\b.*(approv|check)/i, kind: 'pair', what: 'days you ticked the PO check Done, out of days ticked' },
@@ -35,7 +36,8 @@ async function suggestions(db, { week, rows, today, at = new Date() }) {
   for (const m of rows) {
     if (m.entry || !m.canEdit || !m.person_id) continue;
     const rule = FROM_TASKS[m.code];
-    if (rule) {
+    // 3 Nov: HQ checks in weekly (one tick on the Monday) – a day count can't be worked out any more.
+    if (rule && week < WEEKLY_FROM) {
       const { tasks, ticks } = await tasksOf(m.person_id);
       const t = tasks.find((x) => rule.task.test(x.label));
       if (!t) continue;
@@ -63,6 +65,11 @@ async function suggestions(db, { week, rows, today, at = new Date() }) {
     if (m.code === 'hrdaily') {
       const { tasks, ticks } = await tasksOf(m.person_id);
       if (!tasks.length) continue;
+      if (week >= WEEKLY_FROM) {
+        const c = team.weekCheck({ tasks, ticks, week });
+        if (c.pct !== null) out.set(m.id, { value: Math.round(c.pct * 1000) / 10, from: `your weekly check-in: ${c.done} of ${c.counted} HR checks done` });
+        continue;
+      }
       const s = team.dailyWeekSummary({ tasks, ticks, weekStart: week, through });
       if (s.pct !== null) out.set(m.id, { value: Math.round(s.pct * 1000) / 10, from: `your HR daily checks: ${s.fullDays} of ${s.workingDays} working days fully done` });
       continue;

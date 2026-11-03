@@ -39,7 +39,7 @@
           <% }) %>
         </ul>
         <% if (edit) { %>
-          <label>My focus for <%= nshort %> <input type="text" name="focus" value="<%= v.focus || '' %>" maxlength="300" placeholder="the one thing that moves the goals most"></label>
+          <label>My focus for <%= nshort %> <small class="muted">(also this Monday’s HQ WIG focus, for Dr Aisyah to approve)</small> <input type="text" name="focus" value="<%= v.focus || '' %>" maxlength="300" placeholder="the one thing that moves the goals most"></label>
           <% if (errs.focus) { %><p class="wk-error"><%= errs.focus %></p><% } %>
           <label>What I need (from the team or the CEO) <input type="text" name="needs" value="<%= v.needs || '' %>" maxlength="800"></label>
           <div class="rv-save"><button class="button secondary" name="submit" value="0">Save draft</button><button class="button" name="submit" value="1">Send</button></div>
