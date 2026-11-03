@@ -266,7 +266,10 @@ test('19 Oct: Inventory menu only for Alia, Syarafana, Fariz (and admin); Projec
   assert.match(a, /<summary>Inventory<\/summary>/);
   assert.match(a, /<summary>Projects<\/summary>[\s\S]*sn-sub[^>]*>Wiki checklist/);
   const h = (await (await hanin()).get('/hq/today')).html;
-  assert.doesNotMatch(h, /<summary>Inventory<\/summary>/);
+  // 4 Nov: every HQ login gets Inventory → Ordering & payments, but only the inventory team the OOS pages.
+  assert.match(h, /<summary>Inventory<\/summary>/);
+  assert.match(h, /href="\/inventory"/);
+  assert.doesNotMatch(h, /href="\/oos\/inbox"|href="\/oos\/transfers"/);
   assert.match(h, /<summary>Projects<\/summary>/);
   assert.equal((await (await hanin()).get('/oos/transfers')).status, 403);
   const f = (await (await fariz()).get('/hq/today')).html;

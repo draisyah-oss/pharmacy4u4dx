@@ -22,7 +22,8 @@ function keyOf(s) {
 const num = (v) => { if (v === null || v === undefined || String(v).trim() === '') return null; const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return Number.isFinite(n) ? n : null; };
 
 // ---------- who can do what ----------
-const canSee = (u) => Boolean(u && (u.role === 'admin' || u.inventory || u.payments));
+// 4 Nov (CEO): every HQ login can see the page (read only unless they tick / approve / mark paid).
+const canSee = (u) => Boolean(u && (['admin', 'hq', 'hq_staff'].includes(u.role) || u.inventory || u.payments));
 const canApprove = (u) => Boolean(u && u.role === 'admin');            // the CEO approves payments
 const canPay = (u) => Boolean(u && (u.role === 'admin' || u.payments)); // Azwani marks paid
 const canTick = (u) => Boolean(u && (u.role === 'admin' || u.inventory));
@@ -303,5 +304,17 @@ async function loadBundledOnce(db, log = () => {}) {
   log('Inventory board data (3 Nov) loaded.');
 }
 
+// One time (3 Nov evening, CEO): the November PO budget by supplier as Dr Aisyah updated it –
+// RM200,628.03 (src/db/imports/inventory-budget-2026-11-03b.json). Replaces November's supplier rows
+// only (the cash plan, payments and daily plans are untouched). Suppliers not in her list stay with RM0.
+async function loadBudgetUpdateOnce(db, log = () => {}) {
+  const flag = 'inventory_budget_20261103b_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  const data = require(path.join(__dirname, '..', 'db', 'imports', 'inventory-budget-2026-11-03b.json'));
+  await saveMonthPlan(db, { month: data.month, budget: data.budget });
+  await db.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, JSON.stringify({ source: data.source, at: new Date().toISOString() })]);
+  log('Inventory: November PO budget updated (3 Nov, RM200,628).');
+}
+
 module.exports = { keyOf, payState, lineView, supplierView, summary, parsePlanRows, VIEWS, FLOOR, canSee, canApprove, canPay, canTick,
-  loadPage, loadPayments, approve, markPaid, addPayments, tick, savePlan, saveMonthPlan, loadBundledOnce, isoDate };
+  loadPage, loadPayments, approve, markPaid, addPayments, tick, savePlan, saveMonthPlan, loadBundledOnce, loadBudgetUpdateOnce, isoDate };

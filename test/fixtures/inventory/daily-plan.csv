@@ -1,0 +1,37 @@
+Action,Item,Branches/short at,Transfer from (qty),Supplier,Supplier status,Order qty,Approx RM
+"NOTE - 03 Nov daily plan. Stock = stockbalance 2.11.xlsx (2 Nov, Stock balance folder). OOS = 4DX trackers, last 14 days (only JH logged in the last 2 working days). Quantities in the stock-file unit. Recommendations only - nothing ordered or paid.",,,,,,,
+SECTION 1: URGENT (4DX asks + A items out),,,,,,,
+URGENT 1 - TRANSFER + ORDER,Panadol Regular Coated 10s (A),0 at WM/JH/Bangi/Ampang; JH asked 1 Nov,BR 10 strips (BR has 43),Zuellig,AFTER PAYMENT (Zuellig RM112k first),84 strips,304
+URGENT 2 - ORDER,Vivadiag Covid/Flu A/B rapid test (+ Influenza A&B test kit),"0 at every outlet + HQ; JH asked 3 days (20, 23, 27 Oct)",none,Plusmedics Supplies,Other supplier - check terms,37 pack,296
+URGENT 3 - ORDER,Hydrocyn Aqua 100ml spray (A),0 at every outlet + HQ,none,Teepham,Open once 30 Oct payment confirmed,17 box,119
+URGENT 4 - TRANSFER,Xepa Tussidex Forte 120ml + Xepa Mucoprom syrup (A),"JH 1 Tussidex, 0 Mucoprom (cough season)",HQ 22 Tussidex (HQ 90) + HQ 7 Mucoprom (HQ 35),Apex,OPEN NOW,0,0
+URGENT 5 - TRANSFER,Panadol Extend 665mg 6s (A),JH -280 (recount) / Bangi 0,HQ 39 strips (HQ 168),Zuellig,AFTER PAYMENT - transfer only,0,0
+URGENT 6 - TRANSFER,One Touch Select test strips 25s (A),JH 0 - asked 2 days (RM80 lost),Bangi 2 (Bangi 6),DKSH,AFTER PAYMENT (wk 16-22 Nov),0,0
+URGENT 7 - ORDER,Duoderm Hydroactive Gel 30g,0 at every outlet; JH asked 22 + 30 Oct,none,Apex,OPEN NOW,2 tube,42
+URGENT 8 - TRANSFER,Crystorvas 20mg (A),JH 0 - asked 1 + 2 Nov (3 customers); WM 0,"BR 3 to JH, Ampang 2 to WM (BR 7, Ampang 6)",AA Pharmacy / Duopharma,AFTER SOA check (Duopharma),0,0
+URGENT 9 - TRANSFER + ORDER,Neurobion tablet 10s (A),JH 0 - asked 27 + 31 Oct; BR 2,Ampang 4 (Ampang 8),Zuellig,AFTER PAYMENT - offer Hovid Neurovit Forte (ordered 2 Nov),17 strips,156
+URGENT 10 - ORDER,Cap Kaki Tiga Povidone Iodine 60ml (A),0 at WM/JH/Bangi; JH asked 21 Oct + 1 Nov,none,Delfi,OPEN NOW,8,44
+URGENT 11 - TRANSFER,Ural effervescent sachets (A),BR 11 left,HQ 42 sachets (HQ 252),Zuellig,AFTER PAYMENT - transfer only,0,0
+URGENT 12 - TRANSFER + ORDER,Glucovance 500/5mg 120s,JH asked 2 Nov (RM102 lost); only Ampang 1 in company,Ampang 1,match? - supplier blank in masterlist (Merck),check,1 box,90
+SECTION 2: TRANSFER FROM HQ WAREHOUSE / TRANSIT FIRST (no cash),,,,,,,
+TRANSFER (HQ),XEPA TUSSIDEX FORTE 15MG/5ML LINCTUS 120ML,JH 1,HQ/Transit 22 (has 90),APEX,OPEN NOW,0,0
+TRANSFER (HQ),ASTHALIN HFA MDI 100MCG INHALER- 200D,WM 2,HQ/Transit 16 (has 28),DKSH,AFTER PAYMENT (wk 16-22 Nov),0,0
+TRANSFER (HQ),EVIN PREGNANCY TEST CASSETTE,BR 0; JH 2; Bangi 0 (Bangi -28 recount),HQ 40 + Ampang 12,AA ALIVE,Open once 30 Oct payment confirmed,20 pcs,18
+"SECTION 3: A ITEMS UNDER 1 WEEK COVER - transfer between outlets, then order (3 weeks of sales)",,,,,,,
+ORDER,UPHAMOL SUSPENSION 250MG/5ML ORANGE 100ML,WM 1; JH 0; Bangi 0; Ampang 0,none,UPHAMOL,Other supplier - check terms,25 BOT,82
+TRANSFER + ORDER,PABRON COUGH SYRUP KIDS 120ML,WM 0; BR 0; JH 0; Bangi 0,Ampang 3,ZUELLIG PHARMA,AFTER PAYMENT,8 BOX,78
+ORDER LATER,YSP SELADIN 500MG TAB 10S,BR 3; JH 0; Bangi 0,none,YSP,AFTER YSP reconfirm,30 STP,252
+ORDER,PROSPAN F COUGH SYRUP NEW 100ML,JH 0; Bangi 0,none,DELFI,OPEN NOW,7 BOT,100
+ORDER,TOPSEAL BREV WATERPROOF DRESSING 6X7 100S,WM 1; BR 1; Bangi 0,none,AA ALIVE,Open once paid - check qty/UOM,check,0
+ORDER,PHARMANIAGA GLUMET XR 500MG PACK 10S,BR 0; JH 0,none - in Alia's Pharmaniaga order,PHARMANIAGA,CBD - check overdue with Azwani,9 STP,47
+ORDER,HOVID FOLIC ACID 5MG TABLET 10S,WM 0; Bangi 1,none - Hovid PO 2 Nov has 12 box,HOVID,OPEN (PO placed 2 Nov),check vs PO,0
+TRANSFER,ELDON DX ANDROCHI 10S/STP,WM 0,Ampang 4,ELDON,OPEN NOW,0,0
+"(+ about 90 smaller transfer / order lines - see 02 Nov sheet; same rules: transfer first, then open suppliers)",,,,,,,
+SECTION 4: CUSTOMERS ASKING - NOT STOCKED / NO MATCH (decide whether to list),,,,,,,
+CUSTOMERS ASKING,Qtern 5/10mg,JH 23 Oct,,,,,RM180 asked
+"CUSTOMERS ASKING","Premarin 0.625mg (Apex, cost RM66.50, 0 stock)",JH 26 Oct,,Apex,OPEN NOW,,
+SECTION 5: COUNTS TO FIX (negative stock - 302 lines in stockbalance 2.11),,,,,,,
+RECOUNT,NUR CARE ALCOHOL SWAB 1S,JH -1400,,,,,
+RECOUNT,PANADOL EXTEND 665MG 6S,JH -280,,,,,
+TOTALS,Order now - open + other suppliers (incl. AA Alive/Teepham once paid),,,,,,~5700
+TOTALS,Waiting for supplier release (Zuellig/DKSH/YSP/Duopharma/Redwood),,,,,,~2700

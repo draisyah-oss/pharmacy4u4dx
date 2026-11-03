@@ -16,6 +16,9 @@
   <p class="muted">For Alia (orders), Azwani (payments) and Dr Aisyah (approvals). <%= d.plan ? 'Today’s list is ' + d.plan.title + '.' : 'No daily plan yet.' %> Recommendations only: nothing here places an order or pays anyone.</p>
   <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <p class="inv-foldbar" data-fold-bar hidden><span class="muted small">Tap a heading to fold it away · ▾ on a column to filter or sort, like Excel.</span> <button type="button" class="link-button small" data-fold="close">Fold all</button> · <button type="button" class="link-button small" data-fold="open">Open all</button></p>
+  <details class="oo-card inv-sec" id="glance" open>
+  <summary><h2>Today at a glance</h2></summary>
   <p class="iv-take">Today: <b><%= S.order_now_lines %></b> items to order now from open suppliers (about <b><%= rm(S.order_now_rm) %></b>), and <b><%= S.transfer_lines %></b> transfers to do first, which cost no cash.
     <% if (S.next) { %>Next supplier payment: <b><%= S.next.supplier %> <%= rm(S.next.amount) %></b> on <b><%= dmy(S.next.date) %></b>.<% } %></p>
 
@@ -26,21 +29,34 @@
     <a class="iv-tile" href="<%= keep({ view: 'wait' }) %>#today"><span class="iv-lab">4 · Wait for payment</span><span class="iv-big"><%= rm(S.wait_rm) %></span><span class="muted small"><%= S.wait_lines %> lines held until the supplier is paid. Offer a transfer or a substitute.</span></a>
     <a class="iv-tile<%= S.late_lines ? ' is-warn' : '' %>" href="#payments"><span class="iv-lab">Payments not marked paid</span><span class="iv-big"><%= rm(S.late_rm) %></span><span class="muted small"><%= S.late_lines %> approved lines past their pay date. Azwani marks Paid below.</span></a>
   </section>
+  </details>
 
-  <section class="oo-card" id="suppliers">
-    <h2>Can I order from this supplier?</h2>
-    <p class="muted small">A supplier waiting for payment shows as open once every payment line for it is marked Paid. PO budget for <%= new Date(d.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %> from the 28 Oct meeting.</p>
-    <div class="mo-scroll"><table class="mo-t">
+  <details class="oo-card inv-sec" id="suppliers" open>
+    <summary><h2>Can I order from this supplier?</h2></summary>
+    <p class="muted small">A supplier waiting for payment shows as open once every payment line for it is marked Paid. PO budget for <%= new Date(d.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %> as Dr Aisyah updated it on 3 Nov.</p>
+    <div class="mo-scroll"><table class="mo-t" data-xfilter aria-label="Supplier ordering status">
       <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c">PO budget (RM)</th><th>Falls due</th></tr></thead>
       <tbody><% d.suppliers.forEach(function (b) { %><tr><th><%= b.supplier %></th><td><%- pill(b.gate, b.status_label) %></td><td><%= b.when_text %></td><td><%= b.terms %></td>
         <td class="mo-c"><%= b.today_lines %></td><td class="mo-c"><%= n0(b.today_rm) || '0' %></td><td class="mo-c"><%= n0(b.po_budget) %></td><td><%= b.falls_due %></td></tr><% }) %></tbody>
     </table></div>
     <p class="muted small">Total PO budget: <b><%= rm(S.po_budget_total) %></b>. Buy in this order: out-of-stock A items, A items at reorder point, then B items under 2 weeks. C items only when a customer asks, or by transfer.</p>
-  </section>
+  </details>
 
-  <section class="oo-card" id="today">
-    <h2>Today’s list<% if (d.plan) { %> <small class="muted">· <%= d.plan.title %></small><% } %></h2>
+  <details class="oo-card inv-sec" id="today" open>
+    <summary><h2>Today’s list<% if (d.plan) { %> <small class="muted">· <%= d.plan.title %></small><% } %></h2></summary>
     <% if (d.plan && d.plan.note) { %><p class="muted small"><%= d.plan.note %></p><% } %>
+    <% const ago = function (iso) { if (!iso) return ''; const t = new Date(iso); return isNaN(t) ? '' : t.toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }); }; %>
+    <% if ((drive && drive.configured) || can.admin) { %><div class="iv-drive">
+      <% if (drive && drive.configured) { %>
+        <p class="small"><b>From Mr Eve (Google Drive)</b> – checked every 30 minutes.
+          <% if (drive.file) { %>Last loaded: <%= drive.file %> (<%= drive.lines %> lines, <%= ago(drive.imported_at) %>).<% } %>
+          <% if (drive.checked_at) { %><span class="muted">Last checked <%= ago(drive.checked_at) %>.</span><% } %></p>
+        <% if (drive.error) { %><p class="alert alert-bad small">Couldn’t read Mr Eve’s plan from Google Drive: <%= drive.error %></p><% } %>
+        <form method="post" action="/inventory/drive" class="iv-inline"><%- hidden('today') %><button class="button secondary small">Check Drive now</button></form>
+      <% } else if (can.admin) { %>
+        <p class="alert alert-info small"><b>Mr Eve → 4DX is not switched on yet.</b> The app can load Mr Eve’s newest “Mr Eve Daily Plan” sheet from the Inventory Agent Inputs folder by itself every 30 minutes. To switch it on: (1) in Google Cloud, turn on the <b>Google Drive API</b> for the service account’s project; (2) share the <b>Inventory Agent Inputs</b> folder with the service account’s email as <b>Viewer</b>; (3) on Railway add <code>INVENTORY_GOOGLE_SERVICE_ACCOUNT_JSON</code> with the key file’s text (or the sales sheet’s <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> is used). <% if (drive && drive.keyError) { %>Key problem: <%= drive.keyError %><% } %></p>
+      <% } %>
+    </div><% } %>
     <% if (d.plans.length > 1) { %><p class="small">Other days: <% d.plans.forEach(function (p, i) { %><%- i ? ' · ' : '' %><% if (d.plan && p.id === d.plan.id) { %><b><%= dmy(p.plan_date) %></b><% } else { %><a href="/inventory?date=<%= p.plan_date %>#today"><%= dmy(p.plan_date) %></a><% } %><% }) %></p><% } %>
     <nav class="iv-chips" aria-label="Show">
       <% Object.keys(d.VIEWS).forEach(function (v) { %><a class="iv-chip<%= d.view === v ? ' is-on' : '' %>" href="<%= keep({ view: v === 'all' ? '' : v }) %>#today" <%- d.view === v ? 'aria-current="true"' : '' %>><%= d.VIEWS[v].label %> <span><%= S.counts[v] %></span></a><% }) %>
@@ -53,8 +69,8 @@
     <% if (!d.plan) { %><p class="muted">No daily plan yet – Mr Eve sends one each working morning.</p>
     <% } else if (!d.shown.length) { %><p class="muted">Nothing in this view.</p>
     <% } else { %>
-    <div class="mo-scroll"><table class="mo-t iv-list">
-      <thead><tr><% if (can.tick) { %><th>Done</th><% } %><th>Do</th><th>Item</th><th>Short at</th><th>Transfer from</th><th>Supplier</th><th>Supplier status</th><th class="mo-c">Order qty</th><th class="mo-c">Approx RM</th></tr></thead>
+    <div class="mo-scroll"><table class="mo-t iv-list" data-xfilter aria-label="Today’s list">
+      <thead><tr><% if (can.tick) { %><th data-xfilter-off>Done</th><% } %><th>Do</th><th>Item</th><th>Short at</th><th>Transfer from</th><th>Supplier</th><th>Supplier status</th><th class="mo-c">Order qty</th><th class="mo-c">Approx RM</th></tr></thead>
       <tbody><% d.shown.forEach(function (t) { %><tr id="l<%= t.id %>" class="<%= t.done_at ? 'is-done' : '' %><%= t.section === 'urgent' ? ' is-urgent' : '' %>">
         <% if (can.tick) { %><td><form method="post" action="/inventory/lines/<%= t.id %>"><%- hidden('l' + t.id) %><input type="hidden" name="done" value="<%= t.done_at ? '0' : '1' %>">
           <button class="iv-tick<%= t.done_at ? ' is-on' : '' %>" title="<%= t.done_at ? 'Done' + (t.done_by_name ? ' by ' + t.done_by_name : '') + ' – press to undo' : 'Mark done' %>" aria-label="<%= t.done_at ? 'Undo done: ' : 'Mark done: ' %><%= t.item %>"><%= t.done_at ? '✔' : '' %></button></form></td><% } %>
@@ -63,10 +79,10 @@
     </table></div>
     <% } %>
     <p class="muted small">Outlets: WM = Wangsa Maju, JH = Jenderam Hilir (Dengkil), BR = Rinching, plus Bangi and Ampang. HQ Warehouse often holds stock, so transfer before ordering. Negative stock means the count needs fixing first.</p>
-  </section>
+  </details>
 
-  <section class="oo-card" id="cash">
-    <h2>Payment plan by week</h2>
+  <details class="oo-card inv-sec" id="cash" open>
+    <summary><h2>Payment plan by week</h2></summary>
     <p class="muted small">Plan from the 28 Oct meeting. The bank must stay above RM<%= d.FLOOR.toLocaleString('en-MY') %>. If sales or zakat come in late, the week 3 payments are cut first.</p>
     <% if (d.cash.length) { const max = Math.max.apply(null, d.cash.map(function (w) { return Math.max(w.supplier_out, w.cash_end); }).concat([d.FLOOR])) * 1.1; %>
     <div class="iv-bars" role="img" aria-label="Supplier payments and cash at week end, by week">
@@ -83,12 +99,12 @@
         <td class="mo-c"><b><%= n0(w.supplier_out) %></b></td><td class="small"><%= w.paying %></td><td class="mo-c<%= w.cash_end < d.FLOOR * 1.25 ? ' iv-low' : '' %>"><%= n0(w.cash_end) %></td></tr><% }) %></tbody>
     </table></div>
     <% } else { %><p class="muted">No weekly plan for this month yet.</p><% } %>
-  </section>
+  </details>
 
-  <section class="oo-card" id="payments">
-    <h2>Payment approvals</h2>
+  <details class="oo-card inv-sec" id="payments" open>
+    <summary><h2>Payment approvals</h2></summary>
     <p class="muted small">Dr Aisyah approves here; Azwani marks Paid with the date and PV number, then writes PAID and the PV number in the supplier’s SOA file. A message in Telegram is not an approval.</p>
-    <div class="mo-scroll"><table class="mo-t">
+    <div class="mo-scroll"><table class="mo-t" data-xfilter aria-label="Payment approvals">
       <thead><tr><th>Pay date</th><th>Supplier</th><th class="mo-c">Proposed (RM)</th><th>Approved?</th><th>Status</th><th>Notes</th></tr></thead>
       <tbody><% d.pay.forEach(function (p) { %><tr id="p<%= p.id %>">
         <td class="small"><%= dmy(p.pay_date) %><br><span class="muted"><%= p.week %></span></td><th><%= p.supplier %></th><td class="mo-c"><%= n0(p.proposed) %></td>
@@ -118,7 +134,9 @@
         <button class="button">Add – Dr Aisyah approves</button>
       </form></details>
     <% } %>
-  </section>
+  </details>
 </main>
+<script src="/js/inventory.js?v=1" defer></script>
+<script src="/js/table-filter.js?v=2" defer></script>
 </body>
 </html>

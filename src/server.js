@@ -22,6 +22,7 @@ const { getDb } = require('./db');
 const { prepareDatabase } = require('./db/setup');
 const { createApp } = require('./app');
 const { createSalesSheetLink } = require('./sheets/sync');
+const { createInventoryDrive } = require('./inventory/drive');
 const { clearExpiredSessions } = require('./auth/sessions');
 
 async function main() {
@@ -40,7 +41,10 @@ async function main() {
   if (fake) console.log(`Pretending today is ${process.env.APP_TODAY} (APP_TODAY).`);
   const now = fake ? () => new Date(`${process.env.APP_TODAY}T20:00:00+08:00`) : () => new Date();
   const salesSheet = createSalesSheetLink(db, { now });
-  const app = createApp(db, { now, salesSheet });
+  // 4 Nov: Mr Eve's daily plan from Google Drive into /inventory every 30 minutes.
+  const inventoryDrive = createInventoryDrive(db, { now });
+  const app = createApp(db, { now, salesSheet, inventoryDrive });
+  inventoryDrive.schedule(30);
   salesSheet.schedule(Number(process.env.SALES_SHEET_SYNC_MINUTES) || 10);
 
   // Remove expired login sessions now and every hour.

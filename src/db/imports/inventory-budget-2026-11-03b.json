@@ -1,0 +1,216 @@
+{
+ "source": "Dr Aisyah, 3 Nov 2026 – updated November PO budget (RM200,628.03); suppliers not in her list kept with no budget",
+ "month": "2026-11",
+ "budget": [
+  {
+   "supplier": "Zuellig Pharma",
+   "key": "ZUELLIG",
+   "terms": "60 days",
+   "gate": "after_payment",
+   "unlock": "ZUELLIG",
+   "when": "Once the RM112k is paid (by 15 Nov)",
+   "po_budget": 115961.58,
+   "falls_due": "about mid-January"
+  },
+  {
+   "supplier": "DKSH (104)",
+   "key": "DKSH",
+   "terms": "30 days",
+   "gate": "after_payment",
+   "unlock": "DKSH",
+   "when": "After the week 3 payment (A items only)",
+   "po_budget": 55023.25,
+   "falls_due": "about 20 December"
+  },
+  {
+   "supplier": "Tongee",
+   "key": "TONGEE",
+   "terms": "–",
+   "gate": "check",
+   "unlock": "",
+   "when": "Check terms with Azwani first",
+   "po_budget": 10237.62,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "AISH",
+   "key": "AISH",
+   "terms": "–",
+   "gate": "check",
+   "unlock": "",
+   "when": "Check terms with Azwani first",
+   "po_budget": 4588.85,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "Duopharma",
+   "key": "DUOPHARMA",
+   "terms": "60 days",
+   "gate": "soa",
+   "unlock": "",
+   "when": "Once Azwani confirms its SOA",
+   "po_budget": 3911.96,
+   "falls_due": "about early January"
+  },
+  {
+   "supplier": "Nova",
+   "key": "NOVA",
+   "terms": "–",
+   "gate": "check",
+   "unlock": "",
+   "when": "Check terms with Azwani first",
+   "po_budget": 3340.8,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "Ben Way",
+   "key": "BEN",
+   "terms": "–",
+   "gate": "check",
+   "unlock": "",
+   "when": "Check terms with Azwani first",
+   "po_budget": 2864.35,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "DCH",
+   "key": "DCH",
+   "terms": "CBD",
+   "gate": "check",
+   "unlock": "",
+   "when": "Cash before delivery – pay DCH first",
+   "po_budget": 2100,
+   "falls_due": "on order"
+  },
+  {
+   "supplier": "Mun Xin",
+   "key": "MUN",
+   "terms": "–",
+   "gate": "check",
+   "unlock": "",
+   "when": "Check terms with Azwani first",
+   "po_budget": 1599.62,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "DKSH (103)",
+   "key": "DKSH 103",
+   "terms": "30 days",
+   "gate": "check",
+   "unlock": "",
+   "when": "Check the 103 account with Azwani",
+   "po_budget": 1000,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "Pahang Pharmacy",
+   "key": "PAHANG",
+   "terms": "90 days",
+   "gate": "open",
+   "unlock": "",
+   "when": "Now",
+   "po_budget": 0,
+   "falls_due": "end of January"
+  },
+  {
+   "supplier": "Apex Pharmacy",
+   "key": "APEX",
+   "terms": "60 days",
+   "gate": "open",
+   "unlock": "",
+   "when": "Now",
+   "po_budget": 0,
+   "falls_due": "about end of December"
+  },
+  {
+   "supplier": "AA Alive",
+   "key": "AA ALIVE",
+   "terms": "60 days",
+   "gate": "after_payment",
+   "unlock": "AA ALIVE",
+   "when": "Now, once the 30 Oct payment is marked paid",
+   "po_budget": 0,
+   "falls_due": "about end of December"
+  },
+  {
+   "supplier": "Teepham Medical",
+   "key": "TEEPHAM",
+   "terms": "60 days",
+   "gate": "after_payment",
+   "unlock": "TEEPHAM",
+   "when": "Now, once the 30 Oct payment is marked paid",
+   "po_budget": 0,
+   "falls_due": "about end of December"
+  },
+  {
+   "supplier": "Eldon Healthcare",
+   "key": "ELDON",
+   "terms": "60 days",
+   "gate": "open",
+   "unlock": "",
+   "when": "Now",
+   "po_budget": 0,
+   "falls_due": "about end of December"
+  },
+  {
+   "supplier": "Delfi Marketing",
+   "key": "DELFI",
+   "terms": "60 days",
+   "gate": "open",
+   "unlock": "",
+   "when": "Now",
+   "po_budget": 0,
+   "falls_due": "about end of December"
+  },
+  {
+   "supplier": "YSP Industries",
+   "key": "YSP",
+   "terms": "60 days",
+   "gate": "after_payment",
+   "unlock": "YSP",
+   "when": "After YSP reconfirms RM1,567 and it is paid",
+   "po_budget": 0,
+   "falls_due": "about early January"
+  },
+  {
+   "supplier": "Kotra Pharma",
+   "key": "KOTRA",
+   "terms": "30 days",
+   "gate": "after_payment",
+   "unlock": "KOTRA",
+   "when": "After the week 3 payment",
+   "po_budget": 0,
+   "falls_due": "about 20 December"
+  },
+  {
+   "supplier": "Pharmaniaga",
+   "key": "PHARMANIAGA",
+   "terms": "104 days (Alia, 3 Nov)",
+   "gate": "check",
+   "unlock": "",
+   "when": "Not in the November budget. Check overdue with Azwani first",
+   "po_budget": 0,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "Others (check SOA first)",
+   "key": "OTHERS",
+   "terms": "30–90 days",
+   "gate": "check",
+   "unlock": "",
+   "when": "Alia to check each one’s SOA",
+   "po_budget": 0,
+   "falls_due": "–"
+  },
+  {
+   "supplier": "Redwood Pharma",
+   "key": "REDWOOD",
+   "terms": "30 days",
+   "gate": "hold",
+   "unlock": "",
+   "when": "Not until the account reopens",
+   "po_budget": 0,
+   "falls_due": "–"
+  }
+ ]
+}

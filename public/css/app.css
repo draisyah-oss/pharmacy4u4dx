@@ -1342,3 +1342,38 @@ input.pp-ok { border-color: var(--good) !important; }
 .zk-chk.is-due { background: #fdf0d8; color: #7a4a00; }
 .zk-chk.is-late { background: var(--short-tint); color: var(--short); }
 .zk-chk .button.small { min-height: 34px; padding: 0 12px; font-size: 0.85rem; }
+/* Inventory sections fold (3 Nov) */
+details.inv-sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: -4px 0 8px; padding: 4px 0; }
+details.inv-sec > summary::-webkit-details-marker { display: none; }
+details.inv-sec > summary::before { content: "▾"; display: inline-block; color: var(--brand); font-size: 1rem; width: 1em; text-align: center; transition: transform .15s; }
+details.inv-sec:not([open]) > summary { margin-bottom: -4px; }
+details.inv-sec:not([open]) > summary::before { transform: rotate(-90deg); }
+details.inv-sec > summary h2 { margin: 0; }
+details.inv-sec > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+.inv-foldbar { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin: 0 0 10px; }
+.inv-foldbar .link-button { color: var(--brand); font-weight: 700; }
+/* Excel-style column filters (3 Nov) – public/js/table-filter.js */
+.xf-btn { margin-left: 4px; border: 1px solid var(--line); background: var(--card); color: var(--ink-soft); border-radius: 6px; font-size: 0.7rem; line-height: 1; padding: 3px 5px; cursor: pointer; vertical-align: 1px; }
+.xf-btn:hover, .xf-btn[aria-expanded="true"] { border-color: var(--brand); color: var(--brand); }
+th.xf-on .xf-btn { background: var(--brand); border-color: var(--brand); color: #fff; }
+.xf-menu { position: absolute; z-index: 60; background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 30px rgba(19, 32, 58, .18); padding: 8px; font-size: 0.9rem; }
+.xf-menu hr { border: 0; border-top: 1px solid var(--line); margin: 6px 0; }
+.xf-item { display: block; width: 100%; text-align: left; background: none; border: 0; padding: 7px 8px; border-radius: 8px; font: inherit; color: var(--ink); cursor: pointer; }
+.xf-item:hover { background: var(--brand-tint); }
+.xf-search { width: 100%; font: inherit; padding: 7px 10px; border: 1px solid var(--line); border-radius: 8px; margin: 0 0 6px; }
+.xf-list { max-height: 260px; overflow: auto; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; }
+.xf-opt { display: flex; gap: 8px; align-items: baseline; padding: 4px 2px; cursor: pointer; line-height: 1.3; }
+.xf-opt input { flex: none; }
+.xf-opt span { flex: 1; word-break: break-word; }
+.xf-all { border-bottom: 1px solid var(--line); font-weight: 700; }
+.xf-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+.xf-status { margin: 4px 0 8px; }
+.xf-status .link-button { color: var(--brand); font-weight: 700; }
+.xf-actions .button { min-height: 36px; padding: 0 14px; font-size: 0.9rem; width: auto; }
+.xf-opt[hidden] { display: none; }
+.inv-filters a[aria-current="page"] .chip-count { color: #fff; opacity: .85; }
+details.inv-sec .iv-tiles { margin-bottom: 0; }
+details.inv-sec .iv-tile { background: var(--page); }
+.iv-drive { background: var(--page); border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 0 0 12px; }
+.iv-drive p { margin: 0 0 6px; }
+.iv-drive .alert { margin: 6px 0; }

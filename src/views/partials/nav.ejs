@@ -18,7 +18,7 @@
        ['oostransfers', '/oos/transfers', 'Deliveries to send', 'oos transfer delivery send hq'],
        ['oosactivity', '/oos/activity', 'Activity log', 'oos seen question reply follow up whatsapp'],
        ['oosproducts', '/oos/products', 'Product list (Dynamod)', 'masterlist dynamod stock id barcode upload cost price margin']]]]
-       : user.payments ? [['Inventory', [board]]] : [];
+       : (user.payments || role === 'hq' || role === 'hq_staff') ? [['Inventory', [board]]] : []; // 4 Nov: all HQ see Ordering & payments
      // Projects (HQ team only), with the wiki checklist as a sub-item (full HQ and admin open it).
      // Milestones with a step checklist (19 Oct, e.g. min/max top 300) are sub-items too, with done / total.
      const stepItems = (typeof stepMenu !== 'undefined' && stepMenu ? stepMenu : []).map(function (m) {

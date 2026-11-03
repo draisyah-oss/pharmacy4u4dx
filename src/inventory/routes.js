@@ -11,9 +11,9 @@ const express = require('express');
 const calc = require('../calc');
 const inv = require('./data');
 
-function inventoryRoutes(db, { now }) {
+function inventoryRoutes(db, { now, drive = null }) {
   const router = express.Router();
-  const deny = (res) => res.status(403).render('message', { title: 'Not available', message: 'Ordering & payments is for the inventory team, Azwani and Dr Aisyah.' });
+  const deny = (res) => res.status(403).render('message', { title: 'Not available', message: 'Ordering & payments is for HQ.' });
   const back = (req, res, msg, kind = 'ok') => {
     const q = new URLSearchParams();
     for (const k of ['view', 'q', 'date']) if (req.body && req.body[k]) q.set(k, req.body[k]);
@@ -27,9 +27,22 @@ function inventoryRoutes(db, { now }) {
       const today = calc.todayInMalaysia(now());
       const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : null;
       const data = await inv.loadPage(db, { today, date, view: String(req.query.view || 'all'), q: req.query.q });
-      res.render('inventory', { title: 'Ordering & payments', d: data, today, navActive: 'inventory',
-        can: { approve: inv.canApprove(req.user), pay: inv.canPay(req.user), tick: inv.canTick(req.user) },
+      const driveStatus = drive ? await drive.status() : { configured: false };
+      res.render('inventory', { title: 'Ordering & payments', d: data, today, navActive: 'inventory', drive: driveStatus,
+        can: { approve: inv.canApprove(req.user), pay: inv.canPay(req.user), tick: inv.canTick(req.user), admin: req.user.role === 'admin' },
         ok: req.query.ok || null, err: req.query.err || null });
+    } catch (err) { next(err); }
+  });
+
+  // 4 Nov: "Check Drive now" – fetch Mr Eve's newest daily plan from Google Drive (anyone who can see the page).
+  router.post('/inventory/drive', async (req, res, next) => {
+    try {
+      if (!inv.canSee(req.user)) return deny(res);
+      if (!drive || !drive.configured()) return back(req, res, 'The Google Drive link isn’t set up yet.', 'err');
+      try {
+        const r = await drive.syncNow({ force: true });
+        back(req, res, r.unchanged ? 'Checked Google Drive – no newer plan from Mr Eve.' : `Loaded Mr Eve’s plan from Google Drive (${r.lines} lines).`);
+      } catch (err) { back(req, res, err.message, 'err'); }
     } catch (err) { next(err); }
   });
 
