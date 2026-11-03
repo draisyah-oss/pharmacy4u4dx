@@ -23,7 +23,7 @@
         <% g.rows.forEach(function (it) { const k = 'r[i' + it.id + ']'; const a = val(it, 'answer', it.answer || ''); const bad = rowErrors[it.id]; %>
           <tr class="<%= it.urgent && it.unanswered ? 'is-urgent' : '' %><%= bad ? ' is-error' : '' %>" data-row>
             <td class="nowrap"><%= of.when(it.reported_at, at) %><br><small class="muted"><%= it.seen_at ? 'seen ' + (it.seen_by_name || '') : 'not opened' %></small></td>
-            <td class="oo-titem"><a href="/oos/<%= it.id %>"><b><%= it.item %></b></a><% if (it.urgent && it.unanswered) { %> <span class="oo-chip oc-bad">URGENT</span><% } %>
+            <td class="oo-titem"><a href="/oos/<%= it.id %>"><b><%= it.item %></b></a><% if (it.product_stock_id) { %> <small class="pp-code"><%= it.product_stock_id %><%= it.product_uom ? ' · ' + it.product_uom : '' %></small><% } %><% if (it.urgent && it.unanswered) { %> <span class="oo-chip oc-bad">URGENT</span><% } %>
               <br><small class="muted"><%= it.b2b_customer ? it.b2b_customer + ' · ' : '' %><%= it.left_qty === 0 ? '0 left' : it.left_qty ? it.left_qty + ' left' : '' %><%= it.customers_count ? ' · ' + (it.customers_count >= 3 ? '3+' : '1–2') + ' asking' : '' %><%= it.note ? ' · “' + it.note + '”' : '' %><%= it.photo_id ? ' · 📷' : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %></small>
               <% if (it.awaitingHq) { %><br><a class="oo-due s-watch" href="/oos/<%= it.id %>">💬 Branch replied</a><% } else if ((it.messages || []).length) { %><br><a class="small" href="/oos/<%= it.id %>">💬 <%= it.messages.length %></a><% } %>
             </td>
@@ -57,7 +57,7 @@
   <form method="post" action="/oos/inbox/b2b" class="oo-form oo-b2b" novalidate>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
     <div class="oo-two">
-      <label class="oo-label">Item<input name="item" maxlength="120" autocomplete="off" required></label>
+      <label class="oo-label pp-wrap">Item<input name="item" maxlength="120" autocomplete="off" required<%= typeof productList !== 'undefined' && productList ? ' data-product-search data-required=1 placeholder="type and pick from the Dynamod list"' : '' %>><input type="hidden" name="product_id"><small class="pp-info" data-product-info></small></label>
       <label class="oo-label">B2B customer<input name="customer" maxlength="80" autocomplete="off" required placeholder="e.g. Klinik Mesra"></label>
     </div>
     <label class="oo-label">Note (optional)<input name="note" maxlength="200" autocomplete="off" placeholder="e.g. needs 20 boxes by Friday"></label>

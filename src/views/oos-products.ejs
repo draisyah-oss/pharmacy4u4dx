@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'oosproducts' }) %>
+<main class="page oo-page">
+  <h1>Product list (Dynamod)</h1>
+  <p class="muted">Branches pick out-of-stock items from this list, so every report has the Dynamod description, stock ID and UOM – the same as you order. <%= stats.active %> products<%= last ? ' · from ' + last.source + (last.by ? ' (' + last.by + ')' : '') + ', ' + new Date(last.at).toLocaleDateString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short' }) : '' %>.</p>
+  <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <section class="oo-card">
+    <h2>Find a product</h2>
+    <form method="get" class="pp-find"><input type="search" name="q" value="<%= q %>" placeholder="name, generic, stock ID or barcode" aria-label="Search"><button class="button secondary">Search</button></form>
+    <% if (q) { %>
+      <% if (!found.length) { %><p class="muted">Nothing found.</p><% } else { %>
+      <div class="mo-scroll"><table class="mo-t"><thead><tr><th>Description</th><th>Stock ID</th><th>UOM</th><th>Barcode</th><th>Generic</th></tr></thead>
+        <tbody><% found.forEach(function (p) { %><tr><th><%= p.description %></th><td><%= p.stock_id %></td><td><%= p.uom %></td><td><%= p.barcode %></td><td><%= p.generic %></td></tr><% }) %></tbody></table></div>
+      <% } %>
+    <% } %>
+  </section>
+  <section class="oo-card">
+    <h2>Update from a new Dynamod export</h2>
+    <p class="muted small">Export the stock masterlist from Dynamod as Excel (.xlsx, same columns: Active, Stock ID, Barcode, Description 1, UOM ID …) and upload it. Products are matched by barcode; new ones are added, changed names updated.</p>
+    <form method="post" action="/oos/products" class="oo-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="file"><input type="hidden" name="name">
+      <label class="oo-label">Masterlist file<input type="file" accept=".xlsx" data-xlsx-upload required></label>
+      <label><input type="checkbox" name="replace" value="1"> Products not in this file are no longer listed (full export)</label>
+      <button class="button" type="submit">Upload</button>
+    </form>
+  </section>
+</main>
+<script src="/js/product-pick.js?v=1" defer></script>
+</body>
+</html>

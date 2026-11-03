@@ -45,7 +45,7 @@ function oosRoutes(db, { now, trackerStart }) {
       newCount: (await db.query("SELECT count(*)::int AS n FROM item_requests WHERE branch_id = $1 AND status = ANY($2)", [branch.id, requests.OPEN])).rows[0].n,
       bq: many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : '',
       typed: extra.typed || {}, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || req.query.err || null,
-      targets: await oos.targets(db),
+      targets: await oos.targets(db), productList: (await require('./products').count(db)) > 0,
     });
   }
 
@@ -141,6 +141,47 @@ function oosRoutes(db, { now, trackerStart }) {
       ok: req.query.ok || null, err: extra.err || req.query.err || null, at: now(),
     });
   }
+
+  // ─────────────── 3 Nov: Dynamod product list (search + upload) ───────────────
+  const products = require('./products');
+  const canReport = (u) => ['branch_staff', 'branch_manager', 'admin', 'hq', 'hq_staff'].includes(u.role);
+
+  router.get('/oos/products/search', async (req, res, next) => {
+    try {
+      if (!canReport(req.user)) return res.status(403).json({ error: 'forbidden' });
+      res.set('Cache-Control', 'private, max-age=60');
+      res.json({ items: await products.search(db, req.query.q) });
+    } catch (err) { next(err); }
+  });
+
+  router.get('/oos/products', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'The product list is kept by the inventory team (Alia, Syarafana, Fariz) and admin.');
+      const info = (await db.query("SELECT key, value FROM app_settings WHERE key IN ('products_20261102_v1', 'products_last_upload')")).rows;
+      const last = info.find((r) => r.key === 'products_last_upload') || info.find((r) => r.key === 'products_20261102_v1');
+      const stats = (await db.query('SELECT count(*) FILTER (WHERE active)::int AS active, count(*)::int AS total FROM products')).rows[0];
+      const found = req.query.q ? await products.search(db, req.query.q, { limit: 50 }) : [];
+      res.render('oos-products', { title: 'Product list', stats, last: last ? JSON.parse(last.value) : null, q: req.query.q || '', found,
+        ok: req.query.ok || null, err: req.query.err || null, navActive: 'oosproducts' });
+    } catch (err) { next(err); }
+  });
+
+  router.post('/oos/products', async (req, res, next) => {
+    try {
+      if (!oos.canAnswer(req.user)) return forbid(res, 'The product list is kept by the inventory team and admin.');
+      const m = /^data:[^;]*;base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body.file || ''));
+      if (!m) return back(res, '/oos/products', 'Choose the Dynamod masterlist (.xlsx) first.', 'err');
+      const buf = Buffer.from(m[1], 'base64');
+      if (buf.subarray(0, 2).toString() !== 'PK') return back(res, '/oos/products', 'That isn’t an Excel (.xlsx) file.', 'err');
+      const parsed = await products.parseXlsx(buf);
+      if (parsed.error) return back(res, '/oos/products', parsed.error, 'err');
+      const r = await products.upsertProducts(db, parsed.rows, { deactivateMissing: req.body.replace === '1' });
+      const info = { source: String(req.body.name || 'upload').slice(0, 120), at: now().toISOString(), by: req.user.display_name, ...r };
+      await db.query(`INSERT INTO app_settings (key, value) VALUES ('products_last_upload', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`, [JSON.stringify(info)]);
+      await db.query(`INSERT INTO audit_log (user_id, action, table_name, record_key, new_value) VALUES ($1, 'import', 'products', $2, $3)`, [req.user.id, info.source, JSON.stringify(r)]);
+      back(res, '/oos/products', `Product list updated: ${r.total} rows read, ${r.added} new, ${r.updated} changed.`);
+    } catch (err) { next(err); }
+  });
 
   router.post('/oos/inbox/b2b', async (req, res, next) => {
     try {

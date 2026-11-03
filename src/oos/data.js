@@ -78,10 +78,26 @@ async function audit(tx, user, action, key, oldV, newV) {
 
 // ─────────────── 1. Report ───────────────
 
+// 3 Nov: the item comes from the Dynamod masterlist (src/oos/products.js) when it is loaded –
+// the description is stored as the item, with the product's id (stock ID, barcode, UOM).
+async function pickProduct(db, body) {
+  const products = require('./products');
+  if (!(await products.count(db))) {
+    const item = cleanText(body.item, { max: 120, label: 'Item' });
+    if (item.error) return { error: item.error };
+    return item.value ? { item: item.value, productId: null } : { error: 'Type the item.' };
+  }
+  const r = await products.resolve(db, body);
+  if (r.none) return { error: 'Type the item and pick it from the list.' };
+  if (r.error) return { error: r.error };
+  return { item: r.product.description.slice(0, 120), productId: r.product.id };
+}
+
 async function report(db, user, branch, body, { now }) {
   const errors = {};
-  const item = cleanText(body.item, { max: 120, label: 'Item' });
-  if (item.error) errors.item = item.error; else if (!item.value) errors.item = 'Type the item.';
+  const picked = await pickProduct(db, body);
+  const item = { value: picked.item };
+  if (picked.error) errors.item = picked.error;
   let left = { value: null };
   if (body.left === 'none') left = { value: 0 };
   else if (body.left === 'low') { left = int(body.left_qty, { min: 1, max: 999 }); if (left.value === null && !left.error) left = { error: 'How many are left?' }; }
@@ -101,10 +117,10 @@ async function report(db, user, branch, body, { now }) {
     const photoId = await chat.savePhoto(tx, user, branch.id, photo.value);
     const { rows } = await tx.query(
       `INSERT INTO oos_items (branch_id, week_start, item, out_of_stock_since, customers_asking, created_by, updated_by,
-         reported_at, left_qty, customers_count, urgent, note, answer_due, updated_at, photo_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12, $7, $13) RETURNING id`,
+         reported_at, left_qty, customers_count, urgent, note, answer_due, updated_at, photo_id, product_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12, $7, $13, $14) RETURNING id`,
       [branch.id, calc.weekStart(today), item.value, today, asking ? `${body.asking} customers asking` : null, user.id,
-        at, left.value, asking ?? null, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour), photoId]);
+        at, left.value, asking ?? null, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour), photoId, picked.productId]);
     await audit(tx, user, 'insert', `${branch.code} #${rows[0].id}`, null,
       { item: item.value, left: left.value, customers: asking ?? null, urgent: body.urgent === 'on' || body.urgent === '1' });
     return { id: rows[0].id };
@@ -113,9 +129,9 @@ async function report(db, user, branch, body, { now }) {
 
 // 28 Oct: a B2B out-of-stock item, added by the inventory team (no branch; the customer's name).
 async function reportB2b(db, user, body, { now }) {
-  const item = cleanText(body.item, { max: 120, label: 'Item' });
-  if (item.error) return { error: item.error };
-  if (!item.value) return { error: 'Type the item.' };
+  const picked = await pickProduct(db, body);
+  if (picked.error) return { error: picked.error };
+  const item = { value: picked.item };
   const customer = cleanText(body.customer, { max: 80, label: 'Customer' });
   if (customer.error) return { error: customer.error };
   if (!customer.value) return { error: 'Type the B2B customer.' };
@@ -126,9 +142,9 @@ async function reportB2b(db, user, body, { now }) {
   return db.transaction(async (tx) => {
     const { rows } = await tx.query(
       `INSERT INTO oos_items (branch_id, b2b_customer, week_start, item, out_of_stock_since, created_by, updated_by,
-         reported_at, urgent, note, answer_due, updated_at, seen_at, seen_by)
-       VALUES (NULL, $1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $6, $6, $5) RETURNING id`,
-      [customer.value, calc.weekStart(today), item.value, today, user.id, at, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour)]);
+         reported_at, urgent, note, answer_due, updated_at, seen_at, seen_by, product_id)
+       VALUES (NULL, $1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $6, $6, $5, $10) RETURNING id`,
+      [customer.value, calc.weekStart(today), item.value, today, user.id, at, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour), picked.productId]);
     await audit(tx, user, 'insert', `B2B #${rows[0].id}`, null, { item: item.value, customer: customer.value });
     return { id: rows[0].id };
   });
@@ -139,8 +155,10 @@ async function reportB2b(db, user, body, { now }) {
 const SELECT = `
   SELECT o.*, COALESCE(b.code, 'B2B') AS branch_code, COALESCE(b.name, 'B2B – ' || o.b2b_customer) AS branch_name, fb.code AS from_code, fb.name AS from_name,
     c.display_name AS reported_by_name, a.display_name AS answered_by_name, s.display_name AS sent_by_name,
-    sn.display_name AS seen_by_name, cx.display_name AS cancelled_by_name
+    sn.display_name AS seen_by_name, cx.display_name AS cancelled_by_name,
+    pr.stock_id AS product_stock_id, pr.barcode AS product_barcode, pr.uom AS product_uom
   FROM oos_items o LEFT JOIN branches b ON b.id = o.branch_id
+  LEFT JOIN products pr ON pr.id = o.product_id
   LEFT JOIN users sn ON sn.id = o.seen_by
   LEFT JOIN users cx ON cx.id = o.cancelled_by
   LEFT JOIN branches fb ON fb.id = o.from_branch_id

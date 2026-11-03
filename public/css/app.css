@@ -1212,3 +1212,14 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 .bm-decide input[type="text"] { flex: 1 1 180px; font: inherit; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; }
 .bm-add { margin-top: 10px; border-top: 1px dashed var(--line); padding-top: 8px; }
 .bm-add summary { cursor: pointer; font-weight: 700; color: var(--brand); }
+/* Dynamod product picker (3 Nov) */
+.pp-wrap { position: relative; }
+.pp-list { position: relative; z-index: 20; list-style: none; margin: 2px 0 0; padding: 4px; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 320px; overflow-y: auto; }
+.pp-list li { padding: 8px 10px; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; font-weight: 400; }
+.pp-list li:hover, .pp-list li.is-active { background: var(--info-tint, #eaf2ff); }
+.pp-list li small { color: var(--muted, #5b6575); }
+.pp-list li.pp-none { cursor: default; }
+.pp-info { display: block; color: var(--good); font-weight: 400; min-height: 1em; }
+input.pp-ok { border-color: var(--good) !important; }
+.pp-code { color: var(--muted, #5b6575); font-weight: 400; }
+.pp-find { display: flex; gap: 8px; } .pp-find input { flex: 1; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }

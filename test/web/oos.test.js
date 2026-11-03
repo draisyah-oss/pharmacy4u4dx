@@ -524,3 +524,37 @@ test('3 Nov (Alia, request #1): a transfer goes with just the branch – quantit
   const after = (await db.query('SELECT answer, answer_qty, expected_back FROM oos_items WHERE id = $1', [item.id])).rows[0];
   assert.equal(after.answer, 'transfer'); assert.equal(after.answer_qty, null); assert.equal(after.expected_back, '2026-10-29', 'due tomorrow');
 });
+
+test('3 Nov: items are picked from the Dynamod product list – search, report with stock ID / UOM, upload', async () => {
+  const products = require('../../src/oos/products');
+  await db.query("DELETE FROM app_settings WHERE key = 'products_20261102_v1'");
+  await products.loadBundledOnce(db);
+  assert.ok((await products.count(db)) > 7000);
+  const hits = await products.search(db, 'zyloric 300');
+  assert.ok(hits.length >= 2 && hits.every((h) => /ZYLORIC 300MG/.test(h.description)));
+  assert.equal((await products.search(db, '1002164')).length >= 2, true, 'by stock ID');
+  const strip = hits.find((h) => h.uom === 'STP');
+  // Report with a picked product
+  const branch = (await db.query("SELECT * FROM branches WHERE code = 'WM'")).rows[0];
+  const user = (await db.query("SELECT * FROM users WHERE role = 'admin' LIMIT 1")).rows[0];
+  const now = () => new Date('2026-11-03T10:00:00+08:00');
+  let r = await oos.report(db, user, branch, { item: 'zyloric', product_id: String(strip.id), left: 'none', asking: '0' }, { now });
+  assert.ok(r.id, JSON.stringify(r.errors));
+  const it = await oos.loadItem(db, r.id);
+  assert.equal(it.item, 'ZYLORIC 300MG TABLET 10S'); assert.equal(it.product_stock_id, '1002164'); assert.equal(it.product_uom, 'STP');
+  // Free text that isn't a product is refused; the exact description is accepted
+  r = await oos.report(db, user, branch, { item: 'panadol something', left: 'none', asking: '0' }, { now });
+  assert.match(r.errors.item, /Pick the item from the Dynamod list/);
+  r = await oos.report(db, user, branch, { item: 'zyloric 300mg tablet 10s', left: 'none', asking: '0' }, { now });
+  assert.ok(r.id);
+  // Upload a newer export (one row changed) by barcode
+  const ExcelJS = require('exceljs');
+  const wb = new ExcelJS.Workbook(); const ws = wb.addWorksheet('Sheet');
+  ws.addRow(['Active', 'Stock ID', 'Barcode', 'Description 1', 'UOM ID', 'Description 2']);
+  ws.addRow(['Y', '1002164', '1002164-1', 'ZYLORIC 300MG TAB 10S (NEW)', 'STP', 'ALLOPURINOL']);
+  ws.addRow(['Y', '9999999', '9999999-1', 'BRAND NEW ITEM 1S', 'BOX', '']);
+  const parsed = await products.parseXlsx(Buffer.from(await wb.xlsx.writeBuffer()));
+  const u = await products.upsertProducts(db, parsed.rows);
+  assert.deepEqual(u, { added: 1, updated: 1, total: 2 });
+  assert.equal((await products.search(db, 'brand new item')).length, 1);
+});

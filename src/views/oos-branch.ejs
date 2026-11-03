@@ -20,8 +20,10 @@
     <p class="muted">Report it when it hits the minimum on the shelf – don’t wait for zero, and don’t wait for Monday.</p>
     <form method="post" action="/oos<%= bq %>" class="oo-form" novalidate>
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-      <label class="oo-label">Item
-        <input name="item" maxlength="120" autocomplete="off" required value="<%= t.item || '' %>" placeholder="e.g. Loyuric 100mg (30s)"<%= errors.item ? ' aria-invalid="true"' : '' %>>
+      <label class="oo-label pp-wrap">Item <% if (productList) { %><small class="muted">– type a few letters and pick it from the Dynamod list</small><% } %>
+        <input name="item" maxlength="120" autocomplete="off" required value="<%= t.item || '' %>" placeholder="<%= productList ? 'e.g. loyuric 100' : 'e.g. Loyuric 100mg (30s)' %>"<%= productList ? ' data-product-search data-required=1' : '' %><%= errors.item ? ' aria-invalid="true"' : '' %>>
+        <input type="hidden" name="product_id" value="<%= t.product_id || '' %>">
+        <small class="pp-info" data-product-info></small>
         <% if (errors.item) { %><span class="wk-error"><%= errors.item %></span><% } %>
       </label>
       <fieldset class="oo-set">
@@ -86,5 +88,6 @@
   </section>
 </main>
 <script src="/js/photo.js?v=1" defer></script>
+<script src="/js/product-pick.js?v=1" defer></script>
 </body>
 </html>
