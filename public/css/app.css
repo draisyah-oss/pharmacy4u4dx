@@ -1230,3 +1230,6 @@ input.pp-ok { border-color: var(--good) !important; }
 .hl-tazkirah { display: flex; gap: 10px; background: #f1f8f2; border-left: 4px solid var(--good); border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
 .hl-tazkirah p { margin: 2px 0; font-style: italic; }
 .hl-tz-k { font-weight: 700; color: var(--good); text-transform: uppercase; letter-spacing: .03em; font-size: .72rem; }
+.hl-tip { display: flex; gap: 10px; background: #fff7ec; border-left: 4px solid #e2a23b; border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
+.hl-tip p { margin: 2px 0; }
+.hl-tip-k { font-weight: 700; color: #8a5a00; text-transform: uppercase; letter-spacing: .03em; font-size: .72rem; }

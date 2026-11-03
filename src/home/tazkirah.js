@@ -38,6 +38,47 @@ const LIST = [
   { kind: 'Al-Quran', text: 'Sesungguhnya Allah tidak mengubah keadaan sesuatu kaum sehingga mereka mengubah apa yang ada pada diri mereka sendiri.', src: 'Surah Ar-Ra’d, 13:11' },
 ];
 
+
+// 3 Nov (CEO): a daily tip to overcome burnout and find meaning at work – shown under the tazkirah.
+const TIPS = [
+  { title: "Rehat sejenak", text: "Ambil 2–3 minit antara pelanggan untuk tarik nafas dalam-dalam: tarik 4 saat, tahan 4 saat, hembus 6 saat. Badan yang tenang membantu fikiran fokus semula." },
+  { title: "Ingat 'kenapa' anda", text: "Ingat seorang pelanggan yang pernah anda bantu sehingga dia rasa lega. Itulah makna kerja kita – bukan sekadar jual ubat, tetapi bantu orang sihat." },
+  { title: "Satu perkara pada satu masa", text: "Bila kerja bertimbun, tulis 3 perkara paling penting hari ini. Siapkan satu, tanda, kemudian yang seterusnya." },
+  { title: "Minum air", text: "Penat dan sakit kepala selalunya tanda kurang air. Letak botol air di tempat yang nampak dan minum setiap kali selesai melayan pelanggan." },
+  { title: "Rehat yang betul", text: "Waktu rehat, jauhkan diri dari kaunter dan telefon kerja walaupun 10 minit. Otak perlukan jeda untuk pulih." },
+  { title: "Tidur yang cukup", text: "Tidur 7–8 jam adalah 'ubat' paling murah untuk mengelak burnout. Cuba letak telefon jauh dari katil 30 minit sebelum tidur." },
+  { title: "Raikan kemenangan kecil", text: "Hari ini, tulis satu perkara yang berjaya – walaupun kecil. Kemajuan kecil setiap hari membina semangat." },
+  { title: "Minta bantuan", text: "Tidak perlu tanggung semuanya seorang diri. Bila rasa terbeban, beritahu rakan sekerja atau pengurus – kita satu pasukan." },
+  { title: "Senyum dan bertegur sapa", text: "Satu ucapan terima kasih kepada rakan sekerja hari ini boleh menceriakan hari mereka – dan hari anda juga." },
+  { title: "Gerakkan badan", text: "Berdiri lama? Regangkan bahu, leher dan betis setiap 1–2 jam. Badan yang bergerak membantu tenaga kekal stabil." },
+  { title: "Hadkan berita negatif", text: "Kurangkan menatal media sosial semasa rehat. Isi masa itu dengan sesuatu yang menenangkan – zikir, berbual, atau berjalan sebentar." },
+  { title: "Kenal tanda awal burnout", text: "Mudah marah, susah tidur, rasa kosong atau hilang minat? Itu isyarat untuk berehat dan bercakap dengan seseorang, bukan tanda anda lemah." },
+  { title: "Tetapkan had", text: "Bila waktu kerja tamat, beri diri anda izin untuk berhenti. Mesej kerja yang tidak segera boleh dijawab esok." },
+  { title: "Belajar satu perkara baru", text: "Pelajari satu fakta tentang ubat atau produk hari ini. Rasa berkembang dalam kerja menambah makna dan keyakinan." },
+  { title: "Fokus pada apa yang boleh dikawal", text: "Jualan, cuaca, pelanggan yang sukar – tidak semua dalam kawalan kita. Fokus pada layanan dan usaha kita sendiri." },
+  { title: "Makan dengan baik", text: "Jangan langkau makan tengah hari. Makanan yang seimbang memberi tenaga yang lebih stabil berbanding kopi dan manisan." },
+  { title: "Solat sebagai rehat jiwa", text: "Gunakan waktu solat sebagai masa berhenti sejenak daripada kesibukan – tenangkan hati sebelum menyambung kerja." },
+  { title: "Bersyukur", text: "Sebelum pulang, fikirkan 3 perkara yang anda syukuri hari ini. Amalan kecil ini terbukti membantu emosi lebih positif." },
+  { title: "Pelanggan yang sukar", text: "Bila berdepan pelanggan marah, ingat – selalunya mereka sedang sakit atau risau. Tarik nafas, dengar dahulu, kemudian bantu." },
+  { title: "Kemas ruang kerja", text: "Kaunter yang tersusun membantu fikiran lebih tenang dan kerja lebih cepat. Luangkan 5 minit setiap pagi." },
+  { title: "Sasaran sebagai panduan", text: "Sasaran 4DX bukan untuk menekan, tetapi untuk menunjukkan arah. Fokus pada satu langkah lead hari ini – keputusan akan menyusul." },
+  { title: "Bercakap tentang perasaan", text: "Kongsi dengan orang yang dipercayai bila rasa tertekan. Meluahkan perasaan meringankan beban di hati." },
+  { title: "Masa untuk keluarga", text: "Luangkan masa berkualiti dengan keluarga atau kawan di luar waktu kerja. Hubungan yang baik mengisi semula tenaga emosi." },
+  { title: "Jangan bandingkan diri", text: "Setiap orang ada kekuatan berbeza. Bandingkan diri anda hari ini dengan diri anda semalam, bukan dengan orang lain." },
+  { title: "Kerja dengan niat", text: "Mulakan syif dengan niat untuk membantu orang. Kerja yang diniatkan kerana Allah menjadi ibadah dan lebih bermakna." },
+  { title: "Rehat mata", text: "Kerap melihat skrin? Ikut peraturan 20-20-20: setiap 20 minit, lihat sesuatu sejauh 20 kaki selama 20 saat." },
+  { title: "Hargai rakan sepasukan", text: "Beri shout-out kepada seorang rakan di sesi WIG hari Selasa. Pengiktirafan membina semangat pasukan." },
+  { title: "Ambil cuti bila perlu", text: "Cuti tahunan ada untuk digunakan. Rancang cuti lebih awal supaya anda kembali dengan tenaga baru." },
+  { title: "Kurangkan multitasking", text: "Melayan pelanggan sambil membalas mesej menambah tekanan. Siapkan satu tugas dengan baik sebelum beralih." },
+  { title: "Cari makna dalam rutin", text: "Menyusun stok, merekod nombor – semuanya memastikan pelanggan dapat ubat yang mereka perlukan tepat pada masanya." },
+  { title: "Beri diri ruang untuk silap", text: "Semua orang buat silap. Belajar, betulkan, dan teruskan – jangan menghukum diri terlalu lama." },
+];
+
+function tipFor(date) {
+  const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
+  return TIPS[((day % TIPS.length) + TIPS.length) % TIPS.length];
+}
+
 const KIND_EMOJI = { 'Al-Quran': '📖', Hadis: '🌙', Tazkirah: '🤲' };
 
 // The tazkirah for a date (YYYY-MM-DD, Malaysia time).
@@ -53,4 +94,4 @@ async function today(db, date) {
   return forDate(date);
 }
 
-module.exports = { LIST, forDate, today };
+module.exports = { LIST, TIPS, forDate, tipFor, today };

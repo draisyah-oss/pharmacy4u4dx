@@ -192,10 +192,11 @@ async function buildHighlights(db, { user, now, trackerStart }) {
   }
   const news = await loadNews(db, today);
   const tazkirah = await require('./tazkirah').today(db, today);
+  const tip = require('./tazkirah').tipFor(today);
   const targets = user.branch_code && ['branch_staff', 'branch_manager'].includes(user.role)
     ? await branchTargets(db, { branchCode: user.branch_code, today, trackerStart }) : null;
   const branchRow = user.branch_code && shared.wins.company && shared.wins.company.rows ? shared.wins.company.rows.find((r) => r.code === user.branch_code) : null;
-  return { today, ...shared, news, tazkirah, targets, canPost: canPost(user), myBranch: branchRow };
+  return { today, ...shared, news, tazkirah, tip, targets, canPost: canPost(user), myBranch: branchRow };
 }
 const clearCache = () => cache.clear();
 

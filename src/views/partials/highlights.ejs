@@ -64,7 +64,12 @@
       <div><small class="hl-tz-k"><%= z.kind === 'Tazkirah' ? 'Tazkirah hari ini' : z.kind + ' – peringatan hari ini' %></small>
         <p>“<%= z.text %>”</p><small class="muted"><%= z.src %></small></div></div>
   <% } %>
-  <% if (!H.news.length && !H.tazkirah) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
+  <% if (H.tip) { %>
+    <div class="hl-tip"><span class="hl-emoji" aria-hidden="true">🌱</span>
+      <div><small class="hl-tip-k">Tip hari ini – jaga diri, kerja bermakna</small>
+        <p><b><%= H.tip.title %>.</b> <%= H.tip.text %></p></div></div>
+  <% } %>
+  <% if (!H.news.length && !H.tazkirah && !H.tip) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
   <ul class="hl-news">
     <% H.news.forEach(function (n) { %>
       <li class="<%= n.pinned ? 'is-pinned' : '' %>"><span class="hl-emoji" aria-hidden="true"><%= n.emoji || '📌' %></span>
