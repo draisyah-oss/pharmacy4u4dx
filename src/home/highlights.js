@@ -187,7 +187,11 @@ async function buildHighlights(db, { user, now, trackerStart }) {
   if (!shared) {
     const w = await wins(db, { today, trackerStart });
     const goals = await require('../review/data').currentGoals(db, today);
-    shared = { wins: w, goals: await goalProgress(db, goals, { today, company: w.company }) };
+    // 3 Nov (CEO): estimated sales lost to out of stock this month – everyone in charge sees it.
+    const lossMod = require('../oos/loss'); const mr = lossMod.monthRange(today);
+    let oosLoss = null;
+    try { oosLoss = { ...(await lossMod.lossBetween(db, { from: mr.from, to: mr.to })), monthName: mr.monthName }; } catch (err) { console.error('OOS loss:', err.message); }
+    shared = { wins: w, goals: await goalProgress(db, goals, { today, company: w.company }), oosLoss };
     cache.clear(); cache.set(key, shared);
   }
   const news = await loadNews(db, today);

@@ -39,6 +39,8 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await bangiNov2Once(db, log);
     await tallyAllOnce(db, readSeed(), log);
     await brNov3Once(db, readSeed(), log);
+    // 3 Nov: zakat claims tracker for BR, WM, JH (replaces the old zakat lead measures).
+    await require('../zakat/data').setupOnce(db, log);
     // 3 Nov: November's agreed goals 1 and 2 are worked out by the app (sales, out of stock).
     await relabelOnce(db, 'goal_metrics_v1', [
       ["UPDATE month_goals SET metric = 'company_sales' WHERE month = '2026-11' AND title LIKE 'Hit the November target%' AND metric IS NULL"],
@@ -53,6 +55,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
 
   const summary = await loadSeed(db, seed, { adminPassword: process.env.ADMIN_PASSWORD });
   await addAdminLoginsOnce(db, seed, log);
+  await require('../zakat/data').setupOnce(db, log);
   log(
     `Loaded seed.json: ${summary.branches} branches, ${summary.people} people, ` +
       `${summary.daily_fields} daily fields, ${summary.measures} measures, ` +

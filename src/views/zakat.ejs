@@ -1,0 +1,171 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'zakat' }) %>
+<%
+  const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mLabel = function (k) { const p = k.split('-'); return MON[+p[1] - 1] + ' ' + p[0]; };
+  const mShort = function (k) { return MON[+k.split('-')[1] - 1]; };
+  const digits = function (n) { return Math.abs(Number(n) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  const money = function (n) { return (n < 0 ? '−' : '') + 'RM ' + digits(n); };
+  const pctOf = function (a, b) { return b > 0 ? Math.round(a / b * 100) : 0; };
+  const wkLabel = function (d) { return new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }); };
+  const link = function (o) { const q = new URLSearchParams({ branch: branch.code, month: o.month || month, tab: o.tab || tab }); if (o.week) q.set('week', o.week); return '/zakat?' + q.toString(); };
+  const r = t.row; const p = t.prev; const ml = mLabel(month); const pl = mShort(prevMonth);
+  const leftThis = Math.max(0, r.target - r.claimed); const totalLeft = r.carriedUnclaimed + r.target - r.claimed; const pct = pctOf(r.claimed, r.target);
+  const ppct = pctOf(r.paid, p.claimed); const unpaidPrev = p.claimed - r.paid; const owed = r.carriedOwed + r.claimed - r.paid;
+  const csrf = '<input type="hidden" name="_csrf" value="' + csrfToken + '"><input type="hidden" name="branch" value="' + branch.code + '">';
+  const monthWeeks = Object.keys(t.weeks).filter(function (k) { return k.slice(0, 7) === month; }).sort().reverse();
+  const allWeeks = Object.keys(t.weeks).sort().reverse();
+%>
+<main class="page zk-page">
+  <h1>Zakat claims – <%= branch.code %></h1>
+  <p class="muted">Key in each week: what you claimed, the payment received and the zakat contracts you bid on and won. These are <%= branch.code %>’s zakat lead measures on the scoreboard (they replace the old “orders / claims on time” boxes).</p>
+  <% if (branches.length) { %><nav class="iv-chips" aria-label="Branch"><% branches.forEach(function (b) { %><a class="iv-chip<%= b === branch.code ? ' is-on' : '' %>" href="/zakat?branch=<%= b %>&month=<%= month %>&tab=<%= tab %>"><%= b %></a><% }) %></nav><% } %>
+  <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+
+  <nav class="zk-tabs" aria-label="Sections">
+    <% [['overview', 'Overview'], ['weekly', 'Weekly'], ['bids', 'Bids'], ['suppliers', 'Suppliers']].forEach(function (x) { %>
+      <a class="zk-tab<%= tab === x[0] ? ' is-on' : '' %>" href="<%= link({ tab: x[0] }) %>" <%- tab === x[0] ? 'aria-current="page"' : '' %>><%= x[1] %></a><% }) %>
+  </nav>
+
+  <% if (tab !== 'suppliers') { %>
+  <div class="zk-mswitch">
+    <a class="zk-icon" href="<%= link({ month: prevMonth, week: null }) %>" aria-label="Previous month">‹</a>
+    <span class="zk-mlabel"><%= ml %></span>
+    <% if (month < today.slice(0, 7)) { %><a class="zk-icon" href="<%= link({ month: nextMonth }) %>" aria-label="Next month">›</a><% } else { %><span class="zk-icon is-off" aria-hidden="true">›</span><% } %>
+  </div>
+  <% } %>
+
+  <% if (tab === 'overview') { %>
+  <section class="oo-card">
+    <div class="zk-head"><h2>Claimed against target</h2><% if (r.target > 0) { %><span class="iv-pill <%= r.claimed >= r.target ? 'g-open' : 'g-check' %>"><%= r.claimed >= r.target ? 'Target reached' : pct + '% claimed' %></span><% } %></div>
+    <% if (canTarget) { %>
+      <form method="post" action="/zakat/target" class="zk-target"><%- csrf %><input type="hidden" name="month" value="<%= month %>">
+        <label class="oo-label">Amount to claim in <%= ml %><span class="zk-rm"><span>RM</span><input name="target" inputmode="decimal" value="<%= r.target > 0 ? r.target : '' %>" placeholder="0.00"></span></label>
+        <button class="button secondary">Save</button></form>
+    <% } else { %><p class="muted small">Amount to claim in <%= ml %>: <b><%= r.target > 0 ? money(r.target) : 'not set yet – your manager sets it' %></b></p><% } %>
+    <p class="zk-big"><span>RM</span><%= digits(r.claimed) %></p>
+    <p class="muted small"><%= r.target > 0 ? 'claimed of ' + money(r.target) : 'claimed so far.' %></p>
+    <div class="zk-meter" role="progressbar" aria-label="Claimed against target" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= Math.min(100, pct) %>"><i style="width: <%= Math.min(100, pct) %>%"></i></div>
+    <div class="zk-stats">
+      <div><span><%= r.carriedUnclaimed < 0 ? 'Ahead from earlier months' : 'Unclaimed from earlier months' %></span><b class="<%= r.carriedUnclaimed > 0 ? 'zk-neg' : '' %>"><%= money(Math.abs(r.carriedUnclaimed)) %></b></div>
+      <div><span>Left to claim this month</span><b><%= money(leftThis) %></b></div>
+      <div><span><%= totalLeft < 0 ? 'Claimed ahead of target' : 'Total still to claim' %></span><b><%= money(Math.abs(totalLeft)) %></b></div>
+    </div>
+  </section>
+
+  <section class="oo-card">
+    <div class="zk-head"><h2>Payment received</h2><% if (p.claimed > 0 && r.paid >= p.claimed) { %><span class="iv-pill g-open"><%= pl %> paid in full</span><% } %></div>
+    <p class="zk-big"><span>RM</span><%= digits(r.paid) %></p>
+    <p class="muted small">received in <%= ml %></p>
+    <div class="zk-meter" role="progressbar" aria-label="Received against last month’s claims" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= Math.min(100, ppct) %>"><i style="width: <%= Math.min(100, ppct) %>%"></i></div>
+    <p class="muted small"><%= p.claimed > 0 ? ppct + '% of the ' + money(p.claimed) + ' claimed in ' + pl : 'No claims keyed in for ' + pl + ' yet.' %></p>
+    <div class="zk-stats">
+      <div><span><%= pl %> target</span><b><%= money(p.target) %></b></div>
+      <div><span><%= pl %> claimed</span><b><%= money(p.claimed) %></b></div>
+      <div><span><%= unpaidPrev > 0 ? pl + ' still unpaid' : 'Received beyond ' + pl %></span><b class="<%= unpaidPrev > 0 ? 'zk-neg' : '' %>"><%= money(Math.abs(unpaidPrev)) %></b></div>
+    </div>
+  </section>
+
+  <section class="oo-card">
+    <div class="zk-head"><h2>Amount owed to <%= branch.code %></h2><% if (r.carriedOwed > 0) { %><span class="iv-pill g-wait">Includes earlier months</span><% } %></div>
+    <div class="zk-ledger">
+      <div><span></span><span>Unpaid from before <%= ml %></span><b><%= money(r.carriedOwed) %></b></div>
+      <div><span>+</span><span>Claimed in <%= ml %></span><b><%= money(r.claimed) %></b></div>
+      <div><span>−</span><span>Payments received in <%= ml %></span><b><%= money(r.paid) %></b></div>
+      <div class="is-total"><span>=</span><span>Total owed</span><b class="<%= owed < 0 ? 'zk-neg' : '' %>"><%= money(owed) %></b></div>
+    </div>
+    <p class="muted small">Everything claimed minus everything paid, carried forward month by month.</p>
+  </section>
+
+  <section class="oo-card">
+    <h2>Contract bids</h2>
+    <% let allB = 0, allW = 0; t.tl.rows.forEach(function (x) { allB += x.bids; allW += x.won; }); %>
+    <div class="zk-stats is-top">
+      <div><span>Bid on in <%= mShort(month) %></span><b><%= r.bids %></b></div>
+      <div><span>Won</span><b><%= r.won %></b></div>
+      <div><span>Win rate</span><b><%= r.bids > 0 ? pctOf(r.won, r.bids) + '%' : '—' %></b></div>
+    </div>
+    <p class="muted small">All months: won <%= allW %> of <%= allB %> bids<%= allB > 0 ? ' (' + pctOf(allW, allB) + '%)' : '' %>.</p>
+  </section>
+
+  <section class="oo-card">
+    <div class="zk-head"><h2>Supply held up</h2><span class="iv-pill <%= t.supply.total > 0 ? 'g-hold' : 'g-open' %>"><%= t.supply.total > 0 ? t.supply.total + ' contract' + (t.supply.total === 1 ? '' : 's') + ' affected' : 'None listed' %></span></div>
+    <p class="muted small"><%= t.supply.count > 0 ? t.supply.count + ' supplier' + (t.supply.count === 1 ? '' : 's') + ' listed' + (t.supply.top && t.supply.top.contracts > 0 ? '. Biggest impact: ' + (t.supply.top.name.trim() || 'unnamed supplier') + ' (' + t.supply.top.contracts + ').' : '.') : 'No suppliers are listed as withholding supply.' %></p>
+    <a class="button secondary" href="<%= link({ tab: 'suppliers' }) %>">Update supplier list</a>
+  </section>
+
+  <section class="oo-card">
+    <h2>Month by month</h2>
+    <% if (!t.tl.rows.length) { %><p class="muted">Month totals appear here once you set an amount to claim or save a week.</p>
+    <% } else { %>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Month</th><th class="mo-c">Target</th><th class="mo-c">Claimed</th><th class="mo-c">Unclaimed</th><th class="mo-c">Paid</th><th class="mo-c">Owed</th></tr></thead>
+      <tbody><% t.tl.rows.slice().reverse().forEach(function (x) { %><tr<%- x.key === month ? ' class="zk-sel"' : '' %>><th><a href="<%= link({ month: x.key, tab: 'overview' }) %>"><%= mShort(x.key).slice(0, 3) %> <%= x.key.slice(0, 4) %></a></th>
+        <td class="mo-c"><%= digits(x.target) %></td><td class="mo-c"><%= digits(x.claimed) %></td><td class="mo-c"><%= x.unclaimedEnd < 0 ? '−' : '' %><%= digits(x.unclaimedEnd) %></td><td class="mo-c"><%= digits(x.paid) %></td><td class="mo-c"><%= x.owedEnd < 0 ? '−' : '' %><%= digits(x.owedEnd) %></td></tr><% }) %></tbody>
+    </table></div>
+    <p class="muted small">Unclaimed and Owed are running totals at the end of each month, in RM.</p>
+    <% } %>
+  </section>
+  <% } %>
+
+  <% if (tab === 'weekly') { const w = weekVals; %>
+  <form method="post" action="/zakat/week" class="oo-card zk-form" id="weekly"><%- csrf %>
+    <h2>Add or update a week</h2>
+    <label class="oo-label">Week starting (Monday)<input type="date" name="week" value="<%= week %>" max="<%= today %>" required></label>
+    <p class="muted small">Week of <%= wkLabel(week) %>, counts toward <%= mLabel(week.slice(0, 7)) %><%= w ? '. Already saved – saving updates it.' : '.' %> Any day picked is moved to its Monday.<% if (!anyWeek) { %> You can change the last <%= backWeeks %> weeks.<% } %></p>
+    <fieldset><legend>Claims and payment</legend>
+      <div class="zk-grid2">
+        <label class="oo-label">Claimed this week<span class="zk-rm"><span>RM</span><input name="claimed" inputmode="decimal" value="<%= w && w.zclaim ? w.zclaim : '' %>" placeholder="0.00"></span></label>
+        <label class="oo-label">Payment received<span class="zk-rm"><span>RM</span><input name="paid" inputmode="decimal" value="<%= w && w.zpaid ? w.zpaid : '' %>" placeholder="0.00"></span></label>
+      </div></fieldset>
+    <fieldset><legend>Contract bids</legend>
+      <div class="zk-grid2">
+        <label class="oo-label">Contracts bid on<input name="bids" inputmode="numeric" value="<%= w && w.zbid ? w.zbid : '' %>" placeholder="0"></label>
+        <label class="oo-label">Contracts won<input name="won" inputmode="numeric" value="<%= w && w.zwon ? w.zwon : '' %>" placeholder="0"></label>
+      </div></fieldset>
+    <div class="zk-row"><button class="button"><%= w ? 'Update week' : 'Save week' %></button>
+      <% const nxt = addDays(week, 7); if (nxt <= today) { %><a class="button secondary" href="<%= link({ tab: 'weekly', week: nxt, month: nxt.slice(0, 7) }) %>#weekly">Next week</a><% } %>
+      <a class="button secondary" href="<%= link({ tab: 'weekly', week: addDays(week, -7), month: addDays(week, -7).slice(0, 7) }) %>#weekly">Week before</a></div>
+  </form>
+  <section class="oo-card">
+    <h2>Weeks saved for <%= ml %></h2>
+    <% if (!monthWeeks.length) { %><p class="muted">No weeks saved for <%= ml %> yet. Fill in the form above and save.</p>
+    <% } else { let tc = 0, tp = 0; monthWeeks.forEach(function (k) { tc += t.weeks[k].zclaim; tp += t.weeks[k].zpaid; }); %>
+      <% monthWeeks.forEach(function (k) { const x = t.weeks[k]; %><div class="zk-wk">
+        <a href="<%= link({ tab: 'weekly', week: k }) %>#weekly"><b>Week of <%= wkLabel(k) %></b><span>Claimed <%= money(x.zclaim) %> · Paid <%= money(x.zpaid) %></span><span>Bids: <%= x.zwon %> won of <%= x.zbid %></span></a>
+        <form method="post" action="/zakat/week/delete" class="zk-del"><%- csrf %><input type="hidden" name="week" value="<%= k %>"><input type="hidden" name="month" value="<%= month %>">
+          <details><summary>Delete</summary><button class="button secondary small">Confirm delete</button></details></form></div><% }) %>
+      <div class="zk-stats"><div><span>Claimed in <%= mShort(month) %></span><b><%= money(tc) %></b></div><div><span>Paid in <%= mShort(month) %></span><b><%= money(tp) %></b></div></div>
+    <% } %>
+  </section>
+  <% } %>
+
+  <% if (tab === 'bids') { let tb = 0, tw = 0; allWeeks.forEach(function (k) { tb += t.weeks[k].zbid; tw += t.weeks[k].zwon; }); %>
+  <section class="oo-card"><h2>All weeks</h2>
+    <div class="zk-stats is-top"><div><span>Bid on</span><b><%= tb %></b></div><div><span>Won</span><b><%= tw %></b></div><div><span>Win rate</span><b><%= tb > 0 ? pctOf(tw, tb) + '%' : '—' %></b></div></div></section>
+  <section class="oo-card"><h2>Week by week</h2>
+    <% if (!allWeeks.length) { %><p class="muted">Bids appear here once you save a week. Enter them under Weekly.</p><% } %>
+    <% allWeeks.slice(0, 26).forEach(function (k) { const x = t.weeks[k]; const pc = pctOf(x.zwon, x.zbid); %><div class="zk-bid">
+      <div><b>Week of <%= wkLabel(k) %></b><span><%= x.zwon %> won of <%= x.zbid %><%= x.zbid > 0 ? ' · ' + pc + '%' : '' %></span></div>
+      <div class="zk-meter is-thin" role="progressbar" aria-label="Win rate for week of <%= wkLabel(k) %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= pc %>"><i style="width: <%= pc %>%"></i></div></div><% }) %>
+    <% if (allWeeks.length > 26) { %><p class="muted small">Showing the latest 26 weeks.</p><% } %>
+  </section>
+  <% } %>
+
+  <% if (tab === 'suppliers') { %>
+  <form method="post" action="/zakat/suppliers" class="oo-card"><%- csrf %><input type="hidden" name="month" value="<%= month %>">
+    <h2>Suppliers holding up our supply</h2>
+    <p class="muted small">Add each supplier that is withholding stock, and how many of <%= branch.code %>’s zakat contracts it affects. Clear a row once the supplier is sorted out.</p>
+    <div class="zk-shead"><span>#</span><span>Supplier</span><span>Contracts</span></div>
+    <% t.suppliers.forEach(function (s) { %><div class="zk-srow"><span><%= s.slot %></span>
+      <input name="name<%= s.slot %>" maxlength="80" value="<%= s.name %>" placeholder="Supplier name" aria-label="Supplier name, row <%= s.slot %>">
+      <input name="n<%= s.slot %>" inputmode="numeric" value="<%= s.contracts || '' %>" placeholder="0" aria-label="Contracts affected, row <%= s.slot %>"></div><% }) %>
+    <div class="zk-stotal"><span>Contracts affected across <%= t.supply.count %> supplier<%= t.supply.count === 1 ? '' : 's' %></span><b><%= t.supply.total %></b></div>
+    <button class="button">Save supplier list</button>
+  </form>
+  <% } %>
+</main>
+</body>
+</html>

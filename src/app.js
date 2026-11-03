@@ -14,6 +14,7 @@ const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
 const { inventoryRoutes } = require('./inventory/routes');
+const { zakatRoutes } = require('./zakat/routes');
 const { wigRoutes } = require('./wig/routes');
 const { requestRoutes, agentApi } = require('./requests/routes');
 const { policyRoutes } = require('./policies/routes');
@@ -175,6 +176,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(salesRoutes(db, { now, salesSheet }));
   app.use(oosRoutes(db, { now, trackerStart }));
   app.use(inventoryRoutes(db, { now }));
+  app.use(zakatRoutes(db, { now }));
   app.use(wigRoutes(db, { now, trackerStart }));
   app.use(requestRoutes(db, { now }));
   app.use(policyRoutes());

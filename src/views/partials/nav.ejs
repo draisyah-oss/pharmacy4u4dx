@@ -5,6 +5,8 @@
      const here = typeof navActive !== 'undefined' ? navActive : '';
      const role = user.role;
      const many = role === 'admin' || role === 'hq';
+     // 3 Nov: zakat claims tracker – BR, WM, JH (their own branch), HQ and admin.
+     const zakatHere = ['BR', 'WM', 'JH'].includes(user.branch_code);
      const bq = many && typeof branch !== 'undefined' && branch ? '?branch=' + encodeURIComponent(branch.code) : '';
      // [key, href, label, search words]
      let quick = []; let groups = [];
@@ -26,7 +28,8 @@
      if (role === 'branch_staff') {
        quick = [['daily', '/daily', 'Daily entry'], ['myweek', '/my-week', 'My week']];
        groups = [['Branch', [['daily', '/daily', 'Daily entry', 'log today'], ['scoreboard', '/scoreboard', 'Scoreboard', 'week lead'], ['myweek', '/my-week', 'My week', 'commitment wig'],
-         ['oos', '/oos', 'Out of stock', 'oos report restock'], ['month', '/month', 'Month scoreboard', 'monthly summary']]], ['Company', [['group', '/group', 'Group scoreboard', 'branches']]]];
+         ['oos', '/oos', 'Out of stock', 'oos report restock'], ['month', '/month', 'Month scoreboard', 'monthly summary'],
+         ...(zakatHere ? [['zakat', '/zakat', 'Zakat claims', 'zakat claim payment bid contract supplier']] : [])]], ['Company', [['group', '/group', 'Group scoreboard', 'branches']]]];
      } else if (role === 'hq_staff') {
        quick = [['hqtoday', '/hq/today', 'My week'], ['hqcommit', '/hq', 'HQ WIG']];
        groups = [
@@ -45,7 +48,8 @@
            ['oos', '/oos' + bq, 'Out of stock', 'oos report restock'],
            ['weekly', '/weekly' + bq, 'Weekly update to HQ', 'monday check-in stock zakat'], ['commitments', '/commitments' + bq, 'Branch WIG session', 'tuesday weekly commitments'],
            ...(role === 'branch_manager' ? [['myweek', '/my-week', 'My week', 'my commitment']] : []),
-           ['branchmeasures', '/branch/measures' + bq, 'Branch measures', 'measures targets activity lead change edit approve']]],
+           ['branchmeasures', '/branch/measures' + bq, 'Branch measures', 'measures targets activity lead change edit approve'],
+           ...(zakatHere || many ? [['zakat', '/zakat' + (many && typeof branch !== 'undefined' && branch && ['BR', 'WM', 'JH'].includes(branch.code) ? '?branch=' + branch.code : ''), 'Zakat claims', 'zakat claim payment bid contract supplier']] : [])]],
          ['Company', [['group', '/group', 'Group scoreboard', 'branches'], ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'],
            ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];

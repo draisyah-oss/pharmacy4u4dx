@@ -13,7 +13,7 @@
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
   <% groups.forEach(function (g) { %>
     <section class="oo-tgroup" id="t-<%= g.code %>" aria-labelledby="h-<%= g.code %>">
-      <h2 id="h-<%= g.code %>"><%= g.code === 'B2B' ? 'B2B customers' : g.code %> <span class="muted small">· <%= g.rows.length %> open</span></h2>
+      <h2 id="h-<%= g.code %>"><%= g.code === 'B2B' ? 'B2B customers' : g.code %> <span class="muted small">· <%= g.rows.length %> open<% const gl = g.rows.reduce(function (a, it) { return a + (it.estLoss || 0); }, 0); if (gl) { %> · <span class="oo-loss">≈ RM <%= Math.round(gl).toLocaleString('en-MY') %> sales lost</span><% } %></span></h2>
       <% if (!g.rows.length) { %><p class="muted small"><%= g.code === 'B2B' ? 'No B2B items – add one below.' : 'Nothing open.' %></p><% } else { %>
       <div class="table-wrap"><table class="oo-table">
         <thead><tr>
@@ -24,7 +24,7 @@
           <tr class="<%= it.urgent && it.unanswered ? 'is-urgent' : '' %><%= bad ? ' is-error' : '' %>" data-row>
             <td class="nowrap"><%= of.when(it.reported_at, at) %><br><small class="muted"><%= it.seen_at ? 'seen ' + (it.seen_by_name || '') : 'not opened' %></small></td>
             <td class="oo-titem"><a href="/oos/<%= it.id %>"><b><%= it.item %></b></a><% if (it.product_stock_id) { %> <small class="pp-code"><%= it.product_stock_id %><%= it.product_uom ? ' · ' + it.product_uom : '' %></small><% } %><% if (it.urgent && it.unanswered) { %> <span class="oo-chip oc-bad">URGENT</span><% } %>
-              <br><small class="muted"><%= it.b2b_customer ? it.b2b_customer + ' · ' : '' %><%= it.left_qty === 0 ? '0 left' : it.left_qty ? it.left_qty + ' left' : '' %><%= it.customers_count ? ' · ' + (it.customers_count >= 3 ? '3+' : '1–2') + ' asking' : '' %><%= it.note ? ' · “' + it.note + '”' : '' %><%= it.photo_id ? ' · 📷' : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %></small>
+              <br><small class="muted"><%= it.b2b_customer ? it.b2b_customer + ' · ' : '' %><%= it.left_qty === 0 ? '0 left' : it.left_qty ? it.left_qty + ' left' : '' %><%= it.customers_count ? ' · ' + (it.customers_count >= 3 ? '3+' : '1–2') + ' asking' : '' %><%= it.note ? ' · “' + it.note + '”' : '' %><%= it.photo_id ? ' · 📷' : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %><% if (it.estLoss) { %> · <span class="oo-loss">≈ RM <%= Math.round(it.estLoss).toLocaleString('en-MY') %> lost</span><% } %></small>
               <% if (it.awaitingHq) { %><br><a class="oo-due s-watch" href="/oos/<%= it.id %>">💬 Branch replied</a><% } else if ((it.messages || []).length) { %><br><a class="small" href="/oos/<%= it.id %>">💬 <%= it.messages.length %></a><% } %>
             </td>
             <td><select name="<%= k %>[answer]" aria-label="Answer for <%= it.item %>" data-answer>

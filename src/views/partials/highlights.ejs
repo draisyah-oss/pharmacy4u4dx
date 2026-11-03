@@ -95,6 +95,23 @@
 <% } %>
 
 
+<% if (H.oosLoss && H.oosLoss.items) { const L = H.oosLoss; const mineB = H.targets ? L.branches.find(function (b) { return b.code === H.targets.code; }) : null;
+     const rmL = function (n) { return 'RM ' + Math.round(n).toLocaleString('en-MY'); }; %>
+<section class="mh-card hl-loss" aria-labelledby="hl-loss">
+  <h2 id="hl-loss">💸 Sales lost to out of stock – <%= L.monthName %> <small class="muted">(estimate)</small></h2>
+  <% if (mineB) { %>
+    <p class="hl-loss-big"><b><%= rmL(mineB.total) %></b> lost at <%= H.targets.code %> <span class="small muted">· <%= mineB.items %> report<%= mineB.items === 1 ? '' : 's' %><%= mineB.open ? ' · ' + mineB.open + ' still out (' + rmL(mineB.openTotal) + ')' : '' %></span></p>
+    <p class="small">All Pharmacy4U: <b><%= rmL(L.total) %></b> · <%= L.open %> item<%= L.open === 1 ? '' : 's' %> still out</p>
+  <% } else { %>
+    <p class="hl-loss-big"><b><%= rmL(L.total) %></b> lost <span class="small muted">· <%= L.items %> reports · <%= L.open %> still out (<%= rmL(L.openTotal) %>)</span></p>
+    <ul class="hl-loss-br"><% L.branches.forEach(function (b) { %><li><a href="/oos?branch=<%= b.code %>"><b><%= b.code %></b> <%= rmL(b.total) %></a><% if (b.open) { %> <small class="muted">· <%= b.open %> out</small><% } %></li><% }) %></ul>
+  <% } %>
+  <% if (L.top.length) { %><p class="hl-sub">Biggest losses – push to get these back</p>
+    <ol class="hl-plain"><% L.top.forEach(function (t) { %><li><b><%= t.item %></b> – <%= rmL(t.loss) %> <small class="muted">(<%= t.branches.join(', ') %><%= t.reports > 1 ? ', ' + t.reports + ' reports' : '' %><%= t.open ? ', still out' : '' %>)</small></li><% }) %></ol><% } %>
+  <p class="muted small">Estimate = selling price (Dynamod Price 1) × customers turned away when it was reported (at least 1).<%= L.unpriced ? ' ' + L.unpriced + ' report' + (L.unpriced === 1 ? '' : 's') + ' without a Dynamod price not counted.' : '' %></p>
+</section>
+<% } %>
+
 <section class="mh-card" aria-labelledby="hl-wins">
   <h2 id="hl-wins">🏆 Last week’s stars <small class="muted">w/c <%= new Date(W.week + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' }) %></small></h2>
   <% if (!W.people.length && !W.ahead.length && !W.streaks.length && !W.words.length) { %><p class="muted">The first stars show up here after a full week of numbers.</p><% } %>

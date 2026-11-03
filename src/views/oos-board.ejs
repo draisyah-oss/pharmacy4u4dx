@@ -25,6 +25,8 @@
     <div class="oo-kpi"><span>Average days to back in stock</span>
       <b class="s-<%= st(b.restock.all, T.restock_days, true) %>"><%= d1(b.restock.all) %> <%= fmt.symbol(st(b.restock.all, T.restock_days, true)) %></b>
       <small>delivery/transfer <%= d1(b.restock.transfer) %> · order <%= d1(b.restock.order) %> · <%= b.restock.count %> back · target <%= T.restock_days %></small></div>
+    <div class="oo-kpi oo-kpi-loss"><span>Est. sales lost – reported this week</span><b>RM <%= Math.round(b.lost.total).toLocaleString('en-MY') %></b>
+      <small><%= b.lost.priced %> priced report<%= b.lost.priced === 1 ? '' : 's' %><%= b.lost.unpriced ? ' · ' + b.lost.unpriced + ' without a price' : '' %> · price × customers asking</small></div>
     <div class="oo-kpi"><span>Open right now</span><b><%= b.open.total %></b>
       <small><%= b.open.toAnswer %> to answer · <%= b.open.late %> late</small></div>
   </div>
@@ -32,11 +34,11 @@
     <section class="oo-card oo-wide">
       <h2>Per branch</h2>
       <div class="table-wrap"><table class="admin-table">
-        <thead><tr><th scope="col">Branch</th><th scope="col" class="n">Reported</th><th scope="col" class="n">Open</th><th scope="col" class="n">Avg days</th><th scope="col" class="n">Customers turned away</th></tr></thead>
+        <thead><tr><th scope="col">Branch</th><th scope="col" class="n">Reported</th><th scope="col" class="n">Open</th><th scope="col" class="n">Avg days</th><th scope="col" class="n">Customers turned away</th><th scope="col" class="n">Est. sales lost (RM)</th></tr></thead>
         <tbody>
           <% b.branches.forEach(function (r) { const s = st(r.avgDays, T.restock_days, true); %>
             <tr><th scope="row"><a href="/oos?branch=<%= encodeURIComponent(r.code) %>"><%= r.name %></a></th><td class="n"><%= r.reported %></td><td class="n"><%= r.open %></td>
-              <td class="n<%= s ? ' s-' + s : '' %>"><%= d1(r.avgDays) %> <%= fmt.symbol(s) %></td><td class="n"><%= r.customers %></td></tr>
+              <td class="n<%= s ? ' s-' + s : '' %>"><%= d1(r.avgDays) %> <%= fmt.symbol(s) %></td><td class="n"><%= r.customers %></td><td class="n"><%= r.lost ? Math.round(r.lost).toLocaleString('en-MY') : '–' %></td></tr>
           <% }) %>
         </tbody>
       </table></div>
