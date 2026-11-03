@@ -39,8 +39,10 @@ function zakatRoutes(db, { now }) {
       const c = await ctx(req);
       if (c.denied) return msg(res, 403, c.denied);
       const t = await zk.loadTracker(db, c.branch, { month: c.month, today: c.today });
-      const week = calc.weekStart(/^\d{4}-\d{2}-\d{2}$/.test(req.query.week || '') && req.query.week <= c.today ? req.query.week : c.today);
-      res.render('zakat', { title: `${c.branch.code} zakat claims`, ...c, t, tab: TABS.includes(req.query.tab) ? req.query.tab : 'overview',
+      const chk = await zk.checkin(db, c.branch, c.today);
+      // Until last week is checked in, the Weekly form opens on last week.
+      const week = calc.weekStart(/^\d{4}-\d{2}-\d{2}$/.test(req.query.week || '') && req.query.week <= c.today ? req.query.week : (chk.done ? c.today : chk.lastWeek));
+      res.render('zakat', { title: `${c.branch.code} zakat claims`, ...c, t, chk, tab: TABS.includes(req.query.tab) ? req.query.tab : 'overview',
         week, weekVals: t.weeks[week] || null, prevMonth: zk.addMonth(c.month, -1), nextMonth: zk.addMonth(c.month, 1),
         canTarget: zk.canTarget(req.user, c.branch), anyWeek: zk.anyWeek(req.user), backWeeks: zk.BACK_WEEKS, addDays: calc.addDays,
         branches: c.many ? zk.BRANCHES : [], ok: req.query.ok || null, err: req.query.err || null, navActive: 'zakat' });

@@ -93,6 +93,9 @@ async function saveWeek(db, user, branch, body, { today }) {
   const v = { zclaim: r2(num(body.claimed)), zpaid: r2(num(body.paid)), zbid: Math.round(num(body.bids)), zwon: Math.round(num(body.won)) };
   if (v.zwon > v.zbid) return { error: 'Contracts won can’t be more than contracts bid on.' };
   await db.transaction(async (tx) => {
+    // 3 Nov: the weekly check-in mark (zchk = 1) – saved even when every number is 0.
+    await tx.query(`INSERT INTO daily_entries (branch_id, entry_date, field_key, value, entered_by, updated_at) VALUES ($1, $2, 'zchk', 1, $3, now())
+      ON CONFLICT (branch_id, entry_date, field_key) DO UPDATE SET entered_by = EXCLUDED.entered_by, updated_at = now()`, [branch.id, monday, user.id]);
     for (const k of KEYS) {
       if (!v[k]) await tx.query('DELETE FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = $3', [branch.id, monday, k]);
       else await tx.query(`INSERT INTO daily_entries (branch_id, entry_date, field_key, value, entered_by, updated_at) VALUES ($1, $2, $3, $4, $5, now())
@@ -107,7 +110,7 @@ async function deleteWeek(db, user, branch, week, { today }) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(week || '')) return { error: 'Pick the week.' };
   const monday = calc.weekStart(week);
   if (!anyWeek(user) && monday < calc.addDays(calc.weekStart(today), -7 * BACK_WEEKS)) return { error: `Weeks older than ${BACK_WEEKS} weeks – ask HQ to change them.` };
-  await db.query('DELETE FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = ANY($3)', [branch.id, monday, KEYS]);
+  await db.query('DELETE FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key = ANY($3)', [branch.id, monday, [...KEYS, 'zchk']]);
   await audit(db, user.id, `${branch.code} week of ${monday}`, { deleted: true });
   return { ok: 'Week deleted.' };
 }
@@ -138,13 +141,39 @@ async function saveSuppliers(db, user, branch, body) {
   return { ok: 'Supplier list saved.' };
 }
 
+// 3 Nov (CEO): "zakat to check in once a week … ensure the PIC of zakat updates that part once a week".
+// Each Monday the PIC (owner of ZC1) keys in last week (claimed, paid, bids – 0 is fine). Returns the
+// PIC and whether last week is done (who, when). Due Monday; late from Tuesday (src/lib/needs.js).
+async function checkin(db, branch, today) {
+  const lastWeek = calc.addDays(calc.weekStart(today), -7);
+  const pic = (await db.query(`SELECT m.owner_name, m.person_id, u.id AS user_id FROM measures m LEFT JOIN users u ON u.person_id = m.person_id AND u.active
+    WHERE m.branch_id = $1 AND m.code = 'ZC1' AND m.active LIMIT 1`, [branch.id])).rows[0] || null;
+  const d = (await db.query(`SELECT e.updated_at, u.display_name FROM daily_entries e LEFT JOIN users u ON u.id = e.entered_by
+    WHERE e.branch_id = $1 AND e.entry_date = $2 AND e.field_key = 'zchk'`, [branch.id, lastWeek])).rows[0] || null;
+  return { lastWeek, pic, done: d ? { at: d.updated_at, by: d.display_name } : null, late: !d && calc.weekStart(today) !== today };
+}
+
 // One time: hidden daily fields, measures ZC1–ZC3 and the old zakat leads retired, per branch.
 const OLD = {
   BR: { measures: ['A6', 'A7'], fields: ['zko', 'zkc', 'zko2w', 'zkc7d'] },
   WM: { measures: ['W7'], fields: ['zkc', 'zkc7d'] },
   JH: { measures: ['F6'], fields: ['zko', 'zkc', 'zko2w', 'zkc7d'] },
 };
+async function checkinFieldOnce(db) {
+  if ((await db.query("SELECT 1 FROM app_settings WHERE key = 'zakat_checkin_v1'")).rows.length) return;
+  for (const code of BRANCHES) {
+    await db.query(`INSERT INTO daily_fields (branch_id, key, label, owner_name, person_id, type, sort_order, active)
+      SELECT b.id, 'zchk', 'Zakat weekly check-in done', m.owner_name, m.person_id, 'count', 999, false FROM branches b
+      JOIN measures m ON m.branch_id = b.id AND m.code = 'ZC1' WHERE b.code = $1 ON CONFLICT (branch_id, key) DO NOTHING`, [code]);
+  }
+  await db.query("INSERT INTO app_settings (key, value) VALUES ('zakat_checkin_v1', $1)", [new Date().toISOString()]);
+}
+
 async function setupOnce(db, log = () => {}) {
+  try { await setupTracker(db, log); } finally { await checkinFieldOnce(db); }
+}
+
+async function setupTracker(db, log) {
   const flag = 'zakat_tracker_v1';
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
   await db.transaction(async (tx) => {
@@ -189,4 +218,4 @@ async function setupOnce(db, log = () => {}) {
 }
 
 module.exports = { BRANCHES, FIELDS, KEYS, SUP_ROWS, BACK_WEEKS, isZakatBranch, canSee, canTarget, anyWeek, timeline, addMonth,
-  loadTracker, saveWeek, deleteWeek, saveTarget, saveSuppliers, setupOnce };
+  loadTracker, checkin, saveWeek, deleteWeek, saveTarget, saveSuppliers, setupOnce };

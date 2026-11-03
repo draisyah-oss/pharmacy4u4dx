@@ -1336,3 +1336,9 @@ input.pp-ok { border-color: var(--good) !important; }
 .oo-loss { color: var(--short); font-weight: 700; }
 .oo-loss-line { background: var(--short-tint); color: var(--short); border-radius: 10px; padding: 8px 12px; }
 .oo-kpi-loss b { color: var(--short); }
+.zk-chk { border-radius: 12px; padding: 10px 14px; margin: 0 0 12px; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.zk-chk-k { width: 100%; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; opacity: .8; }
+.zk-chk.is-done { background: var(--good-tint); color: var(--good); }
+.zk-chk.is-due { background: #fdf0d8; color: #7a4a00; }
+.zk-chk.is-late { background: var(--short-tint); color: var(--short); }
+.zk-chk .button.small { min-height: 34px; padding: 0 12px; font-size: 0.85rem; }

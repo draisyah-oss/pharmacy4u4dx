@@ -91,7 +91,7 @@ test('Zawiyah keys in a week → scoreboard measures; manager sets the amount to
   assert.match(msg(r), /can’t be more than/);
   r = await z.post('/zakat/week', { branch: 'JH', week: '2026-11-04', claimed: '3500.50', paid: '1200', bids: '4', won: '1' });
   assert.equal(r.status, 303);
-  const rows = (await db.query("SELECT b.code, e.entry_date::text AS d, e.field_key, e.value FROM daily_entries e JOIN branches b ON b.id = e.branch_id WHERE e.field_key LIKE 'z%' AND e.field_key <> 'zakat' ORDER BY e.field_key")).rows;
+  const rows = (await db.query("SELECT b.code, e.entry_date::text AS d, e.field_key, e.value FROM daily_entries e JOIN branches b ON b.id = e.branch_id WHERE e.field_key LIKE 'z%' AND e.field_key NOT IN ('zakat', 'zchk') ORDER BY e.field_key")).rows;
   assert.ok(rows.every((x) => x.code === 'WM' && x.d === '2026-11-02'), 'her own branch, on the Monday');
   assert.deepEqual(rows.map((x) => [x.field_key, Number(x.value)]), [['zbid', 4], ['zclaim', 3500.5], ['zpaid', 1200], ['zwon', 1]]);
   // Too old for staff, future refused
@@ -130,4 +130,21 @@ test('who: Bangi has no tracker; admin picks the branch', async () => {
   const p = await a.get('/zakat?branch=JH&tab=weekly');
   assert.equal(p.status, 200); assert.match(p.html, /Zakat claims – JH/); assert.match(p.html, /Add or update a week/);
   assert.equal(calc.weekStart('2026-11-08'), '2026-11-02');
+});
+
+test('weekly check-in: the PIC sees it in Needs you until last week is saved (0 is fine); the manager when late', async () => {
+  const z = await login('pin', 'zawiyah', '2468');
+  const h = await login('password', 'hafizah', 'manager-pass-1');
+  let page = (await z.get('/zakat')).html;
+  assert.match(page, /Zakat weekly check-in/, 'Needs you (Tuesday = late)');
+  assert.match(page, /⚠ Late – Update the week of Mon 26 Oct/);
+  assert.match(page, /PIC Zawiyah/);
+  assert.match((await z.get('/zakat?tab=weekly')).html, /name="week" value="2026-10-26"/, 'the form opens on last week');
+  assert.match((await h.get('/zakat')).html, /Zakat check-in not done \(Zawiyah\)/);
+  const r = await z.post('/zakat/week', { week: '2026-10-26', claimed: '', paid: '', bids: '', won: '' });
+  assert.equal(r.status, 303);
+  page = (await z.get('/zakat')).html;
+  assert.doesNotMatch(page, /Zakat weekly check-in/);
+  assert.match(page, /✔ Week of Mon 26 Oct updated/);
+  assert.doesNotMatch((await h.get('/zakat')).html, /Zakat check-in not done/);
 });

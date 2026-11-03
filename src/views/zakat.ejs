@@ -24,6 +24,14 @@
   <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
 
+  <% const lw = chk.lastWeek; const lwLink = '/zakat?branch=' + branch.code + '&month=' + lw.slice(0, 7) + '&tab=weekly&week=' + lw + '#weekly'; %>
+  <div class="zk-chk <%= chk.done ? 'is-done' : chk.late ? 'is-late' : 'is-due' %>">
+    <span class="zk-chk-k">Weekly check-in · PIC <%= chk.pic ? chk.pic.owner_name : '–' %></span>
+    <% if (chk.done) { %><b>✔ Week of <%= wkLabel(lw) %> updated</b><span class="small"> by <%= chk.done.by || '–' %>, <%= new Date(chk.done.at).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) %></span>
+    <% } else { %><b><%= chk.late ? '⚠ Late – ' : '' %>Update the week of <%= wkLabel(lw) %><%= chk.late ? '' : ' today (Monday)' %></b>
+      <span class="small">Claimed, payment received and bids – 0 is fine if there were none.</span> <a class="button small" href="<%= lwLink %>">Update now</a><% } %>
+  </div>
+
   <nav class="zk-tabs" aria-label="Sections">
     <% [['overview', 'Overview'], ['weekly', 'Weekly'], ['bids', 'Bids'], ['suppliers', 'Suppliers']].forEach(function (x) { %>
       <a class="zk-tab<%= tab === x[0] ? ' is-on' : '' %>" href="<%= link({ tab: x[0] }) %>" <%- tab === x[0] ? 'aria-current="page"' : '' %>><%= x[1] %></a><% }) %>

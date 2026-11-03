@@ -99,7 +99,19 @@ async function forBranch(db, user, today, at, add) {
   const week = calc.weekStart(today);
   const prev = calc.addDays(week, -7);
   const yesterday = calc.addDays(today, -1);
-  const entered = await one(db, 'SELECT count(*) AS n FROM daily_entries WHERE branch_id = $1 AND entry_date = $2', [branchId, yesterday]);
+  const entered = await one(db, "SELECT count(*) AS n FROM daily_entries WHERE branch_id = $1 AND entry_date = $2 AND field_key NOT IN ('zclaim', 'zpaid', 'zbid', 'zwon', 'zchk')", [branchId, yesterday]);
+  // 3 Nov (CEO): the zakat PIC checks in once a week (last week's claims, payments, bids) – due Monday,
+  // late from Tuesday; the manager sees it once it's late.
+  try {
+    const zk = require('../zakat/data');
+    if (zk.isZakatBranch(user.branch_code)) {
+      const c = await zk.checkin(db, { id: branchId, code: user.branch_code }, today);
+      const href = `/zakat?month=${c.lastWeek.slice(0, 7)}&tab=weekly&week=${c.lastWeek}#weekly`;
+      const isPic = c.pic && ((c.pic.person_id && c.pic.person_id === user.person_id) || (!c.pic.person_id && user.role === 'branch_manager'));
+      if (!c.done && isPic) add(c.late ? 'late' : 'today', 1, 'Zakat weekly check-in', `update the week of ${fmtDay(c.lastWeek)} – claimed, paid, bids`, href);
+      else if (!c.done && c.late && user.role === 'branch_manager') add('late', 1, `Zakat check-in not done (${c.pic ? c.pic.owner_name : 'PIC'})`, `week of ${fmtDay(c.lastWeek)}`, href);
+    }
+  } catch (err) { console.error('Needs you – zakat:', err.message); }
   if (!entered) add('today', 1, 'Yesterday’s numbers not entered', fmtDay(yesterday), `/daily?date=${yesterday}`);
   // 27 Oct: Inventory asked a question about one of our items / requests.
   // Staff: only items they reported; the manager: the whole branch.
