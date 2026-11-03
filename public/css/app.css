@@ -1223,3 +1223,10 @@ a.bsales-v { text-decoration: underline dotted; text-underline-offset: 4px; }
 input.pp-ok { border-color: var(--good) !important; }
 .pp-code { color: var(--muted, #5b6575); font-weight: 400; }
 .pp-find { display: flex; gap: 8px; } .pp-find input { flex: 1; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.hl-targets { list-style: none; margin: 0; padding: 0; }
+.hl-targets li a { display: flex; flex-direction: column; gap: 2px; padding: 10px 0; border-bottom: 1px solid var(--line); text-decoration: none; color: var(--ink); }
+.hl-targets li.is-wig a { background: var(--info-tint, #eaf2ff); border-radius: 12px; padding: 10px; border: 0; margin-bottom: 6px; }
+.hl-tbar { margin-top: 4px; }
+.hl-tazkirah { display: flex; gap: 10px; background: #f1f8f2; border-left: 4px solid var(--good); border-radius: 12px; padding: 10px 12px; margin: 0 0 10px; }
+.hl-tazkirah p { margin: 2px 0; font-style: italic; }
+.hl-tz-k { font-weight: 700; color: var(--good); text-transform: uppercase; letter-spacing: .03em; font-size: .72rem; }

@@ -144,6 +144,42 @@ async function wins(db, { today, trackerStart }) {
   };
 }
 
+// 3 Nov (CEO): branch people see THEIR branch's month – the WIG and lead measures with the month's
+// target and how far along they are – instead of the company's goals.
+async function branchTargets(db, { branchCode, today, trackerStart }) {
+  const { isTopMeasure } = require('../scoreboard/data');
+  const branch = (await db.query('SELECT * FROM branches WHERE code = $1 AND active', [branchCode])).rows[0];
+  if (!branch) return null;
+  const month = calc.monthOf(today);
+  const from = [calc.monthStart(month), trackerStart].sort().pop();
+  const lastDay = calc.addDays(today, -1);
+  const measures = (await loadMeasures(db, branch.id)).filter((m) => m.kind === 'WIG' || isTopMeasure(m, branch) || m.kind === 'Lead');
+  const entries = calc.indexEntries((await db.query('SELECT entry_date, field_key, value FROM daily_entries WHERE branch_id = $1 AND entry_date BETWEEN $2 AND $3',
+    [branch.id, from, today])).rows);
+  const per = { day: 'a day', week: 'a week', month: 'a month' };
+  const rows = measures.map((m) => {
+    const shape = { calc: m.calc, money: m.unit === 'RM' };
+    const full = calc.evaluateMeasure({ measure: m, entries: calc.indexEntries([]), from, to: calc.monthEnd(month), trackerStart });
+    const sofar = lastDay >= from ? calc.evaluateMeasure({ measure: m, entries, from, to: lastDay, trackerStart }) : null;
+    const t = m.targets[month]; const w = (m.weekend_targets || {})[month];
+    const rate = t === null || t === undefined ? null
+      : (m.calc === 'sum' ? fmt.value(shape, Number(t)) : fmt.value(shape, Number(t))) + ' ' + (per[m.target_per] || '')
+        + (w !== null && w !== undefined && m.calc === 'sum' ? ` (${calc.highDaysLabel(m.high_days)} ${fmt.value(shape, Number(w))})` : '');
+    const isSum = m.calc === 'sum';
+    return {
+      code: m.code, label: m.label, owner: m.owner_name, wig: m.kind === 'WIG', rate,
+      monthTarget: isSum && full.target !== null ? fmt.value(shape, full.target) : null,
+      sofar: sofar && sofar.actual !== null ? fmt.value(shape, sofar.actual) : '–',
+      pct: sofar ? sofar.pct : null, status: sofar ? sofar.status : 'no_data',
+      fill: isSum && full.target ? Math.min(100, Math.round(((sofar && sofar.actual) || 0) / full.target * 100)) : null,
+      pace: isSum && full.target && sofar && sofar.target ? Math.min(100, Math.round(sofar.target / full.target * 100)) : null,
+      href: `/scoreboard/trace?type=measure&code=${encodeURIComponent(m.code)}&from=${from}&to=${lastDay < from ? from : lastDay}`,
+    };
+  });
+  rows.sort((a, b) => (b.wig - a.wig));
+  return { code: branch.code, name: branch.name, monthName: new Date(`${month}-01T00:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' }), rows };
+}
+
 async function buildHighlights(db, { user, now, trackerStart }) {
   const today = calc.todayInMalaysia(now());
   const key = `${today}|${Math.floor(now().getTime() / TTL)}`;
@@ -155,9 +191,12 @@ async function buildHighlights(db, { user, now, trackerStart }) {
     cache.clear(); cache.set(key, shared);
   }
   const news = await loadNews(db, today);
+  const tazkirah = await require('./tazkirah').today(db, today);
+  const targets = user.branch_code && ['branch_staff', 'branch_manager'].includes(user.role)
+    ? await branchTargets(db, { branchCode: user.branch_code, today, trackerStart }) : null;
   const branchRow = user.branch_code && shared.wins.company && shared.wins.company.rows ? shared.wins.company.rows.find((r) => r.code === user.branch_code) : null;
-  return { today, ...shared, news, canPost: canPost(user), myBranch: branchRow };
+  return { today, ...shared, news, tazkirah, targets, canPost: canPost(user), myBranch: branchRow };
 }
 const clearCache = () => cache.clear();
 
-module.exports = { buildHighlights, goalProgress, saveGoalStatus, postNews, removeNews, loadNews, canPost, oosOver3, clearCache };
+module.exports = { branchTargets, buildHighlights, goalProgress, saveGoalStatus, postNews, removeNews, loadNews, canPost, oosOver3, clearCache };

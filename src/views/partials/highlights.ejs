@@ -10,22 +10,38 @@
 <section class="hl-hero" aria-labelledby="hl-hi">
   <p class="mh-branch"><%= new Date(H.today + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }) %></p>
   <h1 id="hl-hi"><%= hi.greeting %>, <%= hi.name %> 👋</h1>
-  <% if (C && C.target) { %>
-    <div class="mh-month">
-      <div class="mh-month-top"><span>Pharmacy4U this month</span><b><%= fmt.money(C.total) %> <span class="mh-of">of <%= fmt.money(C.target) %> · <%= fmt.pct(C.pct) %></span></b></div>
-      <% const cpct = Math.min(100, Math.round(C.total / C.target * 100)); const cpace = C.paceTarget ? Math.min(100, Math.round(C.paceTarget / C.target * 100)) : null; %>
-      <div class="mh-bar"><span class="mh-fill" style="width: <%= cpct %>%"></span><% if (cpace !== null) { %><span class="mh-pace" style="left: <%= cpace %>%"></span><% } %></div>
-      <p class="mh-month-sub"><%= C.status === 'on_track' ? '🎉 Ahead of pace – well done, everyone!' : C.perDay ? fmt.money(C.perDay) + ' a day across all branches gets us there' : '' %></p>
-    </div>
-  <% } %>
   <% if (H.myBranch && H.myBranch.sales && H.myBranch.sales.monthTarget) { const s = H.myBranch.sales; %>
     <div class="mh-month">
       <div class="mh-month-top"><span><%= H.myBranch.name %></span><b><%= fmt.money(s.mtd) %> <span class="mh-of">of <%= fmt.money(s.monthTarget) %></span></b></div>
       <%- bar(s) %>
     </div>
   <% } %>
+  <% if (C && C.target) { %>
+    <div class="mh-month">
+      <div class="mh-month-top"><span><%= H.myBranch ? 'All Pharmacy4U' : 'Pharmacy4U this month' %></span><b><%= fmt.money(C.total) %> <span class="mh-of">of <%= fmt.money(C.target) %> · <%= fmt.pct(C.pct) %></span></b></div>
+      <% const cpct = Math.min(100, Math.round(C.total / C.target * 100)); const cpace = C.paceTarget ? Math.min(100, Math.round(C.paceTarget / C.target * 100)) : null; %>
+      <div class="mh-bar"><span class="mh-fill" style="width: <%= cpct %>%"></span><% if (cpace !== null) { %><span class="mh-pace" style="left: <%= cpace %>%"></span><% } %></div>
+      <p class="mh-month-sub"><%= C.status === 'on_track' ? '🎉 Ahead of pace – well done, everyone!' : C.perDay ? fmt.money(C.perDay) + ' a day across all branches gets us there' : '' %></p>
+    </div>
+  <% } %>
 </section>
 
+<% if (H.targets && H.targets.rows.length) { const T = H.targets; %>
+<section class="mh-card" aria-labelledby="hl-targets">
+  <h2 id="hl-targets">🎯 <%= T.code %> – <%= T.monthName %> targets</h2>
+  <p class="muted small">Our WIG and lead measures this month. Tap one to see the days behind it.</p>
+  <ul class="hl-targets">
+    <% T.rows.forEach(function (r) { %>
+      <li class="<%= r.wig ? 'is-wig' : '' %>"><a href="<%= r.href %>">
+        <span class="hl-g-top"><b><%= r.wig ? '🏁 ' : '' %><%= r.label %></b><% if (r.status && r.status !== 'no_data' && r.status !== 'track_only') { %><span class="mh-chip s-<%= r.status %>"><%= ({ on_track: 'On track', watch: 'Nearly', off_track: 'Behind' })[r.status] %></span><% } %></span>
+        <span class="small muted"><%= r.owner %><%= r.rate ? ' · target ' + r.rate : ' · track only' %><%= r.monthTarget ? ' = ' + r.monthTarget + ' this month' : '' %></span>
+        <span class="small"><b><%= r.sofar %></b> so far<%= r.pct !== null && r.pct !== undefined ? ' · ' + fmt.pct(r.pct) + ' of target to date' : '' %></span>
+        <% if (r.fill !== null) { %><span class="mh-bar hl-tbar"><span class="mh-fill" style="width: <%= r.fill %>%"></span><% if (r.pace !== null) { %><span class="mh-pace" style="left: <%= r.pace %>%"></span><% } %></span><% } %>
+      </a></li>
+    <% }) %>
+  </ul>
+</section>
+<% } else { %>
 <% if (H.goals && H.goals.goals.length) { %>
 <section class="mh-card" aria-labelledby="hl-goals">
   <h2 id="hl-goals">🎯 <%= H.goals.name.split(' ')[0] %> goals <% if (H.goals.locked) { %><span class="mh-chip s-on_track">Agreed</span><% } %></h2>
@@ -40,9 +56,15 @@
 </section>
 <% } %>
 
+<% } %>
 <section class="mh-card" aria-labelledby="hl-news">
   <h2 id="hl-news">📣 News</h2>
-  <% if (!H.news.length) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
+  <% if (H.tazkirah) { const z = H.tazkirah; %>
+    <div class="hl-tazkirah"><span class="hl-emoji" aria-hidden="true"><%= z.emoji %></span>
+      <div><small class="hl-tz-k"><%= z.kind === 'Tazkirah' ? 'Tazkirah hari ini' : z.kind + ' – peringatan hari ini' %></small>
+        <p>“<%= z.text %>”</p><small class="muted"><%= z.src %></small></div></div>
+  <% } %>
+  <% if (!H.news.length && !H.tazkirah) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
   <ul class="hl-news">
     <% H.news.forEach(function (n) { %>
       <li class="<%= n.pinned ? 'is-pinned' : '' %>"><span class="hl-emoji" aria-hidden="true"><%= n.emoji || '📌' %></span>

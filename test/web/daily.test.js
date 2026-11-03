@@ -403,3 +403,16 @@ test('1 Nov: the front page for branch staff – wins, shout-outs and focus from
   // HQ and admin keep their own home pages
   assert.equal((await pinLogin('hazera', '1111').then((x) => x.get('/'))).status, 200);
 });
+
+test('3 Nov: front page – a branch sees its own WIG / lead targets, and one tazkirah a day', async () => {
+  const tz = require('../../src/home/tazkirah');
+  assert.ok(tz.LIST.length >= 30 && tz.LIST.every((t) => t.text && t.src));
+  assert.notDeepEqual(tz.forDate('2026-11-03'), tz.forDate('2026-11-04'));
+  assert.deepEqual(tz.forDate('2026-11-03'), tz.forDate('2026-11-03'));
+  const hz = await pinLogin('hazera', '1111');
+  const html = (await hz.get('/')).html;
+  assert.match(html, /WM – \w+ targets/);
+  assert.match(html, /🏁 Walk-in sales/);
+  assert.match(html, /hl-tazkirah/);
+  assert.doesNotMatch(html, /id="hl-goals"/, 'branch people see their own targets, not the company goals');
+});

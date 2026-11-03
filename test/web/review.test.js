@@ -169,8 +169,10 @@ test('conclusion: seeded November goals, HQ and managers agree, the CEO locks; g
   r = await mgr.post('/review/conclusion', { month: '2026-10', 'agree_mgr[s2]': '1' });
   assert.match(r.location, /err=/, 'locked: no more changes');
   const home = await mgr.get('/');
-  assert.match(home.html, /November goals/);
-  assert.match(home.html, /Agreed/);
+  assert.match(home.html, /WM – November targets/, '3 Nov: managers see their branch targets on the front page');
+  const ceoHome = await ceo.get('/');
+  assert.match(ceoHome.html, /November goals/);
+  assert.match(ceoHome.html, /Agreed/);
   const day = await a.get('/hq/today');
   assert.match(day.html, /November goals/);
 });
