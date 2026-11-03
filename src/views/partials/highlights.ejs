@@ -1,0 +1,87 @@
+<%# 3 Nov: the highlights at the top of the first page (everyone). hl = buildHighlights(); hi = { greeting, name }. %>
+<%
+  const H = hl; const W = H.wins; const C = W.company;
+  const chipCls = { 'On track': 's-on_track', 'At risk': 's-watch', 'Off track': 's-off_track', 'Done': 's-on_track' };
+  const bar = function (s) { if (!s || !s.monthTarget) return ''; const pct = Math.min(100, Math.round(s.mtd / s.monthTarget * 100)); const pace = s.paceTarget ? Math.min(100, Math.round(s.paceTarget / s.monthTarget * 100)) : null;
+    return '<div class="mh-bar"><span class="mh-fill" style="width:' + pct + '%"></span>' + (pace !== null ? '<span class="mh-pace" style="left:' + pace + '%"></span>' : '') + '</div>'; };
+%>
+<% if (typeof ok !== 'undefined' && ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+<% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+<section class="hl-hero" aria-labelledby="hl-hi">
+  <p class="mh-branch"><%= new Date(H.today + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }) %></p>
+  <h1 id="hl-hi"><%= hi.greeting %>, <%= hi.name %> 👋</h1>
+  <% if (C && C.target) { %>
+    <div class="mh-month">
+      <div class="mh-month-top"><span>Pharmacy4U this month</span><b><%= fmt.money(C.total) %> <span class="mh-of">of <%= fmt.money(C.target) %> · <%= fmt.pct(C.pct) %></span></b></div>
+      <% const cpct = Math.min(100, Math.round(C.total / C.target * 100)); const cpace = C.paceTarget ? Math.min(100, Math.round(C.paceTarget / C.target * 100)) : null; %>
+      <div class="mh-bar"><span class="mh-fill" style="width: <%= cpct %>%"></span><% if (cpace !== null) { %><span class="mh-pace" style="left: <%= cpace %>%"></span><% } %></div>
+      <p class="mh-month-sub"><%= C.status === 'on_track' ? '🎉 Ahead of pace – well done, everyone!' : C.perDay ? fmt.money(C.perDay) + ' a day across all branches gets us there' : '' %></p>
+    </div>
+  <% } %>
+  <% if (H.myBranch && H.myBranch.sales && H.myBranch.sales.monthTarget) { const s = H.myBranch.sales; %>
+    <div class="mh-month">
+      <div class="mh-month-top"><span><%= H.myBranch.name %></span><b><%= fmt.money(s.mtd) %> <span class="mh-of">of <%= fmt.money(s.monthTarget) %></span></b></div>
+      <%- bar(s) %>
+    </div>
+  <% } %>
+</section>
+
+<% if (H.goals && H.goals.goals.length) { %>
+<section class="mh-card" aria-labelledby="hl-goals">
+  <h2 id="hl-goals">🎯 <%= H.goals.name.split(' ')[0] %> goals <% if (H.goals.locked) { %><span class="mh-chip s-on_track">Agreed</span><% } %></h2>
+  <ol class="hl-goals">
+    <% H.goals.goals.forEach(function (g) { %>
+      <li><div class="hl-g-top"><b><%= g.title %></b><% if (g.chip) { %><span class="mh-chip <%= chipCls[g.chip] %>"><%= g.chip %></span><% } %></div>
+        <% if (g.auto) { %><a class="small" href="<%= g.auto.href %>"><%= g.auto.text %></a><% } else if (g.progress) { %><span class="small"><%= g.progress %></span><% } else { %><span class="small muted"><%= g.owner || '' %><%= g.due ? ' · by ' + g.due : '' %></span><% } %>
+      </li>
+    <% }) %>
+  </ol>
+  <a class="small" href="/review/conclusion?month=<%= H.goals.reviewMonth %>">All goals ›</a>
+</section>
+<% } %>
+
+<section class="mh-card" aria-labelledby="hl-news">
+  <h2 id="hl-news">📣 News</h2>
+  <% if (!H.news.length) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
+  <ul class="hl-news">
+    <% H.news.forEach(function (n) { %>
+      <li class="<%= n.pinned ? 'is-pinned' : '' %>"><span class="hl-emoji" aria-hidden="true"><%= n.emoji || '📌' %></span>
+        <div><b><%= n.title %></b><% if (n.body) { %><p><%= n.body %></p><% } %><small class="muted"><%= n.by_name || '' %> · <%= new Date(n.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short' }) %><%= n.pinned ? ' · pinned' : '' %></small>
+          <% if (H.canPost) { %><form method="post" action="/news/<%= n.id %>/remove" class="hl-remove"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-button small" type="submit">Take down</button></form><% } %></div>
+      </li>
+    <% }) %>
+  </ul>
+  <% if (H.canPost) { %>
+    <details class="hl-post"><summary>➕ Post news</summary>
+      <form method="post" action="/news">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="hl-post-row"><select name="emoji" aria-label="Icon"><% ['🎉','🏆','📣','💊','🛍️','📅','🙌','⭐','❤️','🎂'].forEach(function (e) { %><option><%= e %></option><% }) %></select>
+          <input type="text" name="title" maxlength="120" placeholder="Headline – e.g. JH hit 100 Google reviews!" aria-label="Headline" required></div>
+        <textarea name="body" rows="2" maxlength="600" placeholder="A few words (optional)" aria-label="Story"></textarea>
+        <div class="hl-post-row"><label><input type="checkbox" name="pinned" value="1"> Pin to the top</label>
+          <label>Show until <input type="date" name="show_until"></label>
+          <button class="button" type="submit">Post</button></div>
+      </form>
+    </details>
+  <% } %>
+</section>
+
+<section class="mh-card" aria-labelledby="hl-wins">
+  <h2 id="hl-wins">🏆 Last week’s stars <small class="muted">w/c <%= new Date(W.week + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' }) %></small></h2>
+  <% if (!W.people.length && !W.ahead.length && !W.streaks.length && !W.words.length) { %><p class="muted">The first stars show up here after a full week of numbers.</p><% } %>
+  <% if (W.ahead.length) { %><p>📈 <b>Ahead of pace this month:</b> <%= W.ahead.map(function (a) { return a.name; }).join(', ') %></p><% } %>
+  <% if (W.people.length) { %>
+    <ul class="hl-stars">
+      <% W.people.forEach(function (p, i) { %><li><span class="mh-avatar" aria-hidden="true"><%= i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : p.name.slice(0, 1) %></span><span><b><%= p.name %></b> <small class="muted"><%= p.branch %></small><br><small><%= p.on %> of <%= p.of %> targets hit<%= p.labels.length ? ' · ' + p.labels.join(' · ') : '' %></small></span></li><% }) %>
+    </ul>
+  <% } %>
+  <% if (W.streaks.length) { %>
+    <p class="hl-sub">🔥 On a streak</p>
+    <ul class="hl-plain"><% W.streaks.forEach(function (s) { %><li><b><%= s.name %></b> (<%= s.branch %>) – <%= s.days %> days in a row on “<%= s.label %>”</li><% }) %></ul>
+  <% } %>
+  <% if (W.words.length) { %>
+    <p class="hl-sub">🙌 Wins from the branches</p>
+    <ul class="hl-plain"><% W.words.forEach(function (w) { %><li><b><%= w.code %>:</b> <%= w.win_this_week %></li><% }) %></ul>
+  <% } %>
+  <% if (W.teams.length) { %><p class="small muted">Targets hit last week: <%= W.teams.map(function (t) { return t.code + ' ' + t.on + '/' + t.of; }).join(' · ') %></p><% } %>
+</section>

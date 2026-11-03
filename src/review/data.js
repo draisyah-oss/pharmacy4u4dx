@@ -219,8 +219,8 @@ async function loadGoals(db, month) {
     const seeded = ((readSeed().company || {}).month_goals || {})[month];
     if (seeded && seeded.length) {
       for (const g of seeded) {
-        await db.query(`INSERT INTO month_goals (month, slot, title, detail, owner, due, how_measured) VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING`,
-          [month, g.slot, g.title, g.detail || null, g.owner || null, g.due || null, g.how_measured || null]);
+        await db.query(`INSERT INTO month_goals (month, slot, title, detail, owner, due, how_measured, metric) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING`,
+          [month, g.slot, g.title, g.detail || null, g.owner || null, g.due || null, g.how_measured || null, g.metric || null]);
       }
       return loadGoals(db, month);
     }

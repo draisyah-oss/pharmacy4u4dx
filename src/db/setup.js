@@ -34,6 +34,11 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await bangiNov2Once(db, log);
     await tallyAllOnce(db, readSeed(), log);
     await brNov3Once(db, readSeed(), log);
+    // 3 Nov: November's agreed goals 1 and 2 are worked out by the app (sales, out of stock).
+    await relabelOnce(db, 'goal_metrics_v1', [
+      ["UPDATE month_goals SET metric = 'company_sales' WHERE month = '2026-11' AND title LIKE 'Hit the November target%' AND metric IS NULL"],
+      ["UPDATE month_goals SET metric = 'oos_over3' WHERE month = '2026-11' AND title LIKE 'Out of stock down to 5%' AND metric IS NULL"],
+    ]);
     return { seeded: false };
   }
 

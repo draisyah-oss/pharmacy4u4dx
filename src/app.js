@@ -114,29 +114,54 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
     next();
   });
 
-  // Home: staff and managers go straight to their branch; HQ and admin pick a branch.
+  // Home (3 Nov, CEO): the first page for everyone is the highlights (src/home/highlights.js) – then
+  // branch staff and managers get their own week, HQ staff quick links, HQ / admin the branches.
   app.get('/', async (req, res, next) => {
     try {
-      // 1 Nov (CEO): branch staff and managers land on their own page – wins, shout-outs, focus.
+      const hlMod = require('./home/highlights');
+      const hl = await hlMod.buildHighlights(db, { user: req.user, now, trackerStart: await trackerStart() });
+      const { greeting } = require('./home/mypage');
       if ((req.user.role === 'branch_staff' || req.user.role === 'branch_manager') && req.user.branch_code) {
         const { loadBranch } = require('./daily/data');
         const branch = await loadBranch(db, req.user.branch_code);
         const page = await require('./home/mypage').buildMyPage(db, { user: req.user, branch, now, trackerStart: await trackerStart() });
-        const monthGoals = await require('./review/data').currentGoals(db, calc.todayInMalaysia(now()));
-        return res.render('my-home', { title: 'My page', ...page, monthGoals, fmt, navActive: 'home' });
+        return res.render('my-home', { title: 'Highlights', ...page, hl, fmt, navActive: 'home', ok: req.query.ok || null, err: req.query.err || null });
       }
-      if (req.user.role === 'hq_staff') return res.redirect('/hq/today');
+      const person = req.user.person_id ? (await db.query('SELECT name FROM people WHERE id = $1', [req.user.person_id])).rows[0] : null;
+      const hi = { greeting: greeting(now()), name: person ? person.name : (req.user.is_super ? 'Dr Aisyah' : req.user.display_name) };
+      if (req.user.role === 'hq_staff') return res.render('highlights', { title: 'Highlights', hl, hi, fmt, navActive: 'home', ok: req.query.ok || null, err: req.query.err || null });
       const today = calc.todayInMalaysia(now());
       const branches = (await db.query(
         `SELECT b.code, b.name,
            (SELECT count(*)::int FROM daily_entries e WHERE e.branch_id = b.id AND e.entry_date = $1) AS today_entries,
            (SELECT count(*)::int FROM daily_fields f WHERE f.branch_id = b.id AND f.active) AS fields
          FROM branches b WHERE b.active ORDER BY b.sort_order`, [today])).rows;
-      const company = await companySalesForWeek(db, { week: calc.weekStart(today), today, trackerStart: await trackerStart() });
-      res.render('home', { title: 'Branches', branches, today, company, fmt });
+      const company = hl.wins.company;
+      res.render('home', { title: 'Highlights', branches, today, company, fmt, hl, hi, ok: req.query.ok || null, err: req.query.err || null });
     } catch (err) { next(err); }
   });
 
+  app.post('/news', async (req, res, next) => {
+    try {
+      const h = require('./home/highlights');
+      const r = await h.postNews(db, req.user, req.body, { now });
+      res.redirect(`/?${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}#hl-news`);
+    } catch (err) { next(err); }
+  });
+  app.post('/news/:id/remove', async (req, res, next) => {
+    try {
+      const r = await require('./home/highlights').removeNews(db, req.user, Number(req.params.id) || 0, { now });
+      res.redirect(`/?${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}#hl-news`);
+    } catch (err) { next(err); }
+  });
+  app.post('/goals/:id/progress', async (req, res, next) => {
+    try {
+      const h = require('./home/highlights');
+      const r = await h.saveGoalStatus(db, req.user, { id: Number(req.params.id) || 0, status: req.body.gp_status ?? req.body.status, progress: req.body.gp_progress ?? req.body.progress, now });
+      h.clearCache();
+      res.redirect(`/review/conclusion?month=${encodeURIComponent(req.body.month || '')}&${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}`);
+    } catch (err) { next(err); }
+  });
   app.use(dailyRoutes(db, { now, trackerStart, salesSheet }));
   app.use(scoreboardRoutes(db, { now, trackerStart }));
   app.use(weeklyRoutes(db, { now, trackerStart }));

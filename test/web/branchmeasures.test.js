@@ -46,7 +46,7 @@ test('manager: activity saved at once, lead waits for the CEO, WIG locked; CEO a
   assert.ok(act && lead && wig);
   const mgr = await login('hafizah', 'manager-pass-1');
   const html = (await mgr.get('/branch/measures')).html;
-  assert.match(html, /Our measures/);
+  assert.match(html, /Branch measures/);
   assert.match(html, /Locked – only Dr Aisyah changes the WIG/);
   // Activity: label + November target, straight away
   let r = await mgr.post(`/branch/measures/${act.id}`, { label: `${act.label} (new)`, field_label: act.fieldLabel, owner: act.owner, 't[m202611][t]': '7' });
@@ -75,4 +75,32 @@ test('manager: activity saved at once, lead waits for the CEO, WIG locked; CEO a
   assert.match(decodeURIComponent(r.location), /Approved/);
   m = (await db.query("SELECT target FROM measure_targets WHERE measure_id = $1 AND month = '2026-11'", [lead.id])).rows[0];
   assert.equal(Number(m.target), 99);
+});
+
+test('managers add measures (activity at once, lead after approval) and have 4 changes a month', async () => {
+  const mgr = await login('hafizah', 'manager-pass-1');
+  const wm = (await db.query("SELECT id FROM branches WHERE code = 'WM'")).rows[0].id;
+  // Test 1 used 2 (activity edit + lead change). An activity added now is the 3rd.
+  let r = await mgr.post('/branch/measures/new', { tier: 'activity', label: 'Target product: Vitamin C', owner: 'Hazera', unit: 'count', target_per: 'day', t_202611: '2' });
+  assert.match(decodeURIComponent(r.location), /ok=Added/);
+  const f = (await db.query("SELECT f.label, f.owner_name, m.code FROM daily_fields f JOIN measures m ON m.numerator_field = f.key AND m.branch_id = f.branch_id WHERE f.branch_id = $1 AND m.label = 'Target product: Vitamin C'", [wm])).rows[0];
+  assert.equal(f.owner_name, 'Hazera'); assert.match(f.code, /^A\d/);
+  // A new lead waits; it's the 4th
+  r = await mgr.post('/branch/measures/new', { tier: 'lead', label: 'Customers offered a health check', owner: 'Hafizah', unit: 'count', target_per: 'day', t_202611: '5', reason: 'Drive walk-ins' });
+  assert.match(decodeURIComponent(r.location), /approval/);
+  assert.equal((await db.query("SELECT count(*)::int AS n FROM measures WHERE branch_id = $1 AND label = 'Customers offered a health check'", [wm])).rows[0].n, 0);
+  const html = (await mgr.get('/branch/measures')).html;
+  assert.match(html, /4 of 4<\/b> changes used this month/);
+  // 5th refused
+  r = await mgr.post('/branch/measures/new', { tier: 'activity', label: 'One too many', owner: 'Team', unit: 'count', target_per: 'day' });
+  assert.match(decodeURIComponent(r.location), /used its 4 changes/);
+  // CEO approves the new lead → created
+  const ceo = await login('admin', 'admin-pass-1');
+  const c = (await db.query("SELECT id FROM measure_changes WHERE kind = 'add' AND status = 'Waiting'")).rows[0];
+  r = await ceo.post(`/branch/measures/changes/${c.id}`, { decision: 'approve', branch: 'WM' });
+  const m = (await db.query("SELECT kind, owner_name FROM measures WHERE branch_id = $1 AND label = 'Customers offered a health check'", [wm])).rows[0];
+  assert.deepEqual(m, { kind: 'Lead', owner_name: 'Hafizah' });
+  // CEO / admin changes don't count
+  r = await ceo.post('/branch/measures/new?branch=WM', { branch: 'WM', tier: 'activity', label: 'Admin added', owner: 'Team', unit: 'count', target_per: 'week' });
+  assert.match(decodeURIComponent(r.location), /ok=Added/);
 });

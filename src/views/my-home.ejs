@@ -9,30 +9,15 @@
   const pacePct = s && s.monthTarget && s.paceTarget ? Math.min(100, Math.round((s.paceTarget / s.monthTarget) * 100)) : null;
 %>
 <main class="page mh-page">
-  <section class="mh-hero" aria-labelledby="mh-hi">
-    <p class="mh-branch"><%= branch.name %></p>
-    <h1 id="mh-hi"><%= greeting %>, <%= name %></h1>
-    <p class="mh-line">“<%= line %>”</p>
-    <% if (s && s.monthTarget) { %>
-      <div class="mh-month">
-        <div class="mh-month-top"><span>Month sales</span><b><%= fmt.money(s.mtd) %> <span class="mh-of">of <%= fmt.money(s.monthTarget) %></span></b></div>
-        <div class="mh-bar" role="img" aria-label="<%= fmt.pct(s.pct) %> of the month target<%= pacePct !== null ? ', pace mark at ' + pacePct + '%' : '' %>">
-          <span class="mh-fill" style="width: <%= barPct %>%"></span>
-          <% if (pacePct !== null) { %><span class="mh-pace" style="left: <%= pacePct %>%"></span><% } %>
-        </div>
-        <p class="mh-month-sub"><%= s.status === 'on_track' ? 'Ahead of pace – great work, team!' : s.perDay ? fmt.money(s.perDay) + ' a day gets us there' : '' %></p>
-      </div>
-    <% } %>
-    <% if (wig) { %><p class="mh-wig"><b>Our WIG:</b> <%= wig %></p><% } %>
-  </section>
+  <%- include('partials/highlights', { hi: { greeting: greeting, name: name } }) %>
+  <h2 class="hl-you">⭐ You this week</h2>
+  <% if (wig) { %><p class="mh-wig hl-wig"><b><%= branch.code %> WIG:</b> <%= wig %></p><% } %>
 
   <nav class="mh-actions" aria-label="Quick actions">
     <a class="button<%= enteredToday ? ' secondary' : '' %>" href="/daily"><%= enteredToday ? '✔ Today’s numbers are in – check them' : 'Enter today’s numbers' %></a>
     <a class="button secondary" href="/my-week">My week</a>
     <a class="button secondary" href="/scoreboard"><%= branch.code %> scoreboard</a>
   </nav>
-
-  <%- include('partials/month-goals') %>
 
   <section class="mh-card" aria-labelledby="mh-wins">
     <h2 id="mh-wins">🎉 Wins to celebrate</h2>

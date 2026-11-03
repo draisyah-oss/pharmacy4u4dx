@@ -233,13 +233,17 @@ async function answerItem(db, user, item, body, { now }) {
   const today = mytDate(now());
   const next = { answer: kind === 'not_stocked' ? 'substitute' : kind, status: ANSWERS[kind].status, answer_qty: null, from_branch_id: null, substitute: null, expected_back: null };
   if (DELIVERS.includes(kind) || kind === 'order') {
+    // 3 Nov (Alia, request #1): quantity and date are optional – a transfer / delivery can be sent
+    // with just the branch. No date: deliveries are due tomorrow (the 24-hour send rule), orders open.
     const q = int(body.qty, { min: 1, max: 9999 });
-    if (q.error || q.value === null) return { error: q.error || 'How many?' };
+    if (q.error) return { error: q.error };
     next.answer_qty = q.value;
     const by = String(body.expected_back || '').trim();
-    if (!isRealDate(by)) return { error: 'Pick the date it should arrive.' };
-    if (by < today) return { error: 'The arrival date is in the past.' };
-    next.expected_back = by;
+    if (by) {
+      if (!isRealDate(by)) return { error: 'Pick a real arrival date, or leave it empty.' };
+      if (by < today) return { error: 'The arrival date is in the past.' };
+      next.expected_back = by;
+    } else if (DELIVERS.includes(kind)) next.expected_back = calc.addDays(today, 1);
   }
   if (kind === 'transfer') {
     const from = (await db.query('SELECT id FROM branches WHERE code = $1 AND active', [String(body.from || '')])).rows[0];

@@ -372,16 +372,16 @@ test('28 Oct: inbox as a table by branch + B2B – answer many rows in one Save'
   const page = (await alia.get('/oos/inbox')).html;
   assert.match(page, /Table – answer all/);
   assert.match(page, /id="t-WM"[\s\S]*Panadol 10s[\s\S]*id="t-JH"[\s\S]*id="t-B2B"[\s\S]*Face mask 50s[\s\S]*Klinik Mesra/);
-  // One Save: Panadol HQ delivers 5, Strepsils order 3 but no date (error), B2B order 20, Vicks untouched
+  // One Save: Panadol HQ delivers 5, Strepsils order 3 with a date in the past (error), B2B order 20, Vicks untouched
   const r = await alia.post('/oos/inbox/table', {
     [`r[i${p}][answer]`]: 'hq_deliver', [`r[i${p}][qty]`]: '5', [`r[i${p}][by]`]: '2026-10-29', [`r[i${p}][note]`]: 'van tomorrow',
-    [`r[i${s}][answer]`]: 'order', [`r[i${s}][qty]`]: '3', [`r[i${s}][by]`]: '',
+    [`r[i${s}][answer]`]: 'order', [`r[i${s}][qty]`]: '3', [`r[i${s}][by]`]: '2026-10-01',
     [`r[i${b2b}][answer]`]: 'order', [`r[i${b2b}][qty]`]: '20', [`r[i${b2b}][by]`]: '2026-11-02',
     [`r[i${v}][answer]`]: '', [`r[i${v}][qty]`]: '',
   });
   assert.equal(r.status, 400);
   assert.match(r.html, /2 saved\. 1 row not saved/);
-  assert.match(r.html, /Strepsils honey: Pick the date it should arrive/);
+  assert.match(r.html, /Strepsils honey: The arrival date is in the past/);
   assert.match(r.html, new RegExp(`name="r\\[i${s}\\]\\[qty\\]"[^>]*value="3"`), 'typed value kept');
   const row = async (i) => (await db.query('SELECT answer, answer_qty, reason_for_delay, status, seen_by FROM oos_items WHERE id = $1', [i])).rows[0];
   assert.equal((await row(p)).answer, 'hq_deliver'); assert.equal((await row(p)).reason_for_delay, 'van tomorrow'); assert.ok((await row(p)).seen_by);
@@ -511,4 +511,16 @@ test('30 Oct: "Not stocked – offer substitute" closes the item; substitutes ne
   const yaya = await login('pin', 'yaya', '2222');
   assert.equal((await yaya.post(`/oos/${await id('Panadol 20s')}/cancel`, {})).status, 403);
   clock = before;
+});
+
+test('3 Nov (Alia, request #1): a transfer goes with just the branch – quantity and date optional', async () => {
+  const data = require('../../src/oos/data');
+  const item = (await db.query("SELECT o.*, b.code AS branch_code FROM oos_items o JOIN branches b ON b.id = o.branch_id WHERE o.status = 'Open' AND o.answer IS NULL LIMIT 1")).rows[0];
+  if (!item) return;
+  const user = (await db.query("SELECT * FROM users WHERE role = 'admin' LIMIT 1")).rows[0];
+  const from = item.branch_code === 'WM' ? 'JH' : 'WM';
+  const r = await data.answerItem(db, user, item, { answer: 'transfer', from, qty: '', expected_back: '' }, { now: () => new Date('2026-10-28T10:00:00+08:00') });
+  assert.ok(!r.error, r.error);
+  const after = (await db.query('SELECT answer, answer_qty, expected_back FROM oos_items WHERE id = $1', [item.id])).rows[0];
+  assert.equal(after.answer, 'transfer'); assert.equal(after.answer_qty, null); assert.equal(after.expected_back, '2026-10-29', 'due tomorrow');
 });

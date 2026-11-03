@@ -490,11 +490,15 @@ test('company sales: B2B weeks count in the month of their Thursday; the card is
   assert.equal(g.company.target, 266800);
 
   const a = await admin();
-  for (const p of [`/group?week=${LAST}`, `/hq/scoreboard?week=${LAST}`, '/']) {
+  for (const p of [`/group?week=${LAST}`, `/hq/scoreboard?week=${LAST}`]) {
     const html = (await a.get(p)).html;
     assert.match(html, /Company sales, October so far/, p);
     assert.match(html, /RM 266,800/, p);
   }
+  // 3 Nov: the front page is the highlights – the company's month against its target
+  const home = (await a.get('/')).html;
+  assert.match(home, /Pharmacy4U this month/);
+  assert.match(home, /RM 266,800/);
   // Managers see the total, but the B2B weeks aren't links into HQ input
   const m = await manager();
   const html = (await m.get(`/group?week=${LAST}`)).html;

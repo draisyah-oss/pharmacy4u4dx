@@ -8,6 +8,7 @@
   const tiers = [['wig', 'WIG', 'Locked – only Dr Aisyah changes the WIG.'], ['lead', 'Lead measures', 'Change them here – the change goes live when Dr Aisyah approves it.'], ['activity', 'Activities', 'Change them here – saved straight away.']];
   const showChange = function (ch, calcType) {
     const out = [];
+    if (ch.new) return 'new lead measure “' + ch.new.label + '” – ' + ch.new.owner;
     if (ch.label) out.push('name → “' + ch.label + '”');
     if (ch.field_label) out.push('box → “' + ch.field_label + '”');
     if (ch.owner) out.push('owner → ' + ch.owner);
@@ -17,8 +18,9 @@
   };
 %>
 <main class="page oo-page rv-page">
-  <h1><%= branch.name %> – our measures</h1>
-  <p class="muted">Activities: change them yourself. Lead measures: changes wait for Dr Aisyah’s approval. WIG: locked.</p>
+  <h1><%= branch.name %> – branch measures</h1>
+  <p class="muted">Activities: change or add them yourself. Lead measures: changes and new ones wait for Dr Aisyah’s approval. WIG: locked.</p>
+  <p class="bm-used<%= used >= limit ? ' is-full' : '' %>"><b><%= used %> of <%= limit %></b> changes used this month<%= used >= limit ? ' – the next ones from the 1st' : '' %> <small class="muted">(edits, additions and removals by the branch; a lead change counts when it’s sent)</small></p>
   <% if (user.role !== 'branch_manager') { %><nav class="rv-pills" aria-label="Branch"><% branches.forEach(function (b) { %><a href="/branch/measures?branch=<%= b.code %>"<%- b.code === branch.code ? ' aria-current="page"' : '' %>><%= b.code %></a><% }) %></nav><% } %>
   <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
@@ -46,7 +48,10 @@
       <details class="bm-row" id="m<%= r.id %>"<%= r.pending.length ? ' open' : '' %>>
         <summary><b><%= r.label %></b> <span class="muted small">· <%= r.owner %> · <%= months.map(function (mo) { const t = r.targets[mo].t; return mname(mo) + ' ' + (t === null ? 'track only' : (r.pct ? tv(r, t) + '%' : t) + ' ' + (per[r.targetPer] || '')); }).join(' · ') %></span>
           <% if (r.pending.length) { %><span class="mh-chip s-watch">Waiting for approval</span><% } %></summary>
-        <% r.pending.forEach(function (c) { %><p class="small">⏳ <%= showChange(typeof c.change === 'string' ? JSON.parse(c.change) : c.change, r.calc) %> <span class="muted">– <%= c.proposed_by_name %></span></p><% }) %>
+        <% r.pending.forEach(function (c) { %>
+          <div class="bm-pending"><p class="small">⏳ <%= showChange(typeof c.change === 'string' ? JSON.parse(c.change) : c.change, r.calc) %> <span class="muted">– <%= c.proposed_by_name %><%= c.reason ? ': “' + c.reason + '”' : '' %></span></p>
+            <% if (ceo) { %><%- include('partials/bm-decide', { c: c }) %><% } %></div>
+        <% }) %>
         <% if (locked) { %>
           <p class="muted small">Box on Daily entry: “<%= r.fieldLabel %>”.</p>
         <% } else { %>
@@ -72,6 +77,28 @@
         <% } %>
       </details>
     <% }) %>
+    <% if (tier[0] === 'lead') { newLeads.forEach(function (c) { const n = c.change.new; %>
+      <div class="bm-pending bm-newlead"><p>⏳ <b>New lead: <%= n.label %></b> <span class="small muted">· <%= n.owner %> · <%= months.map(function (mo) { return mname(mo) + ' ' + (n.targets[mo] && n.targets[mo].t !== null ? n.targets[mo].t : 'track only'); }).join(' · ') %> <%= per[n.target_per] %> – <%= c.proposed_by_name %><%= c.reason ? ': “' + c.reason + '”' : '' %></span></p>
+        <% if (ceo) { %><%- include('partials/bm-decide', { c: c }) %><% } %></div>
+    <% }) } %>
+    <% if (canEdit && tier[0] !== 'wig') { %>
+      <details class="bm-add" id="add-<%= tier[0] %>"<%= list.length ? '' : ' open' %>>
+        <summary>➕ Add <%= tier[0] === 'lead' ? 'a lead measure' + (ceo ? '' : ' (Dr Aisyah approves)') : 'an activity' %></summary>
+        <form method="post" action="/branch/measures/new">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>"><input type="hidden" name="tier" value="<%= tier[0] %>">
+          <div class="rv-goal-meta">
+            <label>Name <input type="text" name="label" maxlength="120" placeholder="<%= tier[0] === 'lead' ? 'e.g. Customers offered a health check' : 'e.g. Target product: Vitamin C' %>" required></label>
+            <label>Box name on Daily entry <input type="text" name="field_label" maxlength="120" placeholder="same as the name if empty"></label>
+            <label>Owner <select name="owner"><% owners.forEach(function (o) { %><option><%= o %></option><% }) %></select></label>
+            <label>Counted in <select name="unit"><option value="count">Number (count)</option><option value="RM">RM</option></select></label>
+            <label>Target per <select name="target_per"><option value="day">day</option><option value="week">week</option><option value="month">month</option></select></label>
+            <% months.forEach(function (mo) { %><label><%= mname(mo) %> target <input type="text" inputmode="decimal" name="t_<%= mo.replace('-', '') %>" placeholder="blank = track only"></label><% }) %>
+          </div>
+          <% if (tier[0] === 'lead' && !ceo) { %><label>Why (for Dr Aisyah) <input type="text" name="reason" maxlength="300"></label><% } %>
+          <button class="button" type="submit"<%= used >= limit && !ceo && user.role !== 'admin' ? ' disabled' : '' %>><%= tier[0] === 'lead' && !ceo ? 'Send for approval' : 'Add' %></button>
+        </form>
+      </details>
+    <% } %>
   </section>
   <% }) %>
 

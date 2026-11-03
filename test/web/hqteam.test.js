@@ -91,7 +91,9 @@ test('HQ staff log in with a PIN from the HQ box; full HQ with a password', asyn
 
 test('HQ staff see the group and HQ scoreboards and their own KPIs – nothing else', async () => {
   const s = await syarafana();
-  assert.equal((await s.get('/')).location, '/hq/today');
+  const home = await s.get('/');
+  assert.equal(home.status, 200, '3 Nov: HQ staff open on the highlights');
+  assert.match(home.html, /href="\/hq\/today"/);
   assert.equal((await s.get('/group')).status, 200);
   assert.doesNotMatch((await s.get('/group')).html, /href="\/scoreboard/, 'no links into branches');
   assert.equal((await s.get('/hq/scoreboard')).status, 200);

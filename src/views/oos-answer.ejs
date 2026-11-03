@@ -42,8 +42,8 @@
       </div>
     </fieldset>
     <div class="oo-two">
-      <label class="oo-label">Quantity <small class="muted">(deliver / transfer / order)</small><input name="qty" inputmode="numeric" class="num" value="<%= t.qty || item.answer_qty || '' %>" autocomplete="off"></label>
-      <label class="oo-label">Arrives by<input type="date" name="expected_back" min="<%= today %>" value="<%= t.expected_back || item.expected_back || tomorrow %>"></label>
+      <label class="oo-label">Quantity <small class="muted">(optional)</small><input name="qty" inputmode="numeric" class="num" value="<%= t.qty || item.answer_qty || '' %>" autocomplete="off"></label>
+      <label class="oo-label">Arrives by <small class="muted">(optional)</small><input type="date" name="expected_back" min="<%= today %>" value="<%= t.expected_back || item.expected_back || tomorrow %>"></label>
     </div>
     <label class="oo-label">Offer instead <small class="muted">(substitute / not stocked)</small><input name="substitute" maxlength="160" value="<%= t.substitute || item.substitute || '' %>" placeholder="e.g. Androchi 60ml × 2"></label>
     <label class="oo-label">Note to the branch (optional)<input name="reason" maxlength="300" value="<%= t.reason || item.reason_for_delay || '' %>" placeholder="e.g. supplier out until Nov"></label>

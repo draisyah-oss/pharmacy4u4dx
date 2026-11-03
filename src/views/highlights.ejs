@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'home' }) %>
+<main class="page mh-page">
+  <%- include('partials/highlights') %>
+  <nav class="mh-actions" aria-label="Quick actions">
+    <a class="button" href="/hq/today">My week</a>
+    <a class="button secondary" href="/hq">HQ WIG</a>
+    <a class="button secondary" href="/group">Group scoreboard</a>
+  </nav>
+</main>
+</body>
+</html>

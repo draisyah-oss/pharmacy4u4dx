@@ -1,0 +1,7 @@
+<%# CEO's Approve / Not approved for one waiting change c (branch measures, 3 Nov). %>
+<form method="post" action="/branch/measures/changes/<%= c.id %>" class="bm-decide">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="branch" value="<%= branch.code %>">
+  <input type="text" name="note" maxlength="300" placeholder="Note (optional)" aria-label="Note">
+  <button class="button small" name="decision" value="approve">✔ Approve</button>
+  <button class="button secondary small" name="decision" value="reject">Not approved</button>
+</form>

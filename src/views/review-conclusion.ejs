@@ -51,6 +51,14 @@
           <% if (g.detail) { %><p><%= g.detail %></p><% } %>
           <p class="muted small"><%= g.owner ? 'Owner: ' + g.owner : 'Owner to name' %><%= g.due ? ' · by ' + g.due : '' %><%= g.how_measured ? ' · measured by ' + g.how_measured : '' %></p>
         <% } %>
+        <% if (can.hq && !g.metric) { %>
+          <div class="rv-progress">
+            <b class="small">Progress</b>
+            <select name="gp_status" form="gp<%= g.id %>" aria-label="Status"><option value="">–</option><% ['On track', 'At risk', 'Off track', 'Done'].forEach(function (st) { %><option<%= g.status === st ? ' selected' : '' %>><%= st %></option><% }) %></select>
+            <input type="text" name="gp_progress" form="gp<%= g.id %>" maxlength="300" value="<%= g.progress || '' %>" placeholder="Where it stands" aria-label="Progress">
+            <button class="button secondary small" type="submit" form="gp<%= g.id %>">Save progress</button>
+          </div>
+        <% } else if (g.metric) { %><p class="small muted">Progress is worked out by the app – see the front page.</p><% } %>
         <div class="rv-agree">
           <label><% if (can.hq && !locked) { %><input type="hidden" name="agree_hq[<%= k %>]" value="0"><input type="checkbox" name="agree_hq[<%= k %>]" value="1"<%= g.hq_agreed_at ? ' checked' : '' %>><% } else { %><span aria-hidden="true"><%= g.hq_agreed_at ? '✔' : '–' %></span><% } %>
             HQ agrees<% if (g.hq_agreed_at) { %> <small class="muted">(<%= g.hq_by %>, <%= when(g.hq_agreed_at) %>)</small><% } %></label>
@@ -75,6 +83,9 @@
       <% if (can.lock && locked) { %><button class="button secondary" type="submit" name="lock" value="0">Unlock to change</button><% } %>
     </div>
   </form>
+  <% goals.goals.filter(function (g) { return !g.metric; }).forEach(function (g) { %>
+    <form method="post" action="/goals/<%= g.id %>/progress" id="gp<%= g.id %>" hidden><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="month" value="<%= month %>"></form>
+  <% }) %>
 </main>
 </body>
 </html>

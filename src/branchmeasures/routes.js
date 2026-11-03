@@ -7,7 +7,7 @@ const bm = require('./data');
 
 function branchMeasureRoutes(db, { now }) {
   const router = express.Router();
-  const msg = (res, status, text) => res.status(status).render('message', { title: 'Our measures', message: text });
+  const msg = (res, status, text) => res.status(status).render('message', { title: 'Branch measures', message: text });
 
   async function ctx(req) {
     const u = req.user;
@@ -30,9 +30,18 @@ function branchMeasureRoutes(db, { now }) {
         bm.isCeo(req.user) ? bm.loadWaiting(db) : [], bm.recentDecisions(db, c.branch.id),
       ]);
       res.render('branch-measures', {
-        title: `${c.branch.code} measures`, ...c, ...page, waiting, recent, fmt, canEdit: bm.canEdit(req.user, c.branch), ceo: bm.isCeo(req.user),
+        title: `${c.branch.code} branch measures`, ...c, ...page, waiting, recent, fmt, canEdit: bm.canEdit(req.user, c.branch), ceo: bm.isCeo(req.user),
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'branchmeasures',
       });
+    } catch (err) { next(err); }
+  });
+
+  router.post('/branch/measures/new', async (req, res, next) => {
+    try {
+      const c = await ctx(req);
+      if (c.denied) return msg(res, 403, c.denied);
+      const r = await bm.addMeasure(db, req.user, { branch: c.branch, body: req.body, today: c.today });
+      back(res, c, q(r), req.body.tier === 'lead' ? '#add-lead' : '#add-activity');
     } catch (err) { next(err); }
   });
 
