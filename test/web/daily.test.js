@@ -416,5 +416,8 @@ test('3 Nov: front page – a branch sees its own WIG / lead targets, and one ta
   assert.match(html, /hl-tazkirah/);
   assert.match(html, /Tip hari ini/);
   assert.ok(tz.TIPS.length >= 30 && tz.TIPS.every((t) => t.title && t.text));
+  assert.ok(tz.EFFECTIVE.length >= 30 && tz.EFFECTIVE.every((t) => t.title && t.text));
+  // Alternates: one day a burnout / meaning tip, the next an effectiveness tip.
+  assert.notEqual(tz.tipFor('2026-11-03').kind, tz.tipFor('2026-11-04').kind);
   assert.doesNotMatch(html, /id="hl-goals"/, 'branch people see their own targets, not the company goals');
 });

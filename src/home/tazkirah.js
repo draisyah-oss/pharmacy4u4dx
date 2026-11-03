@@ -74,9 +74,48 @@ const TIPS = [
   { title: "Beri diri ruang untuk silap", text: "Semua orang buat silap. Belajar, betulkan, dan teruskan – jangan menghukum diri terlalu lama." },
 ];
 
+// 3 Nov (CEO): alternate day by day – one day a burnout / meaning tip, the next a tip on working
+// effectively, so the team runs smooth and efficient.
+const EFFECTIVE = [
+  { title: "Mula hari dengan 3 keutamaan", text: "Sebelum kedai buka, tulis 3 perkara yang mesti siap hari ini. Yang lain menyusul selepas tiga ini selesai." },
+  { title: "Buat terus jika kurang 2 minit", text: "Balas mesej ringkas, susun satu rak, isi satu nombor – kalau boleh siap dalam 2 minit, buat sekarang. Jangan biar ia bertimbun." },
+  { title: "Isi nombor hari ini, hari ini", text: "Rekod daily check-in sebelum balik. Nombor yang diisi esok selalunya tersilap dan memakan masa dua kali ganda." },
+  { title: "Kumpulkan kerja yang serupa", text: "Semak stok, buat pesanan dan susun barang dalam satu masa yang sama. Bertukar-tukar tugas setiap 5 minit membazir tenaga." },
+  { title: "Letak barang di tempat yang sama", text: "Setiap barang ada 'rumah'nya. Bila semua orang simpan di tempat yang sama, tiada masa terbuang mencari." },
+  { title: "Tanya awal, bukan lewat", text: "Kalau tidak pasti, tanya sekarang. Satu soalan awal lebih cepat daripada membetulkan kesilapan kemudian." },
+  { title: "Laporkan stok habis segera", text: "Nampak barang habis atau hampir habis? Laporkan dalam app hari ini juga – Inventory boleh pindah atau pesan lebih awal." },
+  { title: "Selesai sampai habis", text: "Kerja yang 90% siap belum siap. Tutup satu tugas sepenuhnya sebelum mula yang baharu." },
+  { title: "Komitmen kecil, ditepati", text: "Dalam sesi WIG, pilih satu komitmen yang benar-benar boleh siap minggu ini. Kecil tetapi ditepati lebih baik daripada besar tetapi tertangguh." },
+  { title: "Lihat scoreboard setiap hari", text: "Satu minit melihat scoreboard memberitahu sama ada kita menang atau ketinggalan – dan apa yang perlu dibuat hari ini." },
+  { title: "Serah tugas dengan jelas", text: "Bila bertukar syif, tinggalkan nota ringkas: apa yang siap, apa yang belum, siapa pelanggan yang perlu dihubungi semula." },
+  { title: "Satu mesej, lengkap", text: "Hantar mesej yang lengkap sekali gus: siapa, apa, berapa, bila. Ini mengelak berbalas-balas mesej yang memakan masa." },
+  { title: "Gunakan senarai semak", text: "Untuk kerja berulang – buka kedai, tutup kedai, terima stok – ikut senarai semak. Kurang lupa, kurang stres." },
+  { title: "Kenal produk laris", text: "Hafal 20 produk paling laris dan lokasinya. Pelanggan dilayan lebih cepat dan jualan tidak terlepas." },
+  { title: "Fokus pada lead measure", text: "Kita tidak boleh kawal jualan secara terus, tetapi boleh kawal tindakan harian – sapa pelanggan, cadang produk, ikut susulan." },
+  { title: "Kosongkan meja kaunter", text: "Kaunter yang kemas mempercepat urusan dan nampak profesional. Simpan apa yang tidak perlu sebelum pelanggan seterusnya." },
+  { title: "Rancang esok sebelum balik", text: "Lima minit sebelum balik, tulis apa yang perlu dibuat esok. Pagi esok terus mula tanpa berfikir panjang." },
+  { title: "Belajar satu perkara baharu", text: "Pilih satu produk atau satu SOP setiap minggu dan fahami betul-betul. Sedikit demi sedikit, kerja jadi lebih lancar." },
+  { title: "Kurangkan gangguan", text: "Senyapkan notifikasi yang tidak penting semasa membuat kerja yang perlukan fokus seperti kiraan stok." },
+  { title: "Tetapkan masa tamat", text: "Beri setiap tugas had masa – contohnya 20 minit untuk susun rak. Kerja jadi lebih fokus dan tidak meleret." },
+  { title: "Betulkan punca, bukan simptom", text: "Masalah yang sama berulang? Tanya 'kenapa' sehingga jumpa puncanya, kemudian cadangkan perubahan melalui 'Request a change'." },
+  { title: "Bantu rakan yang sibuk", text: "Kalau anda lapang, tanya rakan: 'Ada apa yang saya boleh bantu?' Pasukan yang saling membantu bergerak lebih pantas." },
+  { title: "Mesyuarat yang ringkas", text: "Datang ke mesyuarat dengan nombor dan cadangan yang sudah siap. Mesyuarat jadi pendek dan keputusan lebih cepat." },
+  { title: "Susulan dengan pelanggan", text: "Catat nombor pelanggan yang meminta barang habis stok dan hubungi bila barang sampai. Satu panggilan, satu jualan." },
+  { title: "Kira stok dengan teliti sekali", text: "Kiraan yang tepat hari ini mengelak kiraan semula, stok negatif dan pesanan yang salah minggu depan." },
+  { title: "Jadikan yang betul paling mudah", text: "Susun kedai supaya cara yang betul ialah cara yang paling senang – barang laris dekat kaunter, borang di tempat yang mudah dicapai." },
+  { title: "Raikan kemenangan kecil", text: "Capai sasaran harian? Beritahu pasukan. Momentum kecil setiap hari membawa kepada kemenangan bulanan." },
+  { title: "Satu sumber maklumat", text: "Rujuk app 4DX untuk sasaran dan nombor, bukan mesej lama di WhatsApp. Semua orang melihat nombor yang sama." },
+  { title: "Utamakan yang penting, bukan yang bising", text: "Tidak semua yang mendesak itu penting. Tanya: adakah ini membantu kita capai WIG? Jika tidak, ia boleh tunggu." },
+  { title: "Mula awal 10 minit", text: "Sampai 10 minit lebih awal untuk bersedia. Hari yang bermula tenang biasanya berjalan lebih lancar." },
+  { title: "Perbaiki 1% setiap hari", text: "Cari satu perkara kecil yang boleh dibuat lebih baik hari ini. 1% setiap hari menjadi perubahan besar dalam sebulan." },
+];
+
 function tipFor(date) {
   const day = Math.floor(Date.parse(`${date}T00:00:00Z`) / 86400000);
-  return TIPS[((day % TIPS.length) + TIPS.length) % TIPS.length];
+  const list = day % 2 === 0 ? TIPS : EFFECTIVE;
+  const i = Math.floor(day / 2);
+  const t = list[((i % list.length) + list.length) % list.length];
+  return { ...t, kind: list === TIPS ? 'care' : 'effective' };
 }
 
 const KIND_EMOJI = { 'Al-Quran': '📖', Hadis: '🌙', Tazkirah: '🤲' };
@@ -94,4 +133,4 @@ async function today(db, date) {
   return forDate(date);
 }
 
-module.exports = { LIST, TIPS, forDate, tipFor, today };
+module.exports = { LIST, TIPS, EFFECTIVE, forDate, tipFor, today };

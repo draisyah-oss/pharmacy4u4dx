@@ -34,8 +34,8 @@
         <p>“<%= z.text %>”</p><small class="muted"><%= z.src %></small></div></div>
   <% } %>
   <% if (H.tip) { %>
-    <div class="hl-tip"><span class="hl-emoji" aria-hidden="true">🌱</span>
-      <div><small class="hl-tip-k">Tip hari ini – jaga diri, kerja bermakna</small>
+    <div class="hl-tip"><span class="hl-emoji" aria-hidden="true"><%= H.tip.kind === 'effective' ? '⚡' : '🌱' %></span>
+      <div><small class="hl-tip-k">Tip hari ini – <%= H.tip.kind === 'effective' ? 'kerja lancar dan cekap' : 'jaga diri, kerja bermakna' %></small>
         <p><b><%= H.tip.title %>.</b> <%= H.tip.text %></p></div></div>
   <% } %>
   <% if (!H.news.length && !H.tazkirah && !H.tip) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
