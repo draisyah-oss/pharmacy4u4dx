@@ -26,37 +26,6 @@
   <% } %>
 </section>
 
-<% if (H.targets && H.targets.rows.length) { const T = H.targets; %>
-<section class="mh-card" aria-labelledby="hl-targets">
-  <h2 id="hl-targets">🎯 <%= T.code %> – <%= T.monthName %> targets</h2>
-  <p class="muted small">Our WIG and lead measures this month. Tap one to see the days behind it.</p>
-  <ul class="hl-targets">
-    <% T.rows.forEach(function (r) { %>
-      <li class="<%= r.wig ? 'is-wig' : '' %>"><a href="<%= r.href %>">
-        <span class="hl-g-top"><b><%= r.wig ? '🏁 ' : '' %><%= r.label %></b><% if (r.status && r.status !== 'no_data' && r.status !== 'track_only') { %><span class="mh-chip s-<%= r.status %>"><%= ({ on_track: 'On track', watch: 'Nearly', off_track: 'Behind' })[r.status] %></span><% } %></span>
-        <span class="small muted"><%= r.owner %><%= r.rate ? ' · target ' + r.rate : ' · track only' %><%= r.monthTarget ? ' = ' + r.monthTarget + ' this month' : '' %></span>
-        <span class="small"><b><%= r.sofar %></b> so far<%= r.pct !== null && r.pct !== undefined ? ' · ' + fmt.pct(r.pct) + ' of target to date' : '' %></span>
-        <% if (r.fill !== null) { %><span class="mh-bar hl-tbar"><span class="mh-fill" style="width: <%= r.fill %>%"></span><% if (r.pace !== null) { %><span class="mh-pace" style="left: <%= r.pace %>%"></span><% } %></span><% } %>
-      </a></li>
-    <% }) %>
-  </ul>
-</section>
-<% } else { %>
-<% if (H.goals && H.goals.goals.length) { %>
-<section class="mh-card" aria-labelledby="hl-goals">
-  <h2 id="hl-goals">🎯 <%= H.goals.name.split(' ')[0] %> goals <% if (H.goals.locked) { %><span class="mh-chip s-on_track">Agreed</span><% } %></h2>
-  <ol class="hl-goals">
-    <% H.goals.goals.forEach(function (g) { %>
-      <li><div class="hl-g-top"><b><%= g.title %></b><% if (g.chip) { %><span class="mh-chip <%= chipCls[g.chip] %>"><%= g.chip %></span><% } %></div>
-        <% if (g.auto) { %><a class="small" href="<%= g.auto.href %>"><%= g.auto.text %></a><% } else if (g.progress) { %><span class="small"><%= g.progress %></span><% } else { %><span class="small muted"><%= g.owner || '' %><%= g.due ? ' · by ' + g.due : '' %></span><% } %>
-      </li>
-    <% }) %>
-  </ol>
-  <a class="small" href="/review/conclusion?month=<%= H.goals.reviewMonth %>">All goals ›</a>
-</section>
-<% } %>
-
-<% } %>
 <section class="mh-card" aria-labelledby="hl-news">
   <h2 id="hl-news">📣 News</h2>
   <% if (H.tazkirah) { const z = H.tazkirah; %>
@@ -92,6 +61,39 @@
     </details>
   <% } %>
 </section>
+
+<% if (H.targets && H.targets.rows.length) { const T = H.targets; %>
+<section class="mh-card" aria-labelledby="hl-targets">
+  <h2 id="hl-targets">🎯 <%= T.code %> – <%= T.monthName %> targets</h2>
+  <p class="muted small">Our WIG and lead measures this month. Tap one to see the days behind it.</p>
+  <ul class="hl-targets">
+    <% T.rows.forEach(function (r) { %>
+      <li class="<%= r.wig ? 'is-wig' : '' %>"><a href="<%= r.href %>">
+        <span class="hl-g-top"><b><%= r.wig ? '🏁 ' : '' %><%= r.label %></b><% if (r.status && r.status !== 'no_data' && r.status !== 'track_only') { %><span class="mh-chip s-<%= r.status %>"><%= ({ on_track: 'On track', watch: 'Nearly', off_track: 'Behind' })[r.status] %></span><% } %></span>
+        <span class="small muted"><%= r.owner %><%= r.rate ? ' · target ' + r.rate : ' · track only' %><%= r.monthTarget ? ' = ' + r.monthTarget + ' this month' : '' %></span>
+        <span class="small"><b><%= r.sofar %></b> so far<%= r.pct !== null && r.pct !== undefined ? ' · ' + fmt.pct(r.pct) + ' of target to date' : '' %></span>
+        <% if (r.fill !== null) { %><span class="mh-bar hl-tbar"><span class="mh-fill" style="width: <%= r.fill %>%"></span><% if (r.pace !== null) { %><span class="mh-pace" style="left: <%= r.pace %>%"></span><% } %></span><% } %>
+      </a></li>
+    <% }) %>
+  </ul>
+</section>
+<% } else { %>
+<% if (H.goals && H.goals.goals.length) { %>
+<section class="mh-card" aria-labelledby="hl-goals">
+  <h2 id="hl-goals">🎯 <%= H.goals.name.split(' ')[0] %> goals <% if (H.goals.locked) { %><span class="mh-chip s-on_track">Agreed</span><% } %></h2>
+  <ol class="hl-goals">
+    <% H.goals.goals.forEach(function (g) { %>
+      <li><div class="hl-g-top"><b><%= g.title %></b><% if (g.chip) { %><span class="mh-chip <%= chipCls[g.chip] %>"><%= g.chip %></span><% } %></div>
+        <% if (g.auto) { %><a class="small" href="<%= g.auto.href %>"><%= g.auto.text %></a><% } else if (g.progress) { %><span class="small"><%= g.progress %></span><% } else { %><span class="small muted"><%= g.owner || '' %><%= g.due ? ' · by ' + g.due : '' %></span><% } %>
+      </li>
+    <% }) %>
+  </ol>
+  <a class="small" href="/review/conclusion?month=<%= H.goals.reviewMonth %>">All goals ›</a>
+</section>
+<% } %>
+
+<% } %>
+
 
 <section class="mh-card" aria-labelledby="hl-wins">
   <h2 id="hl-wins">🏆 Last week’s stars <small class="muted">w/c <%= new Date(W.week + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' }) %></small></h2>
