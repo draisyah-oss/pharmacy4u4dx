@@ -99,7 +99,7 @@ test('headline counts and RM by what to do', () => {
   assert.equal(s.next.payDate, '05/11/2026');
   assert.equal(s.approvedUnpaidRm, 30655 + 41000 + 71000);
   assert.equal(s.pendingRm, 35677 + 5000 + 2433 + 1890);
-  assert.equal(s.poBudgetTotal, 200000);
+  assert.equal(Math.round(s.poBudgetTotal * 100) / 100, 200628.03);
   // Customers asking and recounts are never counted as transfers or orders.
   const r = build();
   for (const v of ['transfer', 'order_now', 'check', 'wait']) {
@@ -166,8 +166,15 @@ test('cash plan: weeks, floor, tightest week; no salaries in the fixed plans', (
   assert.equal(c.totalOut, 30655 + 41000 + 71000 + 45000);
   assert.ok(c.weeks.every((w) => !w.short));
   assert.equal(c.weeks[2].moneyIn, 61800 + 31866);
-  const budget = Object.values(PLANS).flatMap((p) => p.budget).reduce((s, b) => s + b.poBudget, 0);
-  assert.equal(budget, 200000);
+  // Nov PO budget as Dr Aisyah updated it on 3 Nov: RM200,628.03; one row per supplier key.
+  const budget = nov.budget.reduce((s, b) => s + b.poBudget, 0);
+  assert.equal(Math.round(budget * 100) / 100, 200628.03);
+  assert.equal(new Set(nov.budget.map((b) => b.key)).size, nov.budget.length);
+  const by = (k) => nov.budget.find((b) => b.key === k).poBudget;
+  assert.equal(by('ZUELLIG'), 115961.58);
+  assert.equal(by('DKSH'), 55023.25);
+  assert.equal(by('DCH'), 2100);
+  assert.equal(by('APEX'), 0, 'suppliers not in the 3 Nov list stay, with no budget');
   assert.ok(!mentionsSalary(JSON.stringify(PLANS)), 'plans.js must not mention salaries');
   for (const p of Object.values(PLANS)) for (const w of p.cash) assert.equal(w.fixedOut, undefined);
 });

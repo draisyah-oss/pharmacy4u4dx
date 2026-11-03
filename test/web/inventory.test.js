@@ -102,10 +102,18 @@ test('the four sections, worked out from the sheets', async () => {
   // 2 suppliers
   assert.match(html, /Can I order from this supplier\?/);
   assert.match(html, /<th scope="row">Redwood Pharma<\/th><td><span class="inv-pill g-hold">On hold<\/span>/);
-  assert.match(html, /Total November PO budget: <b>RM200,000<\/b>/);
+  assert.match(html, /Total November PO budget: <b>RM200,628<\/b>/);
   // 3 today's list – all 27 lines and the filter pills with counts
   assert.equal((html.match(/<tr class="sec-/g) || []).length, 27);
   assert.match(html, /href="\/inventory\?show=urgent#today">Urgent <span class="chip-count">12<\/span>/);
+  assert.match(html, /<th scope="row">Tongee<\/th>/);
+  assert.match(html, /<td class="mo-c">115,962<\/td>/);
+  // every section folds (plain <details>, open by default) + Fold all / Open all
+  for (const id of ['glance', 'suppliers', 'today', 'payments', 'approvals']) {
+    assert.match(html, new RegExp(`<details class="oo-card inv-sec" (open id="${id}"|id="${id}" open)>`), id);
+  }
+  assert.match(html, /data-fold="close">Fold all<\/button>/);
+  assert.match(html, /<script src="\/js\/inventory\.js\?v=1" defer><\/script>/);
   // 4 payment plan
   assert.match(html, /November payment plan/);
   assert.match(html, /<svg class="inv-chart"/);

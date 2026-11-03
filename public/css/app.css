@@ -1278,3 +1278,15 @@ input.pp-ok { border-color: var(--good) !important; }
 .inv-setup ol { padding-left: 1.2em; line-height: 1.6; }
 .inv-t td { min-width: 0; }
 .inv-t td.small { min-width: 200px; }
+/* Inventory sections fold (3 Nov) */
+details.inv-sec > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; margin: -4px 0 8px; padding: 4px 0; }
+details.inv-sec > summary::-webkit-details-marker { display: none; }
+details.inv-sec > summary::before { content: "▾"; color: var(--brand); font-size: 1rem; width: 1em; transition: transform .15s; }
+details.inv-sec:not([open]) > summary { margin-bottom: -4px; }
+details.inv-sec:not([open]) > summary::before { transform: rotate(-90deg); }
+details.inv-sec > summary h2 { margin: 0; }
+details.inv-sec > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 6px; }
+details.inv-sec .inv-tiles { margin: 12px 0 0; }
+details.inv-sec .inv-tile { background: var(--page); }
+.inv-foldbar { display: flex; gap: 6px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin: 0 0 10px; }
+.inv-foldbar .link-button { color: var(--brand); font-weight: 700; }

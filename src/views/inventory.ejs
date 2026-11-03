@@ -14,6 +14,7 @@
   <p class="muted">For Alia (orders), Azwani (payments) and Dr Aisyah (approvals). <b>Read only</b> – nothing here places an order or pays anyone.
     <% if (planFile) { %>Today’s list is <b><%= planFile.name %></b> (saved <%= planFile.when %>).<% } %></p>
 
+  <p class="inv-foldbar" data-fold-bar hidden><span class="muted small">Tap a heading to fold it away.</span> <button type="button" class="link-button small" data-fold="close">Fold all</button> · <button type="button" class="link-button small" data-fold="open">Open all</button></p>
   <% if (ok === 'refreshed' && !error) { %><p class="alert alert-good">Checked Google Drive<%= fetchedAt ? ' – ' + fetchedAt : '' %>.</p><% } %>
 
   <% if (error === 'not_configured') { %>
@@ -43,23 +44,26 @@
     <% const miss = [].concat(data.missing.plan.map(function (c) { return 'daily plan: ' + c; }), data.missing.payments.map(function (c) { return 'Payment_Approvals: ' + c; })); %>
     <% if (miss.length) { %><p class="alert alert-info">Some columns weren’t found, so those boxes are empty (<%= miss.join(', ') %>). Check the sheet’s header row.</p><% } %>
 
-    <section class="oo-card inv-take" aria-label="Today in short">
+    <details class="oo-card inv-sec" id="glance" open>
+      <summary><h2>Today at a glance</h2></summary>
+    <div class="inv-take" aria-label="Today in short">
       <p>Today: <b><%= s.counts.order_now %></b> items to order now from open suppliers (about <b><%= rm(s.orderNowRm) %></b>), and <b><%= s.counts.transfer %></b> transfers to do first, which cost no cash.
         <% if (s.next) { %>Next supplier payment: <b><%= s.next.supplier %> <%= rm(s.next.amount) %></b> on <b><%= s.next.payDate %></b>.<% } %>
         <% if (s.late.lines) { %><span class="inv-warn"><%= s.late.lines %> approved payment<%= s.late.lines === 1 ? ' is' : 's are' %> past the pay date and not marked Paid.</span><% } %></p>
-    </section>
+    </div>
 
-    <section class="inv-tiles" aria-label="Today in numbers">
+    <div class="inv-tiles" aria-label="Today in numbers">
       <a class="inv-tile" href="<%= href('transfer') %>"><span class="inv-lab">1 · Transfer first</span><span class="inv-big"><%= s.counts.transfer %></span><span class="muted small">lines to move from HQ or another outlet. No cash needed.</span></a>
       <a class="inv-tile" href="<%= href('order_now') %>"><span class="inv-lab">2 · Order now</span><span class="inv-big"><%= rm(s.orderNowRm) %></span><span class="muted small"><%= s.counts.order_now %> lines · <%= s.orderSuppliers %> supplier<%= s.orderSuppliers === 1 ? '' : 's' %> open now.</span></a>
       <a class="inv-tile" href="<%= href('check') %>"><span class="inv-lab">3 · Check terms first</span><span class="inv-big"><%= rm(s.checkRm) %></span><span class="muted small"><%= s.counts.check %> lines from other suppliers. Check the account with Azwani.</span></a>
       <a class="inv-tile" href="<%= href('wait') %>"><span class="inv-lab">4 · Wait for payment</span><span class="inv-big"><%= rm(s.waitRm) %></span><span class="muted small"><%= s.counts.wait %> lines held until the supplier is paid. Offer a transfer or a substitute.</span></a>
       <a class="inv-tile<%= s.late.lines ? ' is-warn' : '' %>" href="#approvals"><span class="inv-lab">Approved, not marked paid</span><span class="inv-big"><%= rm(s.late.rm) %></span><span class="muted small"><%= s.late.lines %> approved line<%= s.late.lines === 1 ? '' : 's' %> past the pay date. Azwani marks Paid in Payment_Approvals.</span></a>
-    </section>
+    </div>
+    </details>
 
-    <section class="oo-card" id="suppliers">
-      <h2>Can I order from this supplier?</h2>
-      <p class="muted small">A supplier waiting for payment shows <b>Open (paid)</b> once every line for it in Payment_Approvals is marked Paid. <%= monthName %> PO budget split from the <%= plan ? plan.agreed : '' %>.</p>
+    <details class="oo-card inv-sec" open id="suppliers">
+      <summary><h2>Can I order from this supplier?</h2></summary>
+      <p class="muted small">A supplier waiting for payment shows <b>Open (paid)</b> once every line for it in Payment_Approvals is marked Paid. <%= monthName %> PO budget<%= plan && plan.budgetUpdated ? ' as updated ' + plan.budgetUpdated : ' from the ' + (plan ? plan.agreed : '') %>.</p>
       <div class="mo-scroll">
         <table class="mo-t inv-t">
           <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c"><%= monthName %> PO budget (RM)</th><th>Falls due</th></tr></thead>
@@ -72,10 +76,10 @@
         </table>
       </div>
       <p class="muted small">Total <%= monthName %> PO budget: <b><%= rm(s.poBudgetTotal) %></b>. Buy in this order: out-of-stock A items, A items at reorder point, then B items under 2 weeks. C items only when a customer asks, or by transfer.</p>
-    </section>
+    </details>
 
-    <section class="oo-card" id="today">
-      <h2>Today’s list</h2>
+    <details class="oo-card inv-sec" open id="today">
+      <summary><h2>Today’s list</h2></summary>
       <nav class="rv-pills inv-filters" aria-label="Show">
         <% Object.keys(views).forEach(function (k) { %>
           <a href="<%= href(k, q) %>"<%- k === view ? ' aria-current="page"' : '' %>><%= views[k].label %> <span class="chip-count"><%= s.counts[k] %></span></a>
@@ -104,11 +108,11 @@
       </div>
       <% } %>
       <p class="muted small">Outlets: WM = Wangsa Maju, JH = Jenderam Hilir (Dengkil), BR = Rinching, plus Bangi and Ampang. HQ Warehouse often holds stock, so transfer before ordering. Negative stock means the count needs fixing first.</p>
-    </section>
+    </details>
   <% } %>
 
-  <section class="oo-card" id="payments">
-    <h2><%= monthName || 'Monthly' %> payment plan</h2>
+  <details class="oo-card inv-sec" open id="payments">
+    <summary><h2><%= monthName || 'Monthly' %> payment plan</h2></summary>
     <% if (!plan) { %>
       <p class="muted">No payment plan in the app yet.</p>
     <% } else { %>
@@ -134,11 +138,11 @@
         </div>
       </div>
     <% } %>
-  </section>
+  </details>
 
   <% if (data) { %>
-  <section class="oo-card" id="approvals">
-    <h2>Payment approvals</h2>
+  <details class="oo-card inv-sec" open id="approvals">
+    <summary><h2>Payment approvals</h2></summary>
     <p class="muted small">From the Payment_Approvals sheet. Dr Aisyah fills Approved; Azwani fills Paid and the date, then writes PAID and the PV number in the supplier’s SOA file. A message in Telegram is not an approval.</p>
     <% if (!data.pay.length) { %><p class="muted">No payment lines in the sheet yet.</p><% } else { %>
     <div class="mo-scroll">
@@ -154,7 +158,7 @@
     </div>
     <% } %>
     <p class="muted small">Approved and still to pay: <b><%= rm(s.approvedUnpaidRm) %></b>. Waiting for Dr Aisyah’s approval: <b><%= rm(s.pendingRm) %></b>.</p>
-  </section>
+  </details>
   <% } %>
 
   <% if (data || (error && error !== 'not_configured')) { %>
@@ -165,5 +169,6 @@
   </form>
   <% } %>
 </main>
+<script src="/js/inventory.js?v=1" defer></script>
 </body>
 </html>
