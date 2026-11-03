@@ -156,7 +156,8 @@ const SELECT = `
   SELECT o.*, COALESCE(b.code, 'B2B') AS branch_code, COALESCE(b.name, 'B2B – ' || o.b2b_customer) AS branch_name, fb.code AS from_code, fb.name AS from_name,
     c.display_name AS reported_by_name, a.display_name AS answered_by_name, s.display_name AS sent_by_name,
     sn.display_name AS seen_by_name, cx.display_name AS cancelled_by_name,
-    pr.stock_id AS product_stock_id, pr.barcode AS product_barcode, pr.uom AS product_uom
+    pr.stock_id AS product_stock_id, pr.barcode AS product_barcode, pr.uom AS product_uom,
+    ${require('./loss').PRICE_SQL} AS product_price
   FROM oos_items o LEFT JOIN branches b ON b.id = o.branch_id
   LEFT JOIN products pr ON pr.id = o.product_id
   LEFT JOIN users sn ON sn.id = o.seen_by
@@ -196,6 +197,8 @@ function decorate(it, at, today) {
   // A substitute's date is when the original might be back – the branch can already offer the
   // substitute, so it's never shown as LATE (30 Oct, Ampang's Clarityne).
   it.late = it.isOpen && it.answer !== 'substitute' && it.expected_back && it.expected_back < today;
+  // 3 Nov: estimated sales lost (selling price × customers turned away) – src/oos/loss.js.
+  it.estLoss = require('./loss').lossFor(it);
   return it;
 }
 
@@ -443,6 +446,7 @@ async function buildBoard(db, { week, now }) {
   const avg = (xs) => (xs.length ? xs.reduce((a, it) => a + days(it), 0) / xs.length : null);
   const open = all.filter((it) => OPEN.includes(it.status)).map((it) => decorate(it, at, today));
 
+  const lost = await require('./loss').lossBetween(db, { from: week, to: calc.addDays(week, 7) });
   const branches = (await db.query('SELECT id, code, name FROM branches WHERE active ORDER BY sort_order')).rows.map((b) => {
     const mine = (xs) => xs.filter((it) => it.branch_id === b.id);
     return {
@@ -451,6 +455,7 @@ async function buildBoard(db, { week, now }) {
       open: mine(open).length,
       avgDays: avg(mine(back)),
       customers: mine(all.filter((it) => inWeek(it.reported_at))).reduce((a, it) => a + (it.customers_count || 0), 0),
+      lost: (lost.branches.find((x) => x.code === b.code) || {}).total || 0,
     };
   });
   const rep = (await db.query(
@@ -465,7 +470,7 @@ async function buildBoard(db, { week, now }) {
   }
   const ratio = (n, d) => (d ? n / d : null);
   return {
-    targets: t,
+    targets: t, lost,
     answered: { done: answeredOnTime, total: dueHere.length, pct: ratio(answeredOnTime, dueHere.length) },
     transfers: { done: xferOnTime, total: xferDue.length, pct: ratio(xferOnTime, xferDue.length) },
     restock: {

@@ -122,6 +122,8 @@ function agentApi(db, { now }) {
       res.json({ ok: true, id: out.id });
     } catch (err) { next(err); }
   });
+  // 3 Nov: Mr Eve sends the daily plan / payment lines / month plan to the Inventory page.
+  require('../inventory/routes').inventoryAgent(router, db, { now });
   return router;
 }
 

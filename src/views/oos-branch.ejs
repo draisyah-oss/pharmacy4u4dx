@@ -58,13 +58,15 @@
 
   <section aria-labelledby="ours-h">
     <h2 id="ours-h"><%= canReport ? 'Our out-of-stock items' : branch.name + ' – out of stock' %></h2>
+    <% const openLoss = items.filter(function (it) { return it.isOpen; }).reduce(function (a, it) { return a + (it.estLoss || 0); }, 0);
+       if (openLoss) { %><p class="oo-loss-line">💸 Still out of stock: <b>≈ RM <%= Math.round(openLoss).toLocaleString('en-MY') %></b> in sales lost so far (selling price × customers asking). Push to get them back.</p><% } %>
     <% if (!items.length) { %><p class="muted">Nothing out of stock right now.</p><% } %>
     <% items.forEach(function (it) { %>
       <article class="oo-item<%= it.late ? ' is-late' : '' %><%= it.isOpen ? '' : ' is-closed' %>" id="oos-<%= it.id %>">
         <header class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></header>
         <p class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></p>
         <%- include('partials/oos-steps', { it: it, of: of, at: at }) %>
-        <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %>
+        <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %><%= it.estLoss ? ' · ≈ RM ' + Math.round(it.estLoss).toLocaleString('en-MY') + ' sales lost' : '' %>
           <%= it.seen_at ? ' · seen by ' + (it.seen_by_name || 'Inventory') + ' ' + of.when(it.seen_at, at) : ' · not seen by Inventory yet' %><%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? (it.closed_by_hq ? ' · closed by Inventory ' : ' · accepted ') + of.when(it.received_at, at) : '' %></p>
         <%- include('partials/oos-thread', { it: it, action: '/oos/' + it.id + '/message', back: '/oos' + bq + '#oos-' + it.id, canTalk: canTalk, of: of, at: at, open: false }) %>
         <% if (canClose && it.isOpen) { %>

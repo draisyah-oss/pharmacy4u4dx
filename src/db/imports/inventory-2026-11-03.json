@@ -1,0 +1,2008 @@
+{
+"source": "Pharmacy4U Ordering & Payment Board (Mr Eve), 3 Nov 2026: November PO budget + cash plan (28 Oct meeting, Alia 3 Nov), Payment_Approvals sheet, Mr Eve Daily Plan 03 Nov 2026",
+"budget": [
+{
+"supplier": "Zuellig Pharma",
+"key": "ZUELLIG",
+"terms": "60 days",
+"gate": "after_payment",
+"unlock": "ZUELLIG",
+"when": "Once the RM112k is paid (by 15 Nov)",
+"po_budget": 70000,
+"falls_due": "about mid-January"
+},
+{
+"supplier": "Apex Pharmacy",
+"key": "APEX",
+"terms": "60 days",
+"gate": "open",
+"unlock": "",
+"when": "Now",
+"po_budget": 35000,
+"falls_due": "about end of December"
+},
+{
+"supplier": "DKSH (104)",
+"key": "DKSH",
+"terms": "30 days",
+"gate": "after_payment",
+"unlock": "DKSH",
+"when": "After the week 3 payment (A items only)",
+"po_budget": 20000,
+"falls_due": "about 20 December"
+},
+{
+"supplier": "AA Alive",
+"key": "AA ALIVE",
+"terms": "60 days",
+"gate": "after_payment",
+"unlock": "AA ALIVE",
+"when": "Now, once the 30 Oct payment is marked paid",
+"po_budget": 15000,
+"falls_due": "about end of December"
+},
+{
+"supplier": "Pahang Pharmacy",
+"key": "PAHANG",
+"terms": "90 days",
+"gate": "open",
+"unlock": "",
+"when": "Now",
+"po_budget": 15000,
+"falls_due": "end of January"
+},
+{
+"supplier": "Duopharma",
+"key": "DUOPHARMA",
+"terms": "60 days",
+"gate": "soa",
+"unlock": "",
+"when": "Once Azwani confirms its SOA",
+"po_budget": 12000,
+"falls_due": "about early January"
+},
+{
+"supplier": "Teepham Medical",
+"key": "TEEPHAM",
+"terms": "60 days",
+"gate": "after_payment",
+"unlock": "TEEPHAM",
+"when": "Now, once the 30 Oct payment is marked paid",
+"po_budget": 10000,
+"falls_due": "about end of December"
+},
+{
+"supplier": "Eldon Healthcare",
+"key": "ELDON",
+"terms": "60 days",
+"gate": "open",
+"unlock": "",
+"when": "Now",
+"po_budget": 6000,
+"falls_due": "about end of December"
+},
+{
+"supplier": "Delfi Marketing",
+"key": "DELFI",
+"terms": "60 days",
+"gate": "open",
+"unlock": "",
+"when": "Now",
+"po_budget": 5000,
+"falls_due": "about end of December"
+},
+{
+"supplier": "YSP Industries",
+"key": "YSP",
+"terms": "60 days",
+"gate": "after_payment",
+"unlock": "YSP",
+"when": "After YSP reconfirms RM1,567 and it is paid",
+"po_budget": 5000,
+"falls_due": "about early January"
+},
+{
+"supplier": "Kotra Pharma",
+"key": "KOTRA",
+"terms": "30 days",
+"gate": "after_payment",
+"unlock": "KOTRA",
+"when": "After the week 3 payment",
+"po_budget": 3000,
+"falls_due": "about 20 December"
+},
+{
+"supplier": "Pharmaniaga",
+"key": "PHARMANIAGA",
+"terms": "104 days (Alia, 3 Nov)",
+"gate": "check",
+"unlock": "",
+"when": "Not in the RM200k split. Check overdue with Azwani first",
+"po_budget": 0,
+"falls_due": "–"
+},
+{
+"supplier": "Others (check SOA first)",
+"key": "OTHERS",
+"terms": "30–90 days",
+"gate": "check",
+"unlock": "",
+"when": "Alia to check each one's SOA",
+"po_budget": 4000,
+"falls_due": "Dec–Jan"
+},
+{
+"supplier": "Redwood Pharma",
+"key": "REDWOOD",
+"terms": "30 days",
+"gate": "hold",
+"unlock": "",
+"when": "Not until the account reopens",
+"po_budget": 0,
+"falls_due": "–"
+}
+],
+"cash": [
+{
+"order": 1,
+"week": "28 Oct–1 Nov",
+"sales_in": 27200,
+"zakat_in": 0,
+"fixed_out": 0,
+"supplier_out": 30655,
+"cash_end": 23350,
+"paying": "AA Alive RM15,482 · Teepham RM13,606 · YSP RM1,567 (to reconfirm)"
+},
+{
+"order": 2,
+"week": "1–8 Nov",
+"sales_in": 70700,
+"zakat_in": 0,
+"fixed_out": 42201,
+"supplier_out": 41000,
+"cash_end": 10849,
+"paying": "Zuellig part 1 (rent RM21,200 by the 7th)"
+},
+{
+"order": 3,
+"week": "9–15 Nov",
+"sales_in": 61800,
+"zakat_in": 31866,
+"fixed_out": 21117,
+"supplier_out": 71000,
+"cash_end": 12398,
+"paying": "Zuellig part 2, needs the zakat money by 15 Nov"
+},
+{
+"order": 4,
+"week": "16–22 Nov",
+"sales_in": 61800,
+"zakat_in": 0,
+"fixed_out": 9800,
+"supplier_out": 45000,
+"cash_end": 19398,
+"paying": "DKSH RM35,677 · Redwood RM5,000 · Pahang RM2,433 · Kotra RM1,890"
+},
+{
+"order": 5,
+"week": "23–30 Nov",
+"sales_in": 70700,
+"zakat_in": 0,
+"fixed_out": 72555,
+"supplier_out": 0,
+"cash_end": 17543,
+"paying": "No supplier payments (salaries week)"
+}
+],
+"payments": {
+"columns": [
+"Week",
+"Pay date (planned)",
+"Supplier",
+"Proposed amount (RM)",
+"Approved? (Yes / No / Partial)",
+"Approved amount (RM)",
+"Paid? (Yes / No)",
+"Date paid",
+"Notes"
+],
+"rows": [
+[
+"EXAMPLE 2-8 Nov",
+"05/11/2026",
+"EXAMPLE SUPPLIER",
+"1000",
+"Yes",
+"1000",
+"Yes",
+"05/11/2026",
+"Dr Aisyah fills Approved; Azwani fills Paid. Mr Eve adds new rows every Monday."
+],
+[
+"28 Oct-1 Nov",
+"30/10/2026",
+"AA Alive",
+"15482",
+"Yes",
+"15482",
+"",
+"",
+"Agreed in meeting 28 Oct - pay this week (all outlets). Then order"
+],
+[
+"28 Oct-1 Nov",
+"30/10/2026",
+"Teepham Medical",
+"13606",
+"Yes",
+"13606",
+"",
+"",
+"Agreed in meeting 28 Oct - pay this week (all outlets). Then order"
+],
+[
+"28 Oct-1 Nov",
+"30/10/2026",
+"YSP Industries",
+"1567",
+"Partial",
+"",
+"",
+"",
+"Meeting 28 Oct: RM1567 this week - YSP to reconfirm amount"
+],
+[
+"1-8 Nov",
+"05/11/2026",
+"Zuellig Pharma",
+"41000",
+"Yes",
+"",
+"",
+"",
+"Meeting 28 Oct: RM112k in first 2 weeks so the order is released. Part 1"
+],
+[
+"9-15 Nov",
+"12/11/2026",
+"Zuellig Pharma",
+"71000",
+"Yes",
+"",
+"",
+"",
+"Meeting 28 Oct: RM112k in first 2 weeks. Part 2 - needs the zakat payment RM31866 by 15 Nov"
+],
+[
+"16-22 Nov",
+"19/11/2026",
+"DKSH (104)",
+"35677",
+"",
+"",
+"",
+"",
+"After Zuellig (meeting). SOA overdue RM55101 - about RM19.4k left for December. Then order"
+],
+[
+"16-22 Nov",
+"19/11/2026",
+"Redwood Pharma",
+"5000",
+"",
+"",
+"",
+"",
+"Instalment (meeting). RM17214 outstanding - RM5k a month"
+],
+[
+"16-22 Nov",
+"19/11/2026",
+"Pahang Pharmacy",
+"2433",
+"",
+"",
+"",
+"",
+"SOA: overdue (due Sep). Keeps the 90-day account clean"
+],
+[
+"16-22 Nov",
+"19/11/2026",
+"Kotra Pharma",
+"1890",
+"",
+"",
+"",
+"",
+"SOA: oldest overdue (due Jun + Aug). Then instalment"
+]
+]
+},
+"plan": {
+"title": "Mr Eve Daily Plan 03 Nov 2026",
+"date": "2026-11-03",
+"columns": [
+"Action",
+"Item",
+"Branches/short at",
+"Transfer from (qty)",
+"Supplier",
+"Supplier status",
+"Order qty",
+"Approx RM"
+],
+"rows": [
+[
+"NOTE - 03 Nov daily plan. Stock = stockbalance 2.11.xlsx (2 Nov, Stock balance folder). OOS = 4DX trackers, last 14 days (only JH logged in the last 2 working days). Quantities in the stock-file unit. Recommendations only - nothing ordered or paid.",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"SECTION 1: URGENT (4DX asks + A items out)",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"URGENT 1 - TRANSFER + ORDER",
+"Panadol Regular Coated 10s (A)",
+"0 at WM/JH/Bangi/Ampang; JH asked 1 Nov",
+"BR 10 strips (BR has 43)",
+"Zuellig",
+"AFTER PAYMENT (Zuellig RM112k first)",
+"84 strips",
+"304"
+],
+[
+"URGENT 2 - ORDER",
+"Vivadiag Covid/Flu A/B rapid test (+ Influenza A&B test kit)",
+"0 at every outlet + HQ; JH asked 3 days (20, 23, 27 Oct)",
+"none",
+"Plusmedics Supplies",
+"Other supplier - check terms",
+"37 pack",
+"296"
+],
+[
+"URGENT 3 - ORDER",
+"Hydrocyn Aqua 100ml spray (A)",
+"0 at every outlet + HQ",
+"none",
+"Teepham",
+"Open once 30 Oct payment confirmed",
+"17 box",
+"119"
+],
+[
+"URGENT 4 - TRANSFER",
+"Xepa Tussidex Forte 120ml + Xepa Mucoprom syrup (A)",
+"JH 1 Tussidex, 0 Mucoprom (cough season)",
+"HQ 22 Tussidex (HQ 90) + HQ 7 Mucoprom (HQ 35)",
+"Apex",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"URGENT 5 - TRANSFER",
+"Panadol Extend 665mg 6s (A)",
+"JH -280 (recount) / Bangi 0",
+"HQ 39 strips (HQ 168)",
+"Zuellig",
+"AFTER PAYMENT - transfer only",
+"0",
+"0"
+],
+[
+"URGENT 6 - TRANSFER",
+"One Touch Select test strips 25s (A)",
+"JH 0 - asked 2 days (RM80 lost)",
+"Bangi 2 (Bangi 6)",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"URGENT 7 - ORDER",
+"Duoderm Hydroactive Gel 30g",
+"0 at every outlet; JH asked 22 + 30 Oct",
+"none",
+"Apex",
+"OPEN NOW",
+"2 tube",
+"42"
+],
+[
+"URGENT 8 - TRANSFER",
+"Crystorvas 20mg (A)",
+"JH 0 - asked 1 + 2 Nov (3 customers); WM 0",
+"BR 3 to JH, Ampang 2 to WM (BR 7, Ampang 6)",
+"AA Pharmacy / Duopharma",
+"AFTER SOA check (Duopharma)",
+"0",
+"0"
+],
+[
+"URGENT 9 - TRANSFER + ORDER",
+"Neurobion tablet 10s (A)",
+"JH 0 - asked 27 + 31 Oct; BR 2",
+"Ampang 4 (Ampang 8)",
+"Zuellig",
+"AFTER PAYMENT - offer Hovid Neurovit Forte (ordered 2 Nov)",
+"17 strips",
+"156"
+],
+[
+"URGENT 10 - ORDER",
+"Cap Kaki Tiga Povidone Iodine 60ml (A)",
+"0 at WM/JH/Bangi; JH asked 21 Oct + 1 Nov",
+"none",
+"Delfi",
+"OPEN NOW",
+"8",
+"44"
+],
+[
+"URGENT 11 - TRANSFER",
+"Ural effervescent sachets (A)",
+"BR 11 left",
+"HQ 42 sachets (HQ 252)",
+"Zuellig",
+"AFTER PAYMENT - transfer only",
+"0",
+"0"
+],
+[
+"URGENT 12 - TRANSFER + ORDER",
+"Glucovance 500/5mg 120s",
+"JH asked 2 Nov (RM102 lost); only Ampang 1 in company",
+"Ampang 1",
+"match? - supplier blank in masterlist (Merck)",
+"check",
+"1 box",
+"90"
+],
+[
+"URGENT 13 - TRANSFER + ORDER",
+"Plendil 5mg 30s / Plendil 2.5mg",
+"JH asked 5mg 2 Nov (0 everywhere); Bangi 2.5mg OOS",
+"Ampang 2 strips 2.5mg to Bangi (Ampang 4)",
+"match? (likely Zuellig)",
+"AFTER PAYMENT",
+"1 box 5mg",
+"31"
+],
+[
+"URGENT 14 - ORDER",
+"Syn-E juice Orange + Mix Berry 200ml (A)",
+"0 at WM/Bangi/Ampang (WM losing Grab sales since 12 Oct)",
+"none",
+"Syn-E",
+"Other supplier - check terms",
+"33 + 24 pack",
+"248"
+],
+[
+"URGENT 15 - ORDER",
+"Benatussil Forte expectorant 120ml (A)",
+"0 at every outlet + HQ",
+"none",
+"check supplier",
+"Other supplier - check terms",
+"15",
+"64"
+],
+[
+"SECTION 2: TRANSFER FROM HQ WAREHOUSE / TRANSIT FIRST (no cash)",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"TRANSFER (HQ)",
+"URAL EFFERVESCENT GRANULES 4G - SACHET",
+"BR 11",
+"HQ/Transit 42 (has 252)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"XEPA TUSSIDEX FORTE 15MG/5ML LINCTUS 120ML",
+"JH 1",
+"HQ/Transit 22 (has 90)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"ASTHALIN HFA MDI 100MCG INHALER- 200D",
+"WM 2",
+"HQ/Transit 16 (has 28)",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"SERRATA 10MG TABLET - STP 10S",
+"WM 3",
+"HQ/Transit 15 (has 200)",
+"PAHANG PHARMACY",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"HALEON PANADOL EXTEND 665MG TABLET 6S",
+"JH 0; Bangi 0",
+"HQ/Transit 39 (has 168)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"XEPA MUCOPROM 100MG/2.5MG SYRUP CHOCOLATE VANILLA 120ML",
+"JH 0",
+"HQ/Transit 7 (has 35)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"CLEARBLUE PLUS PREGNANCY TEST",
+"WM 1; JH 0",
+"HQ/Transit 5 (has 5)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"SM CHLOROP EYE OINTMENT 5G",
+"JH 0",
+"HQ/Transit 5 (has 112)",
+"SM PHARMACEUTICALS",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"NOVA ACTIVMAX DIABECARE 400GM",
+"BR 0; Ampang 0",
+"HQ/Transit 2 (has 2) - Nova PO 2 Nov covers BR + Ampang",
+"NOVA LABORATORIES",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"HOE OXY-NASE NASAL SPRAY 0.05% W/V 15ML",
+"JH 0",
+"HQ/Transit 3 (has 10)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"MALTOFER FOL CHEWABLE TABLET 10S",
+"BR 0",
+"HQ/Transit 3 (has 3)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"HOMECARE DERMAFIN CREAM 10G",
+"Bangi 0",
+"HQ/Transit 3 (has 20)",
+"YSP",
+"AFTER YSP reconfirm",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"XEPA EZEDE 10MG - 10S",
+"BR 1",
+"HQ/Transit 3 (has 66)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"HOMECARE ELAN-FORTE CREAM 15G",
+"BR 0",
+"HQ/Transit 3 (has 20)",
+"YSP",
+"AFTER YSP reconfirm",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"ELLGY CORNS & WARTS 10ML",
+"BR 0",
+"HQ/Transit 2 (has 2)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"2",
+"28"
+],
+[
+"TRANSFER (HQ)",
+"DIFFLAM AB LOZENGES HONEY LEMON 6'S",
+"Bangi 0",
+"HQ/Transit 4 (has 24)",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"QUEMOX TABLET 500MG - BOX",
+"BR 0",
+"HQ/Transit 7 (has 36)",
+"",
+"check supplier",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"SHINE KOKOYOYO VITA-C GUMMIES 10S",
+"JH 1",
+"HQ/Transit 17 (has 60)",
+"YSP",
+"AFTER YSP reconfirm",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"EYE MO MOIST 7.5ML",
+"BR 0; JH 0",
+"HQ/Transit 7 (has 7)",
+"DELFI",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"TORRENT TOLANZ ODT TABLET 10MG 10S",
+"WM 0 (4DX since 1 Sep)",
+"Transit 2 (has 3); Bangi has 3",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"XEPA DEFUZIN 2% CREAM 15G",
+"BR 0",
+"HQ/Transit 2 (has 15)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"AVOGRA 50MG TAB 1S",
+"WM 0",
+"HQ/Transit 8 (has 12)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"XEPA DEXTRACIN EYE/EAR DROP 5ML",
+"JH 1",
+"HQ/Transit 4 (has 8)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"AVELAC SYRUP 100ML",
+"JH 0",
+"HQ/Transit 2 (has 29)",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"TOPSEAL SPORT TAPE 3.8CMX13.7M",
+"Bangi 0 (4DX 24 Oct)",
+"HQ/Transit 2 (has 5)",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"HOVID DOXYCAP 100MG CAPSULE 10S",
+"BR 0",
+"HQ/Transit 3 (has 30)",
+"HOVID",
+"OPEN (direct; PO placed 2 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER (HQ)",
+"EVIN PREGNANCY TEST CASSETTE",
+"BR 0; JH 2; Bangi 0 (Bangi -28 recount)",
+"HQ 40 + Ampang 12",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"20 pcs",
+"18"
+],
+[
+"TRANSFER (HQ)",
+"PHARMANIAGA COVINACE 4MG PACK - BOX 30S",
+"JH 0 (4DX 27 Oct)",
+"HQ/Transit 1 (has 1)",
+"PHARMANIAGA",
+"Other supplier - CBD",
+"1",
+"12"
+],
+[
+"SECTION 3: A ITEMS UNDER 1 WEEK COVER - transfer between outlets, then order (3 weeks of sales)",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"ORDER",
+"UPHAMOL SUSPENSION 250MG/5ML ORANGE 100ML",
+"WM 1; JH 0; Bangi 0; Ampang 0",
+"none",
+"UPHAMOL",
+"Other supplier - check terms",
+"25 BOT",
+"82"
+],
+[
+"TRANSFER + ORDER",
+"PABRON COUGH SYRUP KIDS 120ML",
+"WM 0; BR 0; JH 0; Bangi 0",
+"Ampang 3",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"8 BOX",
+"78"
+],
+[
+"ORDER LATER",
+"YSP SELADIN 500MG TAB 10S",
+"BR 3; JH 0; Bangi 0",
+"none",
+"YSP",
+"AFTER YSP reconfirm",
+"30 STP",
+"252"
+],
+[
+"TRANSFER",
+"TAB SERRIN 5MG STRIP 10S",
+"WM 1; BR 0; JH 2",
+"Bangi 33",
+"HEALOL",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER + ORDER",
+"BUBBLES O2 MINERAL WATER 800ML",
+"BR 0; JH 0; Bangi 0",
+"Ampang 3",
+"BUBBLESO2",
+"Other supplier - check terms",
+"12 BOT",
+"45"
+],
+[
+"TRANSFER + ORDER",
+"EYE GLO RELIEF EYE DROPS 10ML",
+"BR 1; JH 0; Bangi 1",
+"Ampang 10",
+"DUOPHARMA",
+"AFTER SOA check",
+"2 BOX",
+"11"
+],
+[
+"ORDER",
+"HOVID FOLIC ACID 5MG TABLET 10S",
+"WM 0; Bangi 1",
+"none - Hovid PO 2 Nov has 12 box",
+"HOVID",
+"OPEN (PO placed 2 Nov)",
+"check vs PO",
+"0"
+],
+[
+"ORDER",
+"TOPSEAL BREV WATERPROOF DRESSING 6X7 100S",
+"WM 1; BR 1; Bangi 0",
+"none",
+"AA ALIVE",
+"Open once paid - check qty/UOM",
+"check",
+"0"
+],
+[
+"ORDER",
+"AXCEL PARACETAMOL SYRUP 250MG/5ML (ORANGE) 100ML",
+"WM 0; JH 0; Bangi 0",
+"none",
+"AXCEL",
+"Other supplier - check terms",
+"7 BOX",
+"48"
+],
+[
+"TRANSFER + ORDER",
+"DIFFLAM LOZENGES RASPBERRY RED 3MG/1.33MG 16S",
+"JH 0; Bangi 0",
+"Ampang 4",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"8 BOX",
+"198"
+],
+[
+"ORDER",
+"ACCUSURE INFRARED THERMOMETER DUAL MODE",
+"WM 0; JH 0",
+"none",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"6 BOX",
+"414"
+],
+[
+"TRANSFER + ORDER",
+"PHARMANIAGA SAFROSYN S TABLET 550MG 10S",
+"BR 0; Bangi 0",
+"Ampang 23",
+"NAPROXEN",
+"Other supplier - check terms",
+"14 STP",
+"68"
+],
+[
+"ORDER",
+"EGODERM CREAM 25G",
+"BR 0; Bangi 0",
+"none",
+"EGO",
+"Other supplier - check terms",
+"16 BOT",
+"289"
+],
+[
+"TRANSFER",
+"GAVISCON DOUBLE ACTION LIQUID SACHET 10ML 1S",
+"JH 0; Bangi 0",
+"Ampang 27",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"DUOPHARMA SIMTEC TABLET 10MG - 10S",
+"BR 0; JH 0",
+"WM 18",
+"DUOPHARMA",
+"AFTER SOA check",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"EVIN MIDSTREAM PREGNANCY TEST 1S",
+"BR 0; Bangi 0",
+"Ampang 10",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"YSP LORADINE (LORATADINE) 10MG TAB 10'S",
+"BR 1; JH 4",
+"Bangi 27",
+"YSP",
+"AFTER YSP reconfirm",
+"0",
+"0"
+],
+[
+"ORDER",
+"PROSPAN F COUGH SYRUP NEW 100ML",
+"JH 0; Bangi 0",
+"none",
+"DELFI",
+"OPEN NOW",
+"7 BOT",
+"100"
+],
+[
+"TRANSFER + ORDER",
+"COOLORA MOUTHWASH 100ML",
+"JH 0; Bangi 0",
+"Ampang 2",
+"HEALOL",
+"Other supplier - check terms",
+"9 BOX",
+"63"
+],
+[
+"TRANSFER + ORDER",
+"MSD AERIUS 5MG 10S TABLET",
+"WM 0; Bangi 0",
+"JH 2",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"4 BOX",
+"90"
+],
+[
+"TRANSFER + ORDER",
+"NOVOLAX 5MG TABLET 15S",
+"WM 0; BR 0",
+"Bangi 5; Ampang 5",
+"PAHANG PHARMACY",
+"OPEN NOW",
+"2 STP",
+"6"
+],
+[
+"ORDER",
+"CERUMOL EAR WAX DROP SOFTENER 10ML",
+"WM 0; Bangi 0",
+"none",
+"DELFI",
+"OPEN NOW",
+"4 BOX",
+"65"
+],
+[
+"TRANSFER + ORDER",
+"EVIN HYPERTONIC NASAL SPRAY 50ML",
+"BR 0; Bangi 0",
+"Ampang 3",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"3 BOX",
+"40"
+],
+[
+"TRANSFER + ORDER",
+"TOPSEAL ALCOHOL SWAB 100S",
+"BR 2; JH 0",
+"WM 2",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"11 BOX",
+"21"
+],
+[
+"TRANSFER",
+"COUNTERPAIN ANALGESIC BALM 60G",
+"BR 0; JH 0",
+"WM 6",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"ORDER",
+"QUANTUM MAGNESIUM BISGLYCINATE 834MG 10S",
+"WM 3; JH 0",
+"none",
+"QUANTUM",
+"Other supplier - check terms",
+"17 STP",
+"133"
+],
+[
+"TRANSFER + ORDER",
+"EVIN ISOTONIC NASAL SPRAY 50ML",
+"BR 0; Bangi 0",
+"Ampang 2",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"2 BOX",
+"26"
+],
+[
+"TRANSFER",
+"HOVID HOSOLVON DM ELIXIR 120ML",
+"WM 0; JH 0",
+"Ampang 5 (Hovid PO 2 Nov has 1 carton)",
+"HOVID",
+"OPEN (PO placed 2 Nov)",
+"0",
+"0"
+],
+[
+"ORDER",
+"RESPACK HIJAB SERIES KF94 MASK 4PLY 20S",
+"JH 0; Bangi 0",
+"none",
+"RESPACK",
+"Other supplier - check terms",
+"4 BOX",
+"48"
+],
+[
+"TRANSFER + ORDER",
+"CAP KAKI TIGA LOSYEN KUNING 60ML",
+"WM 1; BR 1 (JH asked 1 Nov)",
+"Ampang 3",
+"DELFI",
+"OPEN NOW",
+"5 BOX",
+"16"
+],
+[
+"ORDER LATER",
+"COUNTERPAIN ANALGESIC BALM 30G",
+"JH 0; Bangi 0",
+"none",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"5 BOX",
+"46"
+],
+[
+"ORDER LATER",
+"ALUCID SUSPENSION 100ML - PEPPERMINT",
+"BR 0; JH 0 (JH asked 22-25 Oct)",
+"none",
+"DUOPHARMA",
+"AFTER SOA check",
+"6 BOT",
+"46"
+],
+[
+"ORDER",
+"DESLOVA SYRUP 2.5MG/5ML 60ML",
+"BR 0; JH 0",
+"none",
+"ANTAH PHARMA",
+"Other supplier - check terms",
+"6 BOX",
+"72"
+],
+[
+"ORDER",
+"MEDTOPIA MIDSTREAM PREGNANCY TEST 1S",
+"WM 0; Bangi 1",
+"none",
+"BERGAMOT",
+"Other supplier - check terms",
+"7 BOX",
+"28"
+],
+[
+"ORDER",
+"DESTACURE SYRUP 2.5MG/5ML 60ML",
+"JH 0; Bangi 0",
+"none",
+"GRACURE",
+"Other supplier - check terms",
+"6 BOX",
+"65"
+],
+[
+"TRANSFER + ORDER",
+"AVOBIC CREAM 1% W/W 15G",
+"WM 0; BR 0",
+"Ampang 2",
+"APEX",
+"OPEN NOW",
+"2 BOX",
+"14"
+],
+[
+"ORDER",
+"PHARMANIAGA GLUMET XR 500MG PACK 10S",
+"BR 0; JH 0",
+"none - in Alia's Pharmaniaga order",
+"PHARMANIAGA",
+"CBD - check overdue with Azwani",
+"9 STP",
+"47"
+],
+[
+"TRANSFER",
+"DERMOPLEX CALAMINE CREAM 25G",
+"WM 0; Bangi 0",
+"JH 6",
+"DUOPHARMA",
+"AFTER SOA check",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"DERMOPLEX CALAMINE LOTION 120ML",
+"JH 0; Bangi 0",
+"BR 5",
+"DUOPHARMA",
+"AFTER SOA check",
+"0",
+"0"
+],
+[
+"ORDER",
+"CELLOTRON SYRINGE WITH NEEDLE 1ML 100S",
+"WM 0; Bangi 0",
+"none",
+"TRUMEDIC",
+"Other supplier - check qty/UOM",
+"check",
+"0"
+],
+[
+"TRANSFER + ORDER",
+"GLUCERNA VANILLA 800G",
+"JH 0",
+"BR 2",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"check qty",
+"0"
+],
+[
+"TRANSFER",
+"ENSURE GOLD POWDER (VANILLA) 800G",
+"WM 0",
+"JH 8",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER + ORDER",
+"GSK ZYRTEC 10MG TABLETS 10S",
+"Bangi 6",
+"Ampang 14",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"8 STP",
+"109"
+],
+[
+"TRANSFER",
+"PROSPAN COUGH SYRUP NEW 100ML",
+"WM 2",
+"BR 5",
+"DELFI",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER + ORDER",
+"NUTREN JUNIOR VANILLA 800G",
+"JH 0",
+"WM 2 (WM Nutren PO 2 Nov 18 tins)",
+"APEX",
+"OPEN NOW",
+"2 TIN",
+"171"
+],
+[
+"TRANSFER",
+"NOVA ACTIVMAX BREAKFAST DRINK 400G (VANILLA)",
+"WM 0",
+"JH 5 (Nova PO 2 Nov 40 tubs to WM)",
+"NOVA",
+"Other supplier",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"BYEKOUGH COUGH RELIEF PATCH 6S",
+"WM 0",
+"Ampang 6; JH 1",
+"AMAZING PHARMACEUTICALS",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"POSTINOR-2 0.75MG TABLET 10X2S",
+"WM 0",
+"Ampang 2",
+"PAHANG PHARMACY",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"ULTRACARBON CHARCOAL 250MG 10S",
+"JH 0",
+"BR 3",
+"F.TRENKA",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"ORDER",
+"ALTERNA OSTOMY BAG TRANSPARENT 10-35MM (PAEDIATRIC) 1S",
+"WM 0",
+"none",
+"DCH AURIGA",
+"CBD - pay DCH RM2100 first",
+"28 PC",
+"371"
+],
+[
+"ORDER",
+"HCQS 200MG TABLET 10'S",
+"Bangi 1",
+"none",
+"ZYFAS",
+"Other supplier - check terms",
+"23 STP",
+"356"
+],
+[
+"TRANSFER",
+"DERMACYN EZYMA HYDROGEL 45G",
+"Bangi 0",
+"Ampang 3",
+"DYAMED BIOTECH",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"ORDER LATER",
+"SIMILAC TOTAL COMFORT (0-12 BULAN) 820G",
+"WM 0",
+"none",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"3 TIN",
+"439"
+],
+[
+"ORDER LATER",
+"STERIMAR BABY NASAL SPRAY 50ML",
+"Bangi 0",
+"none",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"2 BOX",
+"47"
+],
+[
+"TRANSFER",
+"HYDROCYN AQUA WOUND GEL 0.05% 15G",
+"Bangi 1",
+"BR 4",
+"TEEPHAM",
+"Open once 30 Oct payment confirmed",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"CLEARBLUE DIGITAL WITH CONCEPTION INDICATOR",
+"WM 0 (Ampang asked 21 Oct)",
+"Bangi 3",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"ORDER",
+"STACYTINE 600MG EFF TAB - BOX 4X4S",
+"Bangi 0",
+"none",
+"ALLIED PHARMACY",
+"Other supplier - check terms",
+"3 BOX",
+"73"
+],
+[
+"TRANSFER",
+"PFIZER PONSTAN 500MG TABLET 10S",
+"WM 0",
+"JH 11",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"ORDER LATER",
+"ABBOTT PEDIASURE PEPTIGRO VANILLA 1.1KG BIB",
+"JH 0",
+"none",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"3 TIN",
+"436"
+],
+[
+"TRANSFER",
+"HALEON PANADOL CHILDREN 250MG/5ML SUSPENSION (ORANGE) 60ML",
+"Bangi 0",
+"Ampang 9",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"HALEON PANADOL CHILDREN 120MG/5ML SUSPENSION (STRAWBERRY) 60ML",
+"JH 0 (JH asked 29 Oct)",
+"Bangi 2",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"HALEON ZENTEL TABLET 200MG STRIP 2S",
+"Bangi 0",
+"Ampang 3",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER + ORDER",
+"DR. P VALUE TAPE SIZE L 9S",
+"WM 0 (WM -29 recount)",
+"BR 13",
+"LIM SOON HUAT",
+"Other supplier - check terms",
+"3 PACK",
+"45"
+],
+[
+"TRANSFER",
+"HOMECARE DAVMORID BOX 30S",
+"JH 0",
+"WM 2",
+"YSP",
+"AFTER YSP reconfirm",
+"0",
+"0"
+],
+[
+"ORDER",
+"WT BARLEANS OMEGA3 EE FISH OIL 30S",
+"BR 0",
+"none",
+"BARLEANS",
+"Other supplier - check terms",
+"3 BOT",
+"106"
+],
+[
+"TRANSFER + ORDER",
+"CEZTI 10MG STP10S",
+"BR 0",
+"Bangi 14; Ampang 7",
+"ALLIED PHARMACY",
+"Other supplier - check terms",
+"19 STP",
+"25"
+],
+[
+"TRANSFER",
+"MAXIGESIC 500MG/150MG STP10S",
+"WM 0",
+"Ampang 9",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"EVIN DIGITAL THERMOMETER",
+"JH 0",
+"Ampang 3",
+"AA ALIVE",
+"Open once 30 Oct payment confirmed",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"PP NAPROXEN-NA 550MG STP 10S",
+"JH 0",
+"Bangi 6",
+"PAHANG PHARMACY",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"ORDER",
+"NUTREN OPTIMUM VANILLA 800G",
+"JH 0",
+"none (WM Nutren PO 2 Nov 16 tins)",
+"APEX",
+"OPEN NOW",
+"3 TIN",
+"260"
+],
+[
+"ORDER",
+"MAMYPOKO EXTRA DRY PANTS XXXL GIRL 14S",
+"JH 0",
+"none",
+"MAMYPOKO",
+"Other supplier - check terms",
+"6 PACK",
+"187"
+],
+[
+"TRANSFER",
+"GAVISCON DOUBLE ACTION LIQUID SACHET 10ML 5S",
+"Bangi 0",
+"BR 3",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"ELDON DX ANDROCHI 10S/STP",
+"WM 0",
+"Ampang 4",
+"ELDON",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"ORDER",
+"ABSORBA SUPER PLUS PANTS (XL) 8+1S",
+"JH 0 (JH 4DX missed order)",
+"none",
+"DCH AURIGA",
+"CBD - pay DCH RM2100 first",
+"7 PACK",
+"183"
+],
+[
+"ORDER LATER",
+"STREPSILS MAX PRO DIRECT SPRAY 15ML",
+"BR 0",
+"none",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"2 BOX",
+"61"
+],
+[
+"ORDER",
+"FRISOLAC AR 0-12 MONTH 400G",
+"BR 0",
+"none",
+"BIG PHARMACY",
+"Other supplier - check terms",
+"3 TIN",
+"183"
+],
+[
+"TRANSFER",
+"ALOCLAIR PLUS SPRAY 15ML",
+"Bangi 0",
+"Ampang 2",
+"ALOCLAIR",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"DERMACYN WOUND CARE HYDROGEL 50G",
+"BR 0",
+"Bangi 3",
+"DYAMED BIOTECH",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"GAVISCON DOUBLE ACTION LIQUID (NEW) 150ML",
+"WM 0",
+"Bangi 2",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"MOBITHRON ADVANCE 1X10S",
+"Bangi 0 (Bangi asked 22 Oct)",
+"JH 2 (JH has 18)",
+"BIG PHARMACY",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"BUBBLES O2 MINERAL WATER 425ML",
+"BR 0",
+"Ampang 9",
+"BUBBLESO2",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"HALEON PANADOL EXTRA TABLET 565MG BOX 12S",
+"Bangi 0",
+"BR 4",
+"ZUELLIG PHARMA",
+"AFTER PAYMENT",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"BYE BYE FEVER ADULT 2S",
+"WM 0",
+"Ampang 14",
+"DELFI",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"GAVISCON LIQUID SACHETS (PEPPERMINT) 10ML 1S",
+"WM 2",
+"Ampang 7",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"DYNA CHARCOAL TABLET 250MG 10S",
+"Bangi 0",
+"Ampang 6",
+"DYNAPHARM",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"HYDROCYN AQUA WOUND WASH 250ML",
+"WM 0",
+"Bangi 3",
+"TEEPHAM",
+"Open once 30 Oct payment confirmed",
+"0",
+"0"
+],
+[
+"ORDER",
+"ABSORBA CONTI-FIT SOFT PANTS (M) 10S",
+"JH 0",
+"none",
+"DCH AURIGA",
+"CBD - pay DCH RM2100 first",
+"6 PACK",
+"76"
+],
+[
+"ORDER LATER",
+"ENSURE GOLD LIQUID VANILLA 220ML",
+"WM 0",
+"none",
+"DKSH",
+"AFTER PAYMENT (wk 16-22 Nov)",
+"13 BOT",
+"106"
+],
+[
+"TRANSFER",
+"PARACAP 500MG 10S",
+"JH 0",
+"Ampang 10",
+"PARACAP",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"UPHAMOL 650 TABLET-10S STRIP",
+"JH 2",
+"Ampang 5",
+"UPHAMOL",
+"Other supplier - check terms",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"XEPA MUCOKIDS ORAL SOLUTION 120ML",
+"JH 0",
+"Ampang 4",
+"APEX",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"NOLPAZA 40MG 14S",
+"JH 0",
+"WM 3",
+"PAHANG PHARMACY",
+"OPEN NOW",
+"0",
+"0"
+],
+[
+"ORDER",
+"PROGLUTROL G2 2MG/500MG TABLET 100S",
+"BR 0",
+"none",
+"HEALOL",
+"Other supplier - check terms",
+"2 BOX",
+"108"
+],
+[
+"ORDER",
+"ABSORBA AFINA PLUS PANTS (M) 10S",
+"JH 0",
+"none",
+"DCH AURIGA",
+"CBD - pay DCH RM2100 first",
+"5 PACK",
+"84"
+],
+[
+"ORDER",
+"REGULON TABLET 21S",
+"BR 0",
+"none",
+"PAHANG PHARMACY",
+"OPEN NOW",
+"5 BOX",
+"51"
+],
+[
+"TRANSFER",
+"HOVID NEUROVIT FORTE TABLET 10S",
+"JH 0",
+"BR 7 (Hovid PO 2 Nov 5 box)",
+"HOVID",
+"OPEN (PO placed 2 Nov)",
+"0",
+"0"
+],
+[
+"TRANSFER",
+"PHARMANIAGA GLICLAZIDE 80MG PACK 10S",
+"JH 0",
+"BR 3",
+"PHARMANIAGA",
+"CBD - in Alia's Pharmaniaga order",
+"0",
+"0"
+],
+[
+"ORDER",
+"SYSTANE ULTRA LUBRICATING EYE DROPS 5ML",
+"BR 0 (JH asked 28 Oct + 2 Nov)",
+"none",
+"SYSTANE",
+"Other supplier - check terms",
+"2 BOX",
+"25"
+],
+[
+"(+ about 90 smaller transfer / order lines - see 02 Nov sheet; same rules: transfer first, then open suppliers)",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"SECTION 4: CUSTOMERS ASKING - NOT STOCKED / NO MATCH (decide whether to list)",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Qtern 5/10mg",
+"JH 23 Oct",
+"",
+"",
+"",
+"",
+"RM180 asked"
+],
+[
+"CUSTOMERS ASKING",
+"Freestyle Optium Neo strips 50s",
+"JH 31 Oct (0 in company)",
+"",
+"",
+"",
+"",
+"RM83"
+],
+[
+"CUSTOMERS ASKING",
+"Novasource Renal",
+"JH 1 Nov",
+"",
+"",
+"",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Oral 7 dry mouth gel",
+"JH 1 Nov",
+"",
+"",
+"",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Contour strips",
+"JH 23 Oct",
+"",
+"",
+"",
+"",
+"RM43"
+],
+[
+"CUSTOMERS ASKING",
+"Premarin 0.625mg (Apex, cost RM66.50, 0 stock)",
+"JH 26 Oct",
+"",
+"Apex",
+"OPEN NOW",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Oseltamivir syrup",
+"Bangi 24 Oct",
+"",
+"",
+"",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Blackmores vitamin range / Vitamode Cogni Pro",
+"Bangi 21 Oct / Ampang 20 Oct",
+"",
+"",
+"",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Tranexamic acid 250mg, KN94 mask, Manuka drops, Omron nebuliser",
+"JH 26-28 Oct",
+"",
+"",
+"",
+"",
+""
+],
+[
+"CUSTOMERS ASKING",
+"Avoxidil - use Jewim Minoxidil 5% (Medispec) per Alia 2 Nov",
+"Bangi + WM",
+"",
+"Medispec",
+"in Alia's Medispec order",
+"",
+""
+],
+[
+"SECTION 5: COUNTS TO FIX (negative stock - 302 lines in stockbalance 2.11)",
+"",
+"",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"NUR CARE ALCOHOL SWAB 1S",
+"JH -1400",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"PANADOL EXTEND 665MG 6S",
+"JH -280",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"NUR CARE STERILE GAUZE SWAB 5x5 8PLY",
+"WM -75",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"PMN ORS B PLUS (ORIGINAL)",
+"BR -74; WM -31",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"CALSONATE 500MG 10S",
+"Bangi -50",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"BERGAMOT KIDS FACEMASK",
+"WM -50",
+"",
+"",
+"",
+"",
+""
+],
+[
+"RECOUNT",
+"TOPSEAL BREV DRESSING 10X10",
+"Bangi -46",
+"",
+"",
+"",
+"",
+""
+],
+[
+"TOTALS",
+"Order now - open + other suppliers (incl. AA Alive/Teepham once paid)",
+"",
+"",
+"",
+"",
+"",
+"~5700"
+],
+[
+"TOTALS",
+"Waiting for supplier release (Zuellig/DKSH/YSP/Duopharma/Redwood)",
+"",
+"",
+"",
+"",
+"",
+"~2700"
+]
+]
+}
+}
