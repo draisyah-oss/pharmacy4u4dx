@@ -193,6 +193,17 @@ async function buildNeeds(db, user, { at }) {
     const lc = await one(db, "SELECT count(*) AS n FROM measure_changes WHERE status = 'Waiting'", []);
     if (lc) add('today', lc, 'Lead measure changes to approve', 'from the branch managers', '/branch/measures#waiting');
   }
+  // 3 Nov: supplier payments – the CEO approves lines due within a week; Azwani marks approved ones paid.
+  try {
+    if (user.role === 'admin' && user.is_super) {
+      const n = await one(db, "SELECT count(*) AS n FROM inv_payments WHERE approved IS NULL AND NOT paid AND (pay_date IS NULL OR pay_date <= ($1::date + 7))", [today]);
+      if (n) add('today', n, 'Supplier payments to approve', 'due within a week', '/inventory#payments');
+    }
+    if (user.payments) {
+      const n = await one(db, "SELECT count(*) AS n FROM inv_payments WHERE approved IN ('Yes', 'Partial') AND NOT paid AND pay_date <= $1::date", [today]);
+      if (n) add('today', n, 'Supplier payments to mark paid', 'approved and due', '/inventory#payments');
+    }
+  } catch (err) { console.error('Needs you – payments:', err.message); }
   if (user.role === 'admin' && user.is_super && c.approval) add('today', c.approval, 'App changes waiting for your approval', 'checked by the person who asked', '/requests');
   if (user.role === 'admin' && !user.is_super && c.fresh) add('todo', c.fresh, 'New app change requests', 'Request a change', '/requests');
   if (c.mine) add('today', c.mine, 'Check a preview of your app change', 'looks right? / not right yet', '/requests');

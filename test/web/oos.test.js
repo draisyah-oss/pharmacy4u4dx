@@ -568,4 +568,7 @@ test('3 Nov: items are picked from the Dynamod product list – search, report w
   // A later export without the price columns keeps the prices.
   await products.upsertProducts(db, [{ stock_id: '9999999', barcode: '9999999-1', description: 'BRAND NEW ITEM 1S', uom: 'BOX' }]);
   assert.equal(Number((await products.search(db, 'brand new item', { prices: true }))[0].price1), 15);
+  // The bundled prices are encrypted – without the right token nothing is loaded.
+  assert.deepEqual(await products.loadPricesOnce(db, () => {}, {}), { skipped: 'no token' });
+  assert.deepEqual(await products.loadPricesOnce(db, () => {}, { AGENT_API_TOKEN: 'wrong-token-0123456789abcdef' }), { skipped: 'key' });
 });

@@ -53,6 +53,37 @@ async function loadBundledOnce(db, log = () => {}) {
   log(`Products masterlist: ${res.added} added (${data.source}).`);
 }
 
+// 3 Nov (CEO): cost / Price 1 / Price 2 for the bundled list. They sit in git only encrypted
+// (AES-256-GCM, key from the server's AGENT_API_TOKEN) so cost is never readable in the repo.
+// Applied once when the token is there; without it (or if the token changed) nothing happens and the
+// prices come with the next Dynamod upload instead.
+async function loadPricesOnce(db, log = () => {}, env = process.env) {
+  const flag = 'product_prices_20261103_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return { skipped: 'done' };
+  const token = env.AGENT_API_TOKEN;
+  if (!token || token.length < 24) return { skipped: 'no token' };
+  const crypto = require('crypto'); const zlib = require('zlib');
+  const box = require(path.join(__dirname, '..', 'db', 'imports', 'product-prices-2026-11-03.enc.json'));
+  let prices;
+  try {
+    const key = crypto.createHash('sha256').update(`${token}:product-prices`).digest();
+    const d = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(box.iv, 'base64'));
+    d.setAuthTag(Buffer.from(box.tag, 'base64'));
+    prices = JSON.parse(zlib.gunzipSync(Buffer.concat([d.update(Buffer.from(box.data, 'base64')), d.final()])).toString('utf8'));
+  } catch (err) { log('Product prices not loaded (the key does not match).'); return { skipped: 'key' }; }
+  let updated = 0;
+  await db.transaction(async (tx) => {
+    for (const [barcode, [cost, p1, p2]] of Object.entries(prices)) {
+      const r = await tx.query(`UPDATE products SET cost = COALESCE(cost, $2), price1 = COALESCE(price1, $3), price2 = COALESCE(price2, $4)
+        WHERE barcode = $1 AND (cost IS NULL OR price1 IS NULL OR price2 IS NULL)`, [barcode, cost, p1, p2]);
+      updated += r.rowCount || r.affectedRows || 0;
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, JSON.stringify({ at: new Date().toISOString(), updated })]);
+  });
+  log(`Product prices: ${updated} products (2.11 masterlist).`);
+  return { updated };
+}
+
 // Every word must appear (description, generic, brand, stock ID or barcode); best first:
 // description starting with the first word, then shorter descriptions.
 // prices: true adds cost / Price 1 / Price 2 – only for the Product list page (inventory team + admin).
@@ -116,4 +147,4 @@ async function parseXlsx(buffer) {
   return { rows };
 }
 
-module.exports = { upsertProducts, loadBundledOnce, search, byId, resolve, count, parseXlsx, searchText };
+module.exports = { upsertProducts, loadBundledOnce, loadPricesOnce, search, byId, resolve, count, parseXlsx, searchText };

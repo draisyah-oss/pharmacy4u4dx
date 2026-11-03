@@ -13,6 +13,7 @@ const { hqRoutes } = require('./hq/routes');
 const { hqTeamRoutes } = require('./hq/team-routes');
 const { salesRoutes } = require('./sales/routes');
 const { oosRoutes } = require('./oos/routes');
+const { inventoryRoutes } = require('./inventory/routes');
 const { wigRoutes } = require('./wig/routes');
 const { requestRoutes, agentApi } = require('./requests/routes');
 const { policyRoutes } = require('./policies/routes');
@@ -88,13 +89,15 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
     try {
       if (req.user.person_id && ['hq', 'hq_staff'].includes(req.user.role)) {
         const r = (await db.query(
-          `SELECT p.name, s.value, q.value AS quiet FROM people p LEFT JOIN app_settings s ON s.key = 'inventory_team'
-           LEFT JOIN app_settings q ON q.key = 'oos_needs_off' WHERE p.id = $1`, [req.user.person_id])).rows[0];
+          `SELECT p.name, s.value, q.value AS quiet, t.value AS pay FROM people p LEFT JOIN app_settings s ON s.key = 'inventory_team'
+           LEFT JOIN app_settings q ON q.key = 'oos_needs_off' LEFT JOIN app_settings t ON t.key = 'payments_team' WHERE p.id = $1`, [req.user.person_id])).rows[0];
         const list = (v) => { try { return JSON.parse(v || '[]'); } catch { return []; } };
         req.user.inventory = Boolean(r && list(r.value).includes(r.name));
         // 22 Oct: Alia sees and answers out-of-stock items from the Inventory menu, but they don't go
         // in her "Needs you" list (app_settings oos_needs_off = seed hq.oos_needs_off).
         req.user.oosQuiet = Boolean(r && list(r.quiet).includes(r.name));
+        // 3 Nov: the payments team (app_settings payments_team, default Azwani) marks supplier payments paid on /inventory.
+        req.user.payments = Boolean(r && list(r.pay || '["Azwani"]').includes(r.name));
       }
     } catch (err) { console.error('Inventory team:', err.message); }
     // "Needs you" list at the top of the side menu (src/lib/needs.js).
@@ -171,6 +174,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null } = {}) {
   app.use(hqTeamRoutes(db, { now, trackerStart }));
   app.use(salesRoutes(db, { now, salesSheet }));
   app.use(oosRoutes(db, { now, trackerStart }));
+  app.use(inventoryRoutes(db, { now }));
   app.use(wigRoutes(db, { now, trackerStart }));
   app.use(requestRoutes(db, { now }));
   app.use(policyRoutes());

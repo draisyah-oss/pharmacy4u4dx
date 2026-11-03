@@ -1,0 +1,124 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'inventory' }) %>
+<%
+  const S = d.S;
+  const rm = function (n) { return n === null || n === undefined || isNaN(n) ? '–' : 'RM' + Math.round(Number(n)).toLocaleString('en-MY'); };
+  const n0 = function (n) { return n === null || n === undefined || isNaN(n) ? '' : Math.round(Number(n)).toLocaleString('en-MY'); };
+  const dmy = function (s) { if (!s) return '–'; const p = String(s).slice(0, 10).split('-'); return new Date(Date.UTC(+p[0], +p[1] - 1, +p[2])).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }); };
+  const pill = function (gate, label) { return '<span class="iv-pill g-' + gate + '">' + label + '</span>'; };
+  const keep = function (extra) { const q = new URLSearchParams(); if (d.plan && d.plans[0] && d.plan.id !== d.plans[0].id) q.set('date', d.plan.plan_date); if (d.q) q.set('q', d.q); Object.keys(extra).forEach(function (k) { if (extra[k]) q.set(k, extra[k]); else q.delete(k); }); const s = q.toString(); return '/inventory' + (s ? '?' + s : ''); };
+  const hidden = function (at) { return '<input type="hidden" name="_csrf" value="' + csrfToken + '"><input type="hidden" name="view" value="' + d.view + '"><input type="hidden" name="q" value="' + String(d.q).replace(/"/g, '&quot;') + '">' + (d.plan && d.plans[0] && d.plan.id !== d.plans[0].id ? '<input type="hidden" name="date" value="' + d.plan.plan_date + '">' : '') + '<input type="hidden" name="at" value="' + at + '">'; };
+  const PAYCLS = { 'Paid': 'paid', 'Approved, to pay': 'open', 'Not marked paid': 'late', 'Waiting for approval': 'pending', 'Not approved': 'hold' };
+%>
+<main class="page iv-page">
+  <h1>Ordering &amp; payments</h1>
+  <p class="muted">For Alia (orders), Azwani (payments) and Dr Aisyah (approvals). <%= d.plan ? 'Today’s list is ' + d.plan.title + '.' : 'No daily plan yet.' %> Recommendations only: nothing here places an order or pays anyone.</p>
+  <% if (ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <p class="iv-take">Today: <b><%= S.order_now_lines %></b> items to order now from open suppliers (about <b><%= rm(S.order_now_rm) %></b>), and <b><%= S.transfer_lines %></b> transfers to do first, which cost no cash.
+    <% if (S.next) { %>Next supplier payment: <b><%= S.next.supplier %> <%= rm(S.next.amount) %></b> on <b><%= dmy(S.next.date) %></b>.<% } %></p>
+
+  <section class="iv-tiles" aria-label="Today in numbers">
+    <a class="iv-tile" href="<%= keep({ view: 'transfer' }) %>#today"><span class="iv-lab">1 · Transfer first</span><span class="iv-big"><%= S.transfer_lines %></span><span class="muted small">lines to move from HQ or another outlet. No cash needed.</span></a>
+    <a class="iv-tile" href="<%= keep({ view: 'order_now' }) %>#today"><span class="iv-lab">2 · Order now</span><span class="iv-big"><%= rm(S.order_now_rm) %></span><span class="muted small"><%= S.order_now_lines %> lines from suppliers open now.</span></a>
+    <a class="iv-tile" href="<%= keep({ view: 'check' }) %>#today"><span class="iv-lab">3 · Check terms first</span><span class="iv-big"><%= rm(S.check_rm) %></span><span class="muted small"><%= S.check_lines %> lines from other suppliers. Check the account with Azwani.</span></a>
+    <a class="iv-tile" href="<%= keep({ view: 'wait' }) %>#today"><span class="iv-lab">4 · Wait for payment</span><span class="iv-big"><%= rm(S.wait_rm) %></span><span class="muted small"><%= S.wait_lines %> lines held until the supplier is paid. Offer a transfer or a substitute.</span></a>
+    <a class="iv-tile<%= S.late_lines ? ' is-warn' : '' %>" href="#payments"><span class="iv-lab">Payments not marked paid</span><span class="iv-big"><%= rm(S.late_rm) %></span><span class="muted small"><%= S.late_lines %> approved lines past their pay date. Azwani marks Paid below.</span></a>
+  </section>
+
+  <section class="oo-card" id="suppliers">
+    <h2>Can I order from this supplier?</h2>
+    <p class="muted small">A supplier waiting for payment shows as open once every payment line for it is marked Paid. PO budget for <%= new Date(d.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %> from the 28 Oct meeting.</p>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c">PO budget (RM)</th><th>Falls due</th></tr></thead>
+      <tbody><% d.suppliers.forEach(function (b) { %><tr><th><%= b.supplier %></th><td><%- pill(b.gate, b.status_label) %></td><td><%= b.when_text %></td><td><%= b.terms %></td>
+        <td class="mo-c"><%= b.today_lines %></td><td class="mo-c"><%= n0(b.today_rm) || '0' %></td><td class="mo-c"><%= n0(b.po_budget) %></td><td><%= b.falls_due %></td></tr><% }) %></tbody>
+    </table></div>
+    <p class="muted small">Total PO budget: <b><%= rm(S.po_budget_total) %></b>. Buy in this order: out-of-stock A items, A items at reorder point, then B items under 2 weeks. C items only when a customer asks, or by transfer.</p>
+  </section>
+
+  <section class="oo-card" id="today">
+    <h2>Today’s list<% if (d.plan) { %> <small class="muted">· <%= d.plan.title %></small><% } %></h2>
+    <% if (d.plan && d.plan.note) { %><p class="muted small"><%= d.plan.note %></p><% } %>
+    <% if (d.plans.length > 1) { %><p class="small">Other days: <% d.plans.forEach(function (p, i) { %><%- i ? ' · ' : '' %><% if (d.plan && p.id === d.plan.id) { %><b><%= dmy(p.plan_date) %></b><% } else { %><a href="/inventory?date=<%= p.plan_date %>#today"><%= dmy(p.plan_date) %></a><% } %><% }) %></p><% } %>
+    <nav class="iv-chips" aria-label="Show">
+      <% Object.keys(d.VIEWS).forEach(function (v) { %><a class="iv-chip<%= d.view === v ? ' is-on' : '' %>" href="<%= keep({ view: v === 'all' ? '' : v }) %>#today" <%- d.view === v ? 'aria-current="true"' : '' %>><%= d.VIEWS[v].label %> <span><%= S.counts[v] %></span></a><% }) %>
+    </nav>
+    <form method="get" action="/inventory#today" class="pp-find">
+      <% if (d.view !== 'all') { %><input type="hidden" name="view" value="<%= d.view %>"><% } %>
+      <% if (d.plan && d.plans[0] && d.plan.id !== d.plans[0].id) { %><input type="hidden" name="date" value="<%= d.plan.plan_date %>"><% } %>
+      <input type="search" name="q" value="<%= d.q %>" placeholder="Search item, outlet or supplier" aria-label="Search today’s list"><button class="button secondary">Search</button>
+    </form>
+    <% if (!d.plan) { %><p class="muted">No daily plan yet – Mr Eve sends one each working morning.</p>
+    <% } else if (!d.shown.length) { %><p class="muted">Nothing in this view.</p>
+    <% } else { %>
+    <div class="mo-scroll"><table class="mo-t iv-list">
+      <thead><tr><% if (can.tick) { %><th>Done</th><% } %><th>Do</th><th>Item</th><th>Short at</th><th>Transfer from</th><th>Supplier</th><th>Supplier status</th><th class="mo-c">Order qty</th><th class="mo-c">Approx RM</th></tr></thead>
+      <tbody><% d.shown.forEach(function (t) { %><tr id="l<%= t.id %>" class="<%= t.done_at ? 'is-done' : '' %><%= t.section === 'urgent' ? ' is-urgent' : '' %>">
+        <% if (can.tick) { %><td><form method="post" action="/inventory/lines/<%= t.id %>"><%- hidden('l' + t.id) %><input type="hidden" name="done" value="<%= t.done_at ? '0' : '1' %>">
+          <button class="iv-tick<%= t.done_at ? ' is-on' : '' %>" title="<%= t.done_at ? 'Done' + (t.done_by_name ? ' by ' + t.done_by_name : '') + ' – press to undo' : 'Mark done' %>" aria-label="<%= t.done_at ? 'Undo done: ' : 'Mark done: ' %><%= t.item %>"><%= t.done_at ? '✔' : '' %></button></form></td><% } %>
+        <td class="small"><%= t.action %></td><th><%= t.item %></th><td class="small"><%= t.short_at %></td><td class="small"><%= t.transfer_from %></td><td class="small"><%= t.supplier %></td>
+        <td><%- t.gate === 'none' ? '' : pill(t.gate, t.status_label) %></td><td class="mo-c"><%= t.qty && t.qty !== '0' ? t.qty : '' %></td><td class="mo-c"><%= t.rm ? n0(t.rm) : '' %></td></tr><% }) %></tbody>
+    </table></div>
+    <% } %>
+    <p class="muted small">Outlets: WM = Wangsa Maju, JH = Jenderam Hilir (Dengkil), BR = Rinching, plus Bangi and Ampang. HQ Warehouse often holds stock, so transfer before ordering. Negative stock means the count needs fixing first.</p>
+  </section>
+
+  <section class="oo-card" id="cash">
+    <h2>Payment plan by week</h2>
+    <p class="muted small">Plan from the 28 Oct meeting. The bank must stay above RM<%= d.FLOOR.toLocaleString('en-MY') %>. If sales or zakat come in late, the week 3 payments are cut first.</p>
+    <% if (d.cash.length) { const max = Math.max.apply(null, d.cash.map(function (w) { return Math.max(w.supplier_out, w.cash_end); }).concat([d.FLOOR])) * 1.1; %>
+    <div class="iv-bars" role="img" aria-label="Supplier payments and cash at week end, by week">
+      <% d.cash.forEach(function (w) { %><div class="iv-wk">
+        <div class="iv-col"><span class="iv-floor" style="bottom: <%= (d.FLOOR / max * 100).toFixed(1) %>%"></span>
+          <span class="iv-bar is-pay" style="height: <%= (w.supplier_out / max * 100).toFixed(1) %>%" title="Suppliers <%= rm(w.supplier_out) %>"></span>
+          <span class="iv-bar is-cash<%= w.cash_end < d.FLOOR * 1.25 ? ' is-low' : '' %>" style="height: <%= (w.cash_end / max * 100).toFixed(1) %>%" title="Cash at end <%= rm(w.cash_end) %>"></span></div>
+        <small><%= w.week %></small></div><% }) %>
+    </div>
+    <p class="iv-legend small"><span><i class="is-pay"></i>Supplier payments</span><span><i class="is-cash"></i>Cash at week end</span><span><i class="is-floor"></i>RM10k minimum</span></p>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Week</th><th class="mo-c">Sales in</th><th class="mo-c">Zakat in</th><th class="mo-c">Fixed costs</th><th class="mo-c">Suppliers</th><th>Paying</th><th class="mo-c">Cash at end</th></tr></thead>
+      <tbody><% d.cash.forEach(function (w) { %><tr><th><%= w.week %></th><td class="mo-c"><%= n0(w.sales_in) %></td><td class="mo-c"><%= w.zakat_in ? n0(w.zakat_in) : '–' %></td><td class="mo-c"><%= n0(w.fixed_out) %></td>
+        <td class="mo-c"><b><%= n0(w.supplier_out) %></b></td><td class="small"><%= w.paying %></td><td class="mo-c<%= w.cash_end < d.FLOOR * 1.25 ? ' iv-low' : '' %>"><%= n0(w.cash_end) %></td></tr><% }) %></tbody>
+    </table></div>
+    <% } else { %><p class="muted">No weekly plan for this month yet.</p><% } %>
+  </section>
+
+  <section class="oo-card" id="payments">
+    <h2>Payment approvals</h2>
+    <p class="muted small">Dr Aisyah approves here; Azwani marks Paid with the date and PV number, then writes PAID and the PV number in the supplier’s SOA file. A message in Telegram is not an approval.</p>
+    <div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Pay date</th><th>Supplier</th><th class="mo-c">Proposed (RM)</th><th>Approved?</th><th>Status</th><th>Notes</th></tr></thead>
+      <tbody><% d.pay.forEach(function (p) { %><tr id="p<%= p.id %>">
+        <td class="small"><%= dmy(p.pay_date) %><br><span class="muted"><%= p.week %></span></td><th><%= p.supplier %></th><td class="mo-c"><%= n0(p.proposed) %></td>
+        <td class="small">
+          <% if (can.approve && !p.paid) { %><form method="post" action="/inventory/payments/<%= p.id %>/approve" class="iv-inline"><%- hidden('p' + p.id) %>
+            <select name="approved" aria-label="Approved? <%= p.supplier %>"><% ['', 'Yes', 'Partial', 'No'].forEach(function (o) { %><option value="<%= o %>" <%= (p.approved || '') === o ? 'selected' : '' %>><%= o || '—' %></option><% }) %></select>
+            <input name="amount" inputmode="decimal" size="7" placeholder="RM" value="<%= p.approved === 'Partial' && p.approved_amount !== null ? p.approved_amount : '' %>" aria-label="Amount if partial">
+            <button class="button secondary small">Save</button></form>
+          <% } else { %><%= p.approved || '—' %><%= p.approved === 'Partial' && p.approved_amount !== null ? ' ' + rm(p.approved_amount) : '' %><% } %>
+          <% if (p.approved_by_name) { %><br><span class="muted"><%= p.approved_by_name %></span><% } %></td>
+        <td><%- pill(PAYCLS[p.state] || 'none', p.state) %>
+          <% if (p.paid) { %><br><span class="small muted"><%= dmy(p.date_paid) %><%= p.pv_no ? ' · PV ' + p.pv_no : '' %><%= p.paid_by_name ? ' · ' + p.paid_by_name : '' %></span>
+            <% if (can.pay) { %><form method="post" action="/inventory/payments/<%= p.id %>/paid" class="iv-inline"><%- hidden('p' + p.id) %><input type="hidden" name="undo" value="1"><button class="linkish small">Undo</button></form><% } %>
+          <% } else if (can.pay && /^(Yes|Partial)$/.test(p.approved || '')) { %><form method="post" action="/inventory/payments/<%= p.id %>/paid" class="iv-inline"><%- hidden('p' + p.id) %>
+            <input type="date" name="date_paid" value="<%= today %>" aria-label="Date paid"><input name="pv_no" size="7" placeholder="PV no." aria-label="PV number"><button class="button small">Paid</button></form><% } %></td>
+        <td class="small"><%= p.notes %></td></tr><% }) %></tbody>
+    </table></div>
+    <p class="muted small">Approved and still to pay: <b><%= rm(S.approved_unpaid_rm) %></b>. Waiting for Dr Aisyah’s approval: <b><%= rm(S.pending_rm) %></b>.</p>
+    <% if (can.pay) { %>
+    <details class="iv-add"><summary>Add a payment line</summary>
+      <form method="post" action="/inventory/payments" class="oo-form"><%- hidden('payments') %>
+        <label class="oo-label">Supplier<input name="supplier" required maxlength="120"></label>
+        <label class="oo-label">Amount (RM)<input name="proposed" inputmode="decimal" required></label>
+        <label class="oo-label">Planned pay date<input type="date" name="pay_date"></label>
+        <label class="oo-label">Week<input name="week" placeholder="e.g. 16–22 Nov" maxlength="40"></label>
+        <label class="oo-label">Notes<input name="notes" maxlength="500"></label>
+        <button class="button">Add – Dr Aisyah approves</button>
+      </form></details>
+    <% } %>
+  </section>
+</main>
+</body>
+</html>

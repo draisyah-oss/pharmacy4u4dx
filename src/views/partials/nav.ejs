@@ -10,10 +10,13 @@
      let quick = []; let groups = [];
      // Inventory (19 Oct): out-of-stock inbox + transfers – only the inventory team (Alia, Syarafana, Fariz) and admin.
      const inv = role === 'admin' || Boolean(user.inventory);
-     const inventory = inv ? [['Inventory', [['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'],
+     // 3 Nov: Ordering & payments (/inventory) – also for the payments team (Azwani).
+     const board = ['inventory', '/inventory', 'Ordering & payments', 'order payment supplier budget cash plan approve paid transfer mr eve daily plan'];
+     const inventory = inv ? [['Inventory', [board, ['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'],
        ['oostransfers', '/oos/transfers', 'Deliveries to send', 'oos transfer delivery send hq'],
        ['oosactivity', '/oos/activity', 'Activity log', 'oos seen question reply follow up whatsapp'],
-       ['oosproducts', '/oos/products', 'Product list (Dynamod)', 'masterlist dynamod stock id barcode upload']]]] : [];
+       ['oosproducts', '/oos/products', 'Product list (Dynamod)', 'masterlist dynamod stock id barcode upload cost price margin']]]]
+       : user.payments ? [['Inventory', [board]]] : [];
      // Projects (HQ team only), with the wiki checklist as a sub-item (full HQ and admin open it).
      // Milestones with a step checklist (19 Oct, e.g. min/max top 300) are sub-items too, with done / total.
      const stepItems = (typeof stepMenu !== 'undefined' && stepMenu ? stepMenu : []).map(function (m) {

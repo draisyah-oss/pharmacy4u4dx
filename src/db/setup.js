@@ -8,6 +8,9 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   await migrate(db, { log });
   // 3 Nov: the Dynamod product masterlist for out-of-stock reports (fresh and older databases).
   try { await require('../oos/products').loadBundledOnce(db, log); } catch (err) { log(`Products masterlist not loaded: ${err.message}`); }
+  try { await require('../oos/products').loadPricesOnce(db, log); } catch (err) { log(`Product prices not loaded: ${err.message}`); }
+  // 3 Nov: the Ordering & payment board's data (PO budget, cash plan, payment lines, 3 Nov daily plan).
+  try { await require('../inventory/data').loadBundledOnce(db, log); } catch (err) { log(`Inventory board data not loaded: ${err.message}`); }
 
   if (await isSeeded(db)) {
     log('Seed already loaded – using the data in the database.');
