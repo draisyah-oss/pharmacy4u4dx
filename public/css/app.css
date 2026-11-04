@@ -1377,3 +1377,4 @@ details.inv-sec .iv-tile { background: var(--page); }
 .iv-drive { background: var(--page); border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 0 0 12px; }
 .iv-drive p { margin: 0 0 6px; }
 .iv-drive .alert { margin: 6px 0; }
+.iv-links { display: flex; flex-wrap: wrap; gap: 4px 8px; color: var(--ink-soft); margin: 8px 0 6px; }

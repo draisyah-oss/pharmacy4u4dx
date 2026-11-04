@@ -11,7 +11,7 @@ const express = require('express');
 const calc = require('../calc');
 const inv = require('./data');
 
-function inventoryRoutes(db, { now, drive = null }) {
+function inventoryRoutes(db, { now, drive = null, events = null, sheet = null, telegram = null }) {
   const router = express.Router();
   const deny = (res) => res.status(403).render('message', { title: 'Not available', message: 'Ordering & payments is for HQ.' });
   const back = (req, res, msg, kind = 'ok') => {
@@ -28,7 +28,8 @@ function inventoryRoutes(db, { now, drive = null }) {
       const date = /^\d{4}-\d{2}-\d{2}$/.test(req.query.date || '') ? req.query.date : null;
       const data = await inv.loadPage(db, { today, date, view: String(req.query.view || 'all'), q: req.query.q });
       const driveStatus = drive ? await drive.status() : { configured: false };
-      res.render('inventory', { title: 'Ordering & payments', d: data, today, navActive: 'inventory', drive: driveStatus,
+      const links = { sheet: sheet ? await sheet.status() : { configured: false }, telegram: telegram ? telegram.status() : { configured: false } };
+      res.render('inventory', { title: 'Ordering & payments', d: data, today, navActive: 'inventory', drive: driveStatus, links,
         can: { approve: inv.canApprove(req.user), pay: inv.canPay(req.user), tick: inv.canTick(req.user), admin: req.user.role === 'admin' },
         ok: req.query.ok || null, err: req.query.err || null });
     } catch (err) { next(err); }
@@ -50,6 +51,7 @@ function inventoryRoutes(db, { now, drive = null }) {
     try {
       if (!inv.canTick(req.user)) return deny(res);
       const r = await inv.tick(db, req.user, Number(req.params.id) || 0, req.body.done === '1', { now });
+      if (!r.error && events) events.tick(Number(req.params.id) || 0, req.user, req.body.done === '1');
       back(req, res, r.error || (req.body.done === '1' ? 'Ticked done.' : 'Back on the list.'), r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });
@@ -58,6 +60,7 @@ function inventoryRoutes(db, { now, drive = null }) {
     try {
       if (!inv.canApprove(req.user)) return deny(res);
       const r = await inv.approve(db, req.user, Number(req.params.id) || 0, req.body, { now });
+      if (!r.error && events) events.payment('approve', Number(req.params.id) || 0, req.user);
       back(req, res, r.error || 'Approval saved.', r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });
@@ -66,6 +69,7 @@ function inventoryRoutes(db, { now, drive = null }) {
     try {
       if (!inv.canPay(req.user)) return deny(res);
       const r = await inv.markPaid(db, req.user, Number(req.params.id) || 0, req.body, { now });
+      if (!r.error && events) events.payment(req.body.undo === '1' ? 'unpaid' : 'paid', Number(req.params.id) || 0, req.user);
       back(req, res, r.error || (req.body.undo === '1' ? 'Marked not paid.' : 'Marked paid – write PAID, the date and the Swipey reference in the supplier’s SOA file too.'), r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });
@@ -74,6 +78,7 @@ function inventoryRoutes(db, { now, drive = null }) {
     try {
       if (!inv.canPay(req.user)) return deny(res);
       const r = await inv.addPayments(db, req.user.id, [req.body]);
+      if (r.added && events) events.payment('added', null, req.user);
       back(req, res, r.added ? 'Payment line added – waiting for Dr Aisyah’s approval.' : 'Type the supplier and the amount.', r.added ? 'ok' : 'err');
     } catch (err) { next(err); }
   });

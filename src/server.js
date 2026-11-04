@@ -23,6 +23,9 @@ const { prepareDatabase } = require('./db/setup');
 const { createApp } = require('./app');
 const { createSalesSheetLink } = require('./sheets/sync');
 const { createInventoryDrive } = require('./inventory/drive');
+const { createPaymentsSheet } = require('./inventory/sheet');
+const { createInventoryEvents } = require('./inventory/events');
+const { createTelegram } = require('./lib/telegram');
 const { clearExpiredSessions } = require('./auth/sessions');
 
 async function main() {
@@ -42,9 +45,15 @@ async function main() {
   const now = fake ? () => new Date(`${process.env.APP_TODAY}T20:00:00+08:00`) : () => new Date();
   const salesSheet = createSalesSheetLink(db, { now });
   // 4 Nov: Mr Eve's daily plan from Google Drive into /inventory every 30 minutes.
-  const inventoryDrive = createInventoryDrive(db, { now });
-  const app = createApp(db, { now, salesSheet, inventoryDrive });
+  // 4 Nov: changes on /inventory → Telegram group + the Payment_Approvals sheet (what Mr Eve reads).
+  const telegram = createTelegram();
+  console.log(telegram.configured() ? 'Telegram messages: on' : 'Telegram messages: off (TELEGRAM_BOT_TOKEN / TELEGRAM_CHAT_ID not set)');
+  const inventorySheet = createPaymentsSheet(db, { now });
+  const inventoryEvents = createInventoryEvents(db, { telegram, sheet: inventorySheet, now });
+  const inventoryDrive = createInventoryDrive(db, { now, onPlanLoaded: (date) => inventoryEvents.planLoaded(date, require('./inventory/data').loadPage) });
+  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram });
   inventoryDrive.schedule(30);
+  inventorySheet.schedule(30);
   salesSheet.schedule(Number(process.env.SALES_SHEET_SYNC_MINUTES) || 10);
 
   // Remove expired login sessions now and every hour.

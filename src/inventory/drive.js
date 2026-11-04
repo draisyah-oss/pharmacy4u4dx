@@ -66,7 +66,8 @@ async function driveJson(url, token, fetchImpl, email) {
   throw new Error(`Reading Google Drive failed: ${msg}`);
 }
 
-function createInventoryDrive(db, { env = process.env, fetchImpl = fetch, now = () => new Date(), log = console.log, account } = {}) {
+// onPlanLoaded(date): called after a new or changed plan is saved (4 Nov: Telegram message).
+function createInventoryDrive(db, { env = process.env, fetchImpl = fetch, now = () => new Date(), log = console.log, account, onPlanLoaded = null } = {}) {
   let acct = null; let keyError = null;
   try { acct = account !== undefined ? account : loadAccount(env); } catch (err) { keyError = err.message; }
   let running = null; let lastForced = 0;
@@ -113,6 +114,7 @@ function createInventoryDrive(db, { env = process.env, fetchImpl = fetch, now = 
       if (r.error) throw new Error(`"${f.name}": ${r.error}`);
       await saveStatus({ checked_at: at, imported_at: at, file_id: f.id, file: f.name, modified: f.modifiedTime, date, lines: r.lines, error: null });
       log(`Inventory: ${f.name} loaded from Google Drive (${r.lines} lines).`);
+      if (onPlanLoaded) Promise.resolve(onPlanLoaded(date)).catch((err) => log(`After plan load: ${err.message}`));
       return { ok: true, date, lines: r.lines };
     } catch (err) {
       const prev = await status().catch(() => ({}));
@@ -142,4 +144,4 @@ function createInventoryDrive(db, { env = process.env, fetchImpl = fetch, now = 
   };
 }
 
-module.exports = { createInventoryDrive, csvToRows, parseCsv, planDate, DRIVE_SCOPE, DEFAULTS };
+module.exports = { createInventoryDrive, loadAccount, csvToRows, parseCsv, planDate, DRIVE_SCOPE, DEFAULTS };

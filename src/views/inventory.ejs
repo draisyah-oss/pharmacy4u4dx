@@ -9,6 +9,7 @@
   const pill = function (gate, label) { return '<span class="iv-pill g-' + gate + '">' + label + '</span>'; };
   const keep = function (extra) { const q = new URLSearchParams(); if (d.plan && d.plans[0] && d.plan.id !== d.plans[0].id) q.set('date', d.plan.plan_date); if (d.q) q.set('q', d.q); Object.keys(extra).forEach(function (k) { if (extra[k]) q.set(k, extra[k]); else q.delete(k); }); const s = q.toString(); return '/inventory' + (s ? '?' + s : ''); };
   const hidden = function (at) { return '<input type="hidden" name="_csrf" value="' + csrfToken + '"><input type="hidden" name="view" value="' + d.view + '"><input type="hidden" name="q" value="' + String(d.q).replace(/"/g, '&quot;') + '">' + (d.plan && d.plans[0] && d.plan.id !== d.plans[0].id ? '<input type="hidden" name="date" value="' + d.plan.plan_date + '">' : '') + '<input type="hidden" name="at" value="' + at + '">'; };
+  const ago = function (iso) { if (!iso) return ''; const t = new Date(iso); return isNaN(t) ? '' : t.toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }); };
   const PAYCLS = { 'Paid': 'paid', 'Approved, to pay': 'open', 'Not marked paid': 'late', 'Waiting for approval': 'pending', 'Not approved': 'hold' };
 %>
 <main class="page iv-page">
@@ -45,7 +46,6 @@
   <details class="oo-card inv-sec" id="today" open>
     <summary><h2>Today’s list<% if (d.plan) { %> <small class="muted">· <%= d.plan.title %></small><% } %></h2></summary>
     <% if (d.plan && d.plan.note) { %><p class="muted small"><%= d.plan.note %></p><% } %>
-    <% const ago = function (iso) { if (!iso) return ''; const t = new Date(iso); return isNaN(t) ? '' : t.toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }); }; %>
     <% if ((drive && drive.configured) || can.admin) { %><div class="iv-drive">
       <% if (drive && drive.configured) { %>
         <p class="small"><b>From Mr Eve (Google Drive)</b> – checked every 30 minutes.
@@ -124,6 +124,13 @@
             <input name="pv_no" size="10" maxlength="40" placeholder="Swipey ref (optional)" aria-label="Swipey transaction ID or PV number"><button class="button small">Paid</button></form><% } %></td>
         <td class="small"><%= p.notes %></td></tr><% }) %></tbody>
     </table></div>
+    <% if (typeof links !== 'undefined' && links) { const L = links; %>
+    <p class="iv-links small">
+      <% if (L.sheet.configured) { %><span class="<%= L.sheet.error ? 'iv-low' : '' %>">📄 Payment_Approvals sheet: <%= L.sheet.error ? 'not updated – ' + L.sheet.error : (L.sheet.updated_at ? 'kept in step by 4DX (last ' + ago(L.sheet.updated_at) + ')' : 'kept in step by 4DX') %></span><% } %>
+      <% if (L.telegram.configured) { %><span>· 💬 Telegram: on<%= L.telegram.lastError ? ' – last message failed: ' + L.telegram.lastError : '' %></span>
+      <% } else if (can.admin) { %><span>· 💬 Telegram: off – add <code>TELEGRAM_BOT_TOKEN</code> and <code>TELEGRAM_CHAT_ID</code> on Railway to post approvals, Paid and ticks to the team group.</span><% } %>
+    </p>
+    <% } %>
     <p class="muted small">Approved and still to pay: <b><%= rm(S.approved_unpaid_rm) %></b>. Waiting for Dr Aisyah’s approval: <b><%= rm(S.pending_rm) %></b>.</p>
     <% if (can.pay) { %>
     <details class="iv-add"><summary>Add a payment line</summary>
