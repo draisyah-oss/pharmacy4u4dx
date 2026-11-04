@@ -231,8 +231,12 @@ test('CEO approves, Azwani marks paid – the supplier opens', async () => {
   assert.equal(p.approved, 'Yes'); assert.equal(Number(p.approved_amount), 35677);
   r = await az.post(`/inventory/payments/${dksh.id}/paid`, { date_paid: '2026-11-03', pv_no: 'PV-881' });
   assert.equal(r.status, 303);
-  p = (await db.query('SELECT paid, pv_no, date_paid::text AS d FROM inv_payments WHERE id = $1', [dksh.id])).rows[0];
-  assert.deepEqual([p.paid, p.pv_no, p.d], [true, 'PV-881', '2026-11-03']);
+  p = (await db.query('SELECT paid, pv_no, paid_via, date_paid::text AS d FROM inv_payments WHERE id = $1', [dksh.id])).rows[0];
+  assert.deepEqual([p.paid, p.pv_no, p.d, p.paid_via], [true, 'PV-881', '2026-11-03', 'Swipey'], '4 Nov: paid via Swipey unless chosen otherwise');
+  const page = (await az.get('/inventory')).html;
+  assert.match(page, /Swipey · ref PV-881/);
+  assert.match(page, /placeholder="Swipey ref \(optional\)"/);
+  assert.match(page, /<option selected>Swipey<\/option><option>Bank transfer<\/option>/);
   const d = await inv.loadPage(db, { today: '2026-11-03' });
   assert.equal(d.suppliers.find((s) => s.key === 'DKSH').gate, 'paid', 'every DKSH line paid → open');
   assert.ok(d.todo.filter((t) => t.supplier_key === 'DKSH' && t.gate === 'wait').length === 0);
@@ -270,4 +274,41 @@ test('Mr Eve sends the daily plan by the agent API', async () => {
   r = await api('POST', '/inventory/plan', { date: 'x', rows });
   assert.equal(r.status, 400);
   delete process.env.AGENT_API_TOKEN;
+});
+
+test('4 Nov: payment lines follow Dr Aisyah’s 3 Nov plan – paid / approved lines untouched, once', async () => {
+  const db2 = await createDb({ url: '', localDir: 'memory' });
+  try {
+    await migrate(db2);
+    await loadSeed(db2, readSeed(), { adminPassword: 'admin-pass-1' });
+    await inv.loadBundledOnce(db2);
+    // As live on 4 Nov: AA Alive and YSP marked paid, Teepham approved, Zuellig approved.
+    await db2.query("UPDATE inv_payments SET paid = true, date_paid = '2026-11-04' WHERE supplier IN ('AA Alive', 'YSP Industries')");
+    await inv.paymentsUpdateOnce(db2);
+    const rows = (await db2.query('SELECT supplier, proposed::float AS rm, approved, paid, pay_date::text AS d FROM inv_payments ORDER BY id')).rows;
+    const of = (s) => rows.filter((r) => r.supplier === s);
+    for (const gone of ['Redwood Pharma', 'Pahang Pharmacy', 'Kotra Pharma']) assert.equal(of(gone).length, 0, gone);
+    assert.ok(of('AA Alive')[0].paid && of('YSP Industries')[0].paid, 'paid lines stay');
+    assert.equal(of('Teepham Medical')[0].approved, 'Yes', 'approved Teepham stays');
+    const z = of('Zuellig Pharma');
+    assert.deepEqual(z.map((r) => r.rm), [41000, 71000, 3961.58]);
+    assert.deepEqual(z.map((r) => r.approved), ['Yes', 'Yes', null], 'the balance waits for approval');
+    assert.equal(z[2].d, '2026-11-12');
+    assert.equal(of('DKSH (104)')[0].rm, 55023.25);
+    assert.equal(of('DKSH (104)')[0].approved, null);
+    const added = { Tongee: 10237.62, AISH: 4588.85, Duopharma: 3911.96, Nova: 3340.8, 'Ben Way': 2864.35, DCH: 2100, 'Mun Xin': 1599.62, 'DKSH (103)': 1000 };
+    for (const [s, rm] of Object.entries(added)) {
+      assert.equal(of(s).length, 1, s); assert.equal(of(s)[0].rm, rm, s); assert.equal(of(s)[0].d, '2026-11-19', s); assert.equal(of(s)[0].approved, null, s);
+    }
+    // The plan's RM200,628.03 = Zuellig + DKSH (104) + the new suppliers.
+    const planTotal = z.reduce((a, r) => a + r.rm, 0) + 55023.25 + Object.values(added).reduce((a, b) => a + b, 0);
+    assert.equal(Math.round(planTotal * 100) / 100, 200628.03);
+    // Once only
+    await db2.query("DELETE FROM inv_payments WHERE supplier = 'Nova'");
+    await inv.paymentsUpdateOnce(db2);
+    assert.equal((await db2.query("SELECT count(*)::int AS n FROM inv_payments WHERE supplier = 'Nova'")).rows[0].n, 0);
+    // The page shows them for approval
+    const d = await inv.loadPage(db2, { today: '2026-11-04' });
+    assert.equal(Math.round(d.S.pending_rm * 100) / 100, Math.round((3961.58 + 55023.25 + 29643.2 - 3340.8) * 100) / 100);
+  } finally { await db2.close(); }
 });

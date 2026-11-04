@@ -5,7 +5,7 @@
 //  • Today's list – Mr Eve's daily plan: urgent items, transfers first (no cash), orders, customers
 //    asking, recounts – each line can be ticked done;
 //  • the weekly cash plan (supplier payments and cash left; the bank stays above RM10,000);
-//  • payment approvals – the CEO approves, Azwani marks paid with the date and PV number.
+//  • payment approvals – the CEO approves, Azwani marks paid with the date, how it was paid (Swipey by default) and its reference.
 // Recommendations only: nothing here places an order or pays anyone.
 // The rules are the board's (same gates, same counts) so the numbers match what Mr Eve sends.
 
@@ -185,19 +185,24 @@ async function approve(db, user, id, body, { now }) {
   return { ok: true };
 }
 
+const PAID_VIA = ['Swipey', 'Bank transfer', 'Cheque', 'Cash'];
+
 async function markPaid(db, user, id, body, { now }) {
   const p = (await db.query('SELECT * FROM inv_payments WHERE id = $1', [id])).rows[0];
   if (!p) return { error: 'Payment line not found.' };
   if (body.undo === '1') {
-    await db.query('UPDATE inv_payments SET paid = false, date_paid = NULL, pv_no = NULL, paid_by = NULL, paid_at = NULL WHERE id = $1', [id]);
+    await db.query('UPDATE inv_payments SET paid = false, date_paid = NULL, pv_no = NULL, paid_via = NULL, paid_by = NULL, paid_at = NULL WHERE id = $1', [id]);
     await audit(db, user.id, 'unpaid', `payment ${id} ${p.supplier}`, { paid: false });
     return { ok: true };
   }
   if (!/^(Yes|Partial)$/.test(p.approved || '')) return { error: 'Not approved by Dr Aisyah yet – a message in Telegram is not an approval.' };
   const date = /^\d{4}-\d{2}-\d{2}$/.test(body.date_paid || '') ? body.date_paid : calc.todayInMalaysia(now());
+  // 4 Nov: paid through Swipey (default), bank transfer, cheque or cash; the reference is the Swipey
+  // transaction ID (or a PV number when accounts issue one) – optional.
   const pv = String(body.pv_no || '').trim().slice(0, 40) || null;
-  await db.query('UPDATE inv_payments SET paid = true, date_paid = $2, pv_no = $3, paid_by = $4, paid_at = $5 WHERE id = $1', [id, date, pv, user.id, now()]);
-  await audit(db, user.id, 'paid', `payment ${id} ${p.supplier}`, { date_paid: date, pv_no: pv });
+  const via = PAID_VIA.includes(body.paid_via) ? body.paid_via : 'Swipey';
+  await db.query('UPDATE inv_payments SET paid = true, date_paid = $2, pv_no = $3, paid_via = $4, paid_by = $5, paid_at = $6 WHERE id = $1', [id, date, pv, via, user.id, now()]);
+  await audit(db, user.id, 'paid', `payment ${id} ${p.supplier}`, { date_paid: date, paid_via: via, ref: pv });
   return { ok: true };
 }
 
@@ -316,5 +321,60 @@ async function loadBudgetUpdateOnce(db, log = () => {}) {
   log('Inventory: November PO budget updated (3 Nov, RM200,628).');
 }
 
+// One time (4 Nov, CEO: "update payment approvals based on the latest plan"): her 3 Nov list
+// (RM200,628.03) is also what Pharmacy4U pays the suppliers. Paid and approved lines are never touched.
+//  • Redwood, Pahang, Kotra – removed while still not approved (not in her list).
+//  • DKSH (104) – RM55,023.25 (the overdue SOA) while still not approved; if approved by then, the
+//    difference is added as its own line for approval.
+//  • Zuellig – 41,000 (5 Nov) + 71,000 (12 Nov) stay approved; the RM3,961.58 balance to 115,961.58 is a
+//    new line on 12 Nov for approval.
+//  • New lines for approval, 19 Nov (week 16–22 Nov, as the 28 Oct plan): Tongee, AISH, Duopharma, Nova,
+//    Ben Way, DCH (CBD), Mun Xin, DKSH (103). A supplier that already has an unpaid line is not added twice.
+const PAYMENTS_20261104 = [
+  { supplier: 'Zuellig Pharma', proposed: 3961.58, pay_date: '2026-11-12', week: '9-15 Nov', notes: 'Balance to RM115,961.58 (Dr Aisyah’s plan, 3 Nov) – on top of part 1 (41,000) and part 2 (71,000).', balanceOf: 115961.58 },
+  { supplier: 'Tongee', proposed: 10237.62, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov.' },
+  { supplier: 'AISH', proposed: 4588.85, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov.' },
+  { supplier: 'Duopharma', proposed: 3911.96, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov. Check its SOA with Azwani first.' },
+  { supplier: 'Nova', proposed: 3340.8, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov.' },
+  { supplier: 'Ben Way', proposed: 2864.35, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov.' },
+  { supplier: 'DCH', proposed: 2100, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov. Cash before delivery – Mr Eve’s list has DCH orders waiting for this payment.' },
+  { supplier: 'Mun Xin', proposed: 1599.62, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov.' },
+  { supplier: 'DKSH (103)', proposed: 1000, pay_date: '2026-11-19', week: '16-22 Nov', notes: 'Dr Aisyah’s plan, 3 Nov (DKSH account 103).' },
+];
+async function paymentsUpdateOnce(db, log = () => {}) {
+  const flag = 'inventory_payments_20261104_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  if (!(await db.query('SELECT 1 FROM inv_payments LIMIT 1')).rows.length) return; // board data not loaded yet
+  const done = { removed: [], changed: [], added: [] };
+  await db.transaction(async (tx) => {
+    const del = await tx.query(`DELETE FROM inv_payments WHERE paid = false AND approved IS NULL
+      AND supplier IN ('Redwood Pharma', 'Pahang Pharmacy', 'Kotra Pharma') RETURNING supplier`);
+    done.removed = del.rows.map((r) => r.supplier);
+    const dksh = (await tx.query("SELECT * FROM inv_payments WHERE supplier = 'DKSH (104)' AND paid = false ORDER BY id LIMIT 1")).rows[0];
+    if (dksh && !dksh.approved) {
+      await tx.query("UPDATE inv_payments SET proposed = 55023.25, notes = $2 WHERE id = $1",
+        [dksh.id, 'Dr Aisyah’s plan, 3 Nov: RM55,023.25 (SOA overdue RM55,101). Then order (A items only).']);
+      done.changed.push('DKSH (104) 55,023.25');
+    } else if (dksh && Number(dksh.proposed) < 55023.25) {
+      await tx.query(`INSERT INTO inv_payments (week, pay_date, supplier, proposed, notes) VALUES ($1,$2,$3,$4,$5)`,
+        [dksh.week, dksh.pay_date, 'DKSH (104)', Math.round((55023.25 - Number(dksh.proposed)) * 100) / 100, 'Balance to RM55,023.25 (Dr Aisyah’s plan, 3 Nov).']);
+      done.added.push('DKSH (104) balance');
+    }
+    for (const r of PAYMENTS_20261104) {
+      let amount = r.proposed;
+      if (r.balanceOf) {
+        const have = (await tx.query('SELECT coalesce(sum(proposed), 0)::float AS s FROM inv_payments WHERE supplier = $1', [r.supplier])).rows[0].s;
+        amount = Math.round((r.balanceOf - have) * 100) / 100;
+        if (amount <= 0) continue;
+      } else if ((await tx.query('SELECT 1 FROM inv_payments WHERE lower(supplier) = lower($1) AND paid = false', [r.supplier])).rows.length) continue;
+      await tx.query(`INSERT INTO inv_payments (week, pay_date, supplier, proposed, notes) VALUES ($1,$2,$3,$4,$5)`, [r.week, r.pay_date, r.supplier, amount, r.notes]);
+      done.added.push(`${r.supplier} ${amount}`);
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, JSON.stringify({ at: new Date().toISOString(), ...done })]);
+  });
+  await audit(db, null, 'import', 'inventory payments 4 Nov (Dr Aisyah’s plan)', done);
+  log(`Inventory: payment lines updated to Dr Aisyah’s 3 Nov plan (${done.added.length} added, ${done.removed.length} removed).`);
+}
+
 module.exports = { keyOf, payState, lineView, supplierView, summary, parsePlanRows, VIEWS, FLOOR, canSee, canApprove, canPay, canTick,
-  loadPage, loadPayments, approve, markPaid, addPayments, tick, savePlan, saveMonthPlan, loadBundledOnce, loadBudgetUpdateOnce, isoDate };
+  loadPage, loadPayments, approve, markPaid, addPayments, tick, savePlan, saveMonthPlan, loadBundledOnce, loadBudgetUpdateOnce, paymentsUpdateOnce, isoDate };

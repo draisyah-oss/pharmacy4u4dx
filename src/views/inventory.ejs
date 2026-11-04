@@ -103,7 +103,7 @@
 
   <details class="oo-card inv-sec" id="payments" open>
     <summary><h2>Payment approvals</h2></summary>
-    <p class="muted small">Dr Aisyah approves here; Azwani marks Paid with the date and PV number, then writes PAID and the PV number in the supplier’s SOA file. A message in Telegram is not an approval.</p>
+    <p class="muted small">Dr Aisyah approves here; once it’s paid in Swipey, Azwani marks Paid with the date and the Swipey transaction ID (or a PV number if accounts issue one), then writes PAID and that reference in the supplier’s SOA file. A message in Telegram is not an approval.</p>
     <div class="mo-scroll"><table class="mo-t" data-xfilter aria-label="Payment approvals">
       <thead><tr><th>Pay date</th><th>Supplier</th><th class="mo-c">Proposed (RM)</th><th>Approved?</th><th>Status</th><th>Notes</th></tr></thead>
       <tbody><% d.pay.forEach(function (p) { %><tr id="p<%= p.id %>">
@@ -116,10 +116,12 @@
           <% } else { %><%= p.approved || '—' %><%= p.approved === 'Partial' && p.approved_amount !== null ? ' ' + rm(p.approved_amount) : '' %><% } %>
           <% if (p.approved_by_name) { %><br><span class="muted"><%= p.approved_by_name %></span><% } %></td>
         <td><%- pill(PAYCLS[p.state] || 'none', p.state) %>
-          <% if (p.paid) { %><br><span class="small muted"><%= dmy(p.date_paid) %><%= p.pv_no ? ' · PV ' + p.pv_no : '' %><%= p.paid_by_name ? ' · ' + p.paid_by_name : '' %></span>
+          <% if (p.paid) { %><br><span class="small muted"><%= dmy(p.date_paid) %><%= p.paid_via ? ' · ' + p.paid_via : '' %><%= p.pv_no ? ' · ref ' + p.pv_no : '' %><%= p.paid_by_name ? ' · ' + p.paid_by_name : '' %></span>
             <% if (can.pay) { %><form method="post" action="/inventory/payments/<%= p.id %>/paid" class="iv-inline"><%- hidden('p' + p.id) %><input type="hidden" name="undo" value="1"><button class="linkish small">Undo</button></form><% } %>
           <% } else if (can.pay && /^(Yes|Partial)$/.test(p.approved || '')) { %><form method="post" action="/inventory/payments/<%= p.id %>/paid" class="iv-inline"><%- hidden('p' + p.id) %>
-            <input type="date" name="date_paid" value="<%= today %>" aria-label="Date paid"><input name="pv_no" size="7" placeholder="PV no." aria-label="PV number"><button class="button small">Paid</button></form><% } %></td>
+            <input type="date" name="date_paid" value="<%= today %>" aria-label="Date paid">
+            <select name="paid_via" aria-label="Paid via"><% ['Swipey', 'Bank transfer', 'Cheque', 'Cash'].forEach(function (o) { %><option<%= o === 'Swipey' ? ' selected' : '' %>><%= o %></option><% }) %></select>
+            <input name="pv_no" size="10" maxlength="40" placeholder="Swipey ref (optional)" aria-label="Swipey transaction ID or PV number"><button class="button small">Paid</button></form><% } %></td>
         <td class="small"><%= p.notes %></td></tr><% }) %></tbody>
     </table></div>
     <p class="muted small">Approved and still to pay: <b><%= rm(S.approved_unpaid_rm) %></b>. Waiting for Dr Aisyah’s approval: <b><%= rm(S.pending_rm) %></b>.</p>

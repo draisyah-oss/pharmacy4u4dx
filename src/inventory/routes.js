@@ -2,7 +2,7 @@
 //   GET  /inventory?view=&q=&date=            the board (view: all / urgent / transfer / order_now / check / wait / asking / recount / done)
 //   POST /inventory/lines/:id                 tick a daily plan line done / not done {done}   – inventory team + admin
 //   POST /inventory/payments/:id/approve      {approved: Yes / Partial / No / '', amount}      – the CEO (admin)
-//   POST /inventory/payments/:id/paid         {date_paid, pv_no} or {undo: 1}                  – payments team (Azwani) + admin
+//   POST /inventory/payments/:id/paid         {date_paid, paid_via, pv_no (reference)} or {undo: 1}                  – payments team (Azwani) + admin
 //   POST /inventory/payments                  add a payment line {week, pay_date, supplier, proposed, notes} – payments team + admin
 // Agent API (Mr Eve, bearer token – src/requests/routes.js agentApi): GET /api/agent/inventory,
 //   POST /api/agent/inventory/plan, /api/agent/inventory/payments, /api/agent/inventory/month.
@@ -66,7 +66,7 @@ function inventoryRoutes(db, { now, drive = null }) {
     try {
       if (!inv.canPay(req.user)) return deny(res);
       const r = await inv.markPaid(db, req.user, Number(req.params.id) || 0, req.body, { now });
-      back(req, res, r.error || (req.body.undo === '1' ? 'Marked not paid.' : 'Marked paid – write PAID and the PV number in the supplier’s SOA file too.'), r.error ? 'err' : 'ok');
+      back(req, res, r.error || (req.body.undo === '1' ? 'Marked not paid.' : 'Marked paid – write PAID, the date and the Swipey reference in the supplier’s SOA file too.'), r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });
 
