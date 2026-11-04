@@ -1378,3 +1378,7 @@ details.inv-sec .iv-tile { background: var(--page); }
 .iv-drive p { margin: 0 0 6px; }
 .iv-drive .alert { margin: 6px 0; }
 .iv-links { display: flex; flex-wrap: wrap; gap: 4px 8px; color: var(--ink-soft); margin: 8px 0 6px; }
+/* 4 Nov: plan line ↔ out-of-stock reports */
+.iv-oos { display: inline-block; margin-top: 4px; font-size: 0.78rem; color: var(--brand-deep); background: var(--brand-tint); border-radius: 8px; padding: 2px 7px; }
+.iv-oos.is-done { color: var(--good); background: var(--good-tint); }
+.iv-oos a { color: inherit; }

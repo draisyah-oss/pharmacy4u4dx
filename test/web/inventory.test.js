@@ -312,3 +312,45 @@ test('4 Nov: payment lines follow Dr Aisyah’s 3 Nov plan – paid / approved l
     assert.equal(Math.round(d.S.pending_rm * 100) / 100, Math.round((3961.58 + 55023.25 + 29643.2 - 3340.8) * 100) / 100);
   } finally { await db2.close(); }
 });
+
+test('4 Nov: ticking a line answers the branches’ open out-of-stock reports for that item', async () => {
+  const oos = require('../../src/oos/data');
+  const om = require('../../src/inventory/oosmatch');
+  const admin = (await db.query("SELECT * FROM users WHERE username = 'admin'")).rows[0];
+  const br = async (code) => (await db.query('SELECT * FROM branches WHERE code = $1', [code])).rows[0];
+  const rep = async (code, item) => (await oos.report(db, admin, await br(code), { item, left: 'none', asking: '1-2' }, { now })).id;
+  const jh = await rep('JH', 'PANADOL REGULAR 10S');
+  const wm = await rep('WM', 'Panadol Regular 10s');
+  const brItem = await rep('BR', 'PANADOL REGULAR 10S');          // BR isn't short – it gives
+  const other = await rep('JH', 'PANADOL EXTEND 665MG TABLET 6S'); // a different Panadol
+  const answeredAlready = await rep('Bangi', 'PANADOL REGULAR 10S');
+  await oos.answerItem(db, admin, await oos.loadItem(db, answeredAlready), { answer: 'order' }, { now });
+  const line = (await db.query(`SELECT l.id FROM inv_plan_lines l JOIN inv_plans p ON p.id = l.plan_id
+    WHERE p.plan_date = '2026-11-03' AND l.item LIKE 'Panadol Regular Coated%'`)).rows[0];
+  const alia = await login('password', 'alia', 'alia-pass-1');
+  await alia.post(`/inventory/lines/${line.id}`, { done: '0' });
+  const page = (await alia.get('/inventory?date=2026-11-03&q=panadol+regular')).html;
+  assert.match(page, /📦 2 OOS reports: /);
+  assert.match(page, /">WM<\/a> → transfer from BR/); assert.match(page, /">JH<\/a> → transfer from BR/);
+  const r = await alia.post(`/inventory/lines/${line.id}`, { done: '1', date: '2026-11-03' });
+  assert.match(msg(r), /Out-of-stock answered: (JH|WM) – transfer from BR, (JH|WM) – transfer from BR\./);
+  const got = async (id) => (await db.query('SELECT o.answer, o.answer_qty, o.status, o.reason_for_delay, b.code AS fb FROM oos_items o LEFT JOIN branches b ON b.id = o.from_branch_id WHERE o.id = $1', [id])).rows[0];
+  const a = await got(jh);
+  assert.equal(a.answer, 'transfer'); assert.equal(a.fb, 'BR'); assert.equal(a.answer_qty, 10);
+  assert.match(a.reason_for_delay, /Mr Eve plan 3 Nov: URGENT 1 - TRANSFER \+ ORDER – BR 10 strips/);
+  assert.equal((await got(wm)).answer, 'transfer');
+  assert.equal((await got(brItem)).answer, null, 'BR not short');
+  assert.equal((await got(other)).answer, null, 'Panadol Extend ≠ Panadol Regular');
+  assert.equal((await got(answeredAlready)).answer, 'order', 'an answer already given is kept');
+  assert.match((await alia.get('/inventory?date=2026-11-03&view=done')).html, /✔ OOS answered: .*">WM<\/a> \(transfer from BR\)/);
+  // Pure rules
+  assert.deepEqual(om.sourceFor('BR 3 to JH; Ampang 2 to WM (BR 7, Ampang 6)', 'WM'), { from: 'Ampang', qty: 2 });
+  assert.deepEqual(om.sourceFor('HQ/Transit 42 (has 252)', 'BR'), { from: 'HQ', qty: 42 });
+  assert.equal(om.sourceFor('none', 'JH'), null);
+  assert.equal(om.itemMatch('Hydrocyn Aqua 100ml spray (A)', 'HYDROCYN AQUA WOUND GEL 0.05% 15G'), 0);
+  assert.ok(om.itemMatch('Xepa Tussidex Forte 120ml + Mucoprom syrup (A)', 'XEPA MUCOPROM 100MG/2.5MG SYRUP 120ML') > 0);
+  const order = om.proposals({ action: 'URGENT 2 - ORDER', section: 'urgent', item: 'Hydrocyn Aqua 100ml spray (A)', short_at: '0 at every outlet + HQ', transfer_from: 'none', supplier: 'Teepham' },
+    [{ id: 1, item: 'HYDROCYN AQUA SPRAY 100ML', branch_code: 'Ampang' }]);
+  assert.equal(order[0].body.answer, 'order');
+  assert.equal(om.proposals({ action: 'RECOUNT', section: 'recount', item: 'PANADOL REGULAR 10S', short_at: 'JH -5' }, [{ id: 1, item: 'PANADOL REGULAR 10S', branch_code: 'JH' }]).length, 0);
+});

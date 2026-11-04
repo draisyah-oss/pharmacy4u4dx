@@ -157,7 +157,8 @@ async function loadPage(db, { today, date, view = 'all', q = '' } = {}) {
   const pay = await loadPayments(db, today);
   const paidMap = paidByKey(pay);
   const { plan, plans, lines } = await latestPlan(db, date);
-  const todo = lines.map((l) => lineView(l, paidMap));
+  const todo = lines.map((l) => lineView({ ...l, plan_date: plan ? plan.plan_date : null }, paidMap));
+  await attachOosMatches(db, todo);
   const suppliers = supplierView(budget, todo, paidMap);
   const S = summary(todo, pay, budget);
   const v = VIEWS[view] ? view : 'all';
@@ -223,10 +224,34 @@ async function addPayments(db, userId, rows) {
 }
 
 async function tick(db, user, lineId, done, { now }) {
-  const l = (await db.query('SELECT id, item FROM inv_plan_lines WHERE id = $1', [lineId])).rows[0];
+  const l = (await db.query('SELECT l.*, p.plan_date::text AS plan_date FROM inv_plan_lines l JOIN inv_plans p ON p.id = l.plan_id WHERE l.id = $1', [lineId])).rows[0];
   if (!l) return { error: 'Line not found.' };
   await db.query('UPDATE inv_plan_lines SET done_at = $2, done_by = $3 WHERE id = $1', [lineId, done ? now() : null, done ? user.id : null]);
-  return { ok: true };
+  if (!done) return { ok: true };
+  // 4 Nov (CEO): the branches' open, unanswered out-of-stock reports for this item get the answer too.
+  const oos = require('../oos/data');
+  const om = require('./oosmatch');
+  const answered = l.oos_answered ? JSON.parse(l.oos_answered) : [];
+  const failed = []; const fresh = [];
+  for (const p of om.proposals(l, (await db.query(om.OPEN_SQL)).rows)) {
+    const item = await oos.loadItem(db, p.item.id);
+    if (!item || item.answer || item.status !== 'Open') continue;
+    const r = await oos.answerItem(db, user, item, p.body, { now });
+    if (r && r.error) failed.push(`${p.item.branch_code} #${p.item.id}: ${r.error}`);
+    else { const a = { id: p.item.id, branch: p.item.branch_code, item: p.item.item, label: p.label }; answered.push(a); fresh.push(a); }
+  }
+  if (answered.length) await db.query('UPDATE inv_plan_lines SET oos_answered = $2 WHERE id = $1', [lineId, JSON.stringify(answered)]);
+  return { ok: true, answered: fresh, failed };
+}
+
+// For the page: how many open reports each not-done line would answer when ticked.
+async function attachOosMatches(db, todo) {
+  const om = require('./oosmatch');
+  const open = (await db.query(om.OPEN_SQL)).rows;
+  for (const t of todo) {
+    t.oosDone = t.oos_answered ? JSON.parse(t.oos_answered) : [];
+    t.oosWill = t.done_at || !open.length ? [] : om.proposals(t, open).map((p) => ({ id: p.item.id, branch: p.item.branch_code, item: p.item.item, label: p.label }));
+  }
 }
 
 // Replace (or add) one day's plan. rows: sheet rows as objects keyed by the sheet headers.

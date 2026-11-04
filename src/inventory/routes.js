@@ -52,7 +52,10 @@ function inventoryRoutes(db, { now, drive = null, events = null, sheet = null, t
       if (!inv.canTick(req.user)) return deny(res);
       const r = await inv.tick(db, req.user, Number(req.params.id) || 0, req.body.done === '1', { now });
       if (!r.error && events) events.tick(Number(req.params.id) || 0, req.user, req.body.done === '1');
-      back(req, res, r.error || (req.body.done === '1' ? 'Ticked done.' : 'Back on the list.'), r.error ? 'err' : 'ok');
+      let text = r.error || (req.body.done === '1' ? 'Ticked done.' : 'Back on the list – out-of-stock answers already given stay (change them in the inbox).');
+      if (r.answered && r.answered.length) text += ` Out-of-stock answered: ${r.answered.map((a) => `${a.branch} – ${a.label}`).join(', ')}.`;
+      if (r.failed && r.failed.length) text += ` Not answered: ${r.failed.join('; ')}.`;
+      back(req, res, text, r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });
 
