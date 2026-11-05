@@ -17,7 +17,7 @@
       <% }) %>
     </ol>
     <% if (r.status === 'Need more info') { %><p class="alert alert-info">Mr 4DX has a question – answer it in the conversation below and it goes back to <%= r.approved_at ? 'Mr 4DX' : 'Dr Aisyah' %>.</p><% } %>
-    <% if (r.status === 'Approved') { %><p class="muted small">Approved – Mr 4DX checks for approved changes every hour (8 am – 10 pm), makes the change, tests it and marks it Live here.</p><% } %>
+    <% if (r.status === 'Approved') { %><p class="muted small">Approved – Mr 4DX checks for approved changes every 2 hours (8 am – 10 pm, every day), makes the change, tests it and marks it Live here.</p><% } %>
   </section>
 
   <% if (r.plan) { %><section class="oo-card"><h2>Mr 4DX’s plan</h2><p class="pre-wrap"><%= r.plan %></p></section><% } %>
