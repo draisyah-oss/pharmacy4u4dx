@@ -1403,3 +1403,5 @@ details.inv-sec .iv-tile { background: var(--page); }
 .oo-tick.is-x input { accent-color: var(--short); }
 .oo-table-save { position: sticky; bottom: 0; background: var(--page); padding: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 .oo-asked { color: var(--short); font-weight: 700; }
+.oo-chip.oc-soon { background: #fdf0d8; color: #7a4a00; }
+.yesno-3 .yn span small { display: block; font-size: 0.72rem; font-weight: 400; opacity: 0.8; }

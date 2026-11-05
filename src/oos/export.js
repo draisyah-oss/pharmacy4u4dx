@@ -84,7 +84,7 @@ function itemRow(it, at, base) {
     id: it.id,
     item: it.branch_id ? it.item : `${it.item} (${it.b2b_customer})`,
     stockId: it.product_stock_id || null, uom: it.product_uom || null, barcode: it.product_barcode || null,
-    urgent: it.urgent ? 'Yes' : null,
+    urgent: it.urgent ? 'Urgent' : it.urgency === 'soon' ? 'Soon' : null,
     left: left(it.left_qty),
     customers: customers(it.customers_count),
     note: it.note || null,

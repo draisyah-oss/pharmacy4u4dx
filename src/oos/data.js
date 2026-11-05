@@ -61,6 +61,14 @@ function answerDueFor(reportedAt, hour) {
   return atMyt(d, hour);
 }
 
+// 5 Nov (request #3): Urgent / Soon / Routine. Old forms send urgent=1 / on.
+const URGENCY = { urgent: 'Urgent – chronic patient waiting', soon: 'Soon – within a few days', routine: 'Routine' };
+function urgencyOf(body) {
+  const u = String((body && body.urgency) || '').toLowerCase();
+  if (URGENCY[u]) return u;
+  return body && (body.urgent === 'on' || body.urgent === '1') ? 'urgent' : 'routine';
+}
+
 function int(v, { min = 0, max = 100000 } = {}) {
   const s = String(v ?? '').trim();
   if (!s) return { value: null };
@@ -117,12 +125,12 @@ async function report(db, user, branch, body, { now }) {
     const photoId = await chat.savePhoto(tx, user, branch.id, photo.value);
     const { rows } = await tx.query(
       `INSERT INTO oos_items (branch_id, week_start, item, out_of_stock_since, customers_asking, created_by, updated_by,
-         reported_at, left_qty, customers_count, urgent, note, answer_due, updated_at, photo_id, product_id)
-       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12, $7, $13, $14) RETURNING id`,
+         reported_at, left_qty, customers_count, urgent, note, answer_due, updated_at, photo_id, product_id, urgency)
+       VALUES ($1, $2, $3, $4, $5, $6, $6, $7, $8, $9, $10, $11, $12, $7, $13, $14, $15) RETURNING id`,
       [branch.id, calc.weekStart(today), item.value, today, asking ? `${body.asking} customers asking` : null, user.id,
-        at, left.value, asking ?? null, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour), photoId, picked.productId]);
+        at, left.value, asking ?? null, urgencyOf(body) === 'urgent', note.value, answerDueFor(at, t.answer_by_hour), photoId, picked.productId, urgencyOf(body)]);
     await audit(tx, user, 'insert', `${branch.code} #${rows[0].id}`, null,
-      { item: item.value, left: left.value, customers: asking ?? null, urgent: body.urgent === 'on' || body.urgent === '1' });
+      { item: item.value, left: left.value, customers: asking ?? null, urgency: urgencyOf(body) });
     return { id: rows[0].id };
   });
 }
@@ -142,9 +150,9 @@ async function reportB2b(db, user, body, { now }) {
   return db.transaction(async (tx) => {
     const { rows } = await tx.query(
       `INSERT INTO oos_items (branch_id, b2b_customer, week_start, item, out_of_stock_since, created_by, updated_by,
-         reported_at, urgent, note, answer_due, updated_at, seen_at, seen_by, product_id)
-       VALUES (NULL, $1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $6, $6, $5, $10) RETURNING id`,
-      [customer.value, calc.weekStart(today), item.value, today, user.id, at, body.urgent === 'on' || body.urgent === '1', note.value, answerDueFor(at, t.answer_by_hour), picked.productId]);
+         reported_at, urgent, note, answer_due, updated_at, seen_at, seen_by, product_id, urgency)
+       VALUES (NULL, $1, $2, $3, $4, $5, $5, $6, $7, $8, $9, $6, $6, $5, $10, $11) RETURNING id`,
+      [customer.value, calc.weekStart(today), item.value, today, user.id, at, urgencyOf(body) === 'urgent', note.value, answerDueFor(at, t.answer_by_hour), picked.productId, urgencyOf(body)]);
     await audit(tx, user, 'insert', `B2B #${rows[0].id}`, null, { item: item.value, customer: customer.value });
     return { id: rows[0].id };
   });
@@ -205,7 +213,7 @@ function decorate(it, at, today) {
 // Inbox for Inventory: to answer (urgent first, then the oldest), waiting for stock, done lately.
 async function loadInbox(db, { now }) {
   const at = now(); const today = mytDate(at);
-  const open = (await db.query(`${SELECT} WHERE o.status = ANY($1) ORDER BY o.urgent DESC, o.reported_at`, [OPEN])).rows;
+  const open = (await db.query(`${SELECT} WHERE o.status = ANY($1) ORDER BY o.urgent DESC, (o.urgency = 'soon') DESC, o.reported_at`, [OPEN])).rows;
   const done = (await db.query(`${SELECT} WHERE NOT (o.status = ANY($1)) AND o.updated_at > $2::timestamptz - interval '14 days' ORDER BY o.updated_at DESC LIMIT 30`, [OPEN, at])).rows;
   await repeats(db, [...open, ...done], at);
   [...open, ...done].forEach((it) => decorate(it, at, today));
@@ -437,15 +445,16 @@ async function saveBranchTable(db, user, branch, body, { now }) {
     const left = int(v.left, { min: 0, max: 999 });
     if (left.error) { errors.push(`${item.item}: left – ${left.error}`); continue; }
     const asking = v.asking === undefined ? item.customers_count : ({ 0: 0, '1-2': 2, '3+': 3 })[v.asking] ?? item.customers_count;
-    const urgent = v.urgent === '1';
+    const urgency = v.urgency !== undefined ? urgencyOf({ urgency: v.urgency }) : v.urgent !== undefined ? (v.urgent === '1' ? 'urgent' : 'routine') : (item.urgency || (item.urgent ? 'urgent' : 'routine'));
+    const urgent = urgency === 'urgent';
     const note = cleanText(v.note, { max: 200, label: 'Note' });
     if (note.error) { errors.push(`${item.item}: ${note.error}`); continue; }
-    const next = { left_qty: v.left === undefined ? item.left_qty : left.value, customers_count: asking, urgent, note: v.note === undefined ? (item.note || null) : (note.value || null) };
-    const before = { left_qty: item.left_qty, customers_count: item.customers_count, urgent: Boolean(item.urgent), note: item.note || null };
+    const next = { left_qty: v.left === undefined ? item.left_qty : left.value, customers_count: asking, urgent, urgency, note: v.note === undefined ? (item.note || null) : (note.value || null) };
+    const before = { left_qty: item.left_qty, customers_count: item.customers_count, urgent: Boolean(item.urgent), urgency: item.urgency || (item.urgent ? 'urgent' : 'routine'), note: item.note || null };
     if (JSON.stringify(next) === JSON.stringify({ ...before, note: before.note })) continue;
     await db.transaction(async (tx) => {
-      await tx.query(`UPDATE oos_items SET left_qty = $2, customers_count = $3, customers_asking = $4, urgent = $5, note = $6, updated_by = $7, updated_at = $8 WHERE id = $1`,
-        [item.id, next.left_qty, next.customers_count, next.customers_count ? `${next.customers_count >= 3 ? '3+' : '1-2'} customers asking` : null, next.urgent, next.note, user.id, at]);
+      await tx.query(`UPDATE oos_items SET left_qty = $2, customers_count = $3, customers_asking = $4, urgent = $5, note = $6, updated_by = $7, updated_at = $8, urgency = $9 WHERE id = $1`,
+        [item.id, next.left_qty, next.customers_count, next.customers_count ? `${next.customers_count >= 3 ? '3+' : '1-2'} customers asking` : null, next.urgent, next.note, user.id, at, next.urgency]);
       await audit(tx, user, 'update', `${item.branch_code} #${item.id} adjusted`, before, next);
     });
     saved++;
@@ -551,6 +560,6 @@ async function branchWeekSummary(db, { branchId, week, now }) {
 
 module.exports = {
   branchWeekSummary,
-  OPEN, ANSWERS, DELIVERS, isDelivery, markDone, markSeen, saveTable, reportB2b, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
+  OPEN, ANSWERS, DELIVERS, URGENCY, urgencyOf, isDelivery, markDone, markSeen, saveTable, reportB2b, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
   report, loadItem, loadInbox, saveBranchTable, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, cancelItem, buildBoard,
 };

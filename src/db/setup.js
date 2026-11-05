@@ -41,6 +41,8 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await bangiNov2Once(db, log);
     await tallyAllOnce(db, readSeed(), log);
     await brNov3Once(db, readSeed(), log);
+    // 5 Nov: change request #2 (CEO approved).
+    await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
     // 3 Nov: zakat claims tracker for BR, WM, JH (replaces the old zakat lead measures).
     await require('../zakat/data').setupOnce(db, log);
     // 3 Nov: November's agreed goals 1 and 2 are worked out by the app (sales, out of stock).
@@ -58,6 +60,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   const summary = await loadSeed(db, seed, { adminPassword: process.env.ADMIN_PASSWORD });
   await addAdminLoginsOnce(db, seed, log);
   await require('../zakat/data').setupOnce(db, log);
+  await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
   log(
     `Loaded seed.json: ${summary.branches} branches, ${summary.people} people, ` +
       `${summary.daily_fields} daily fields, ${summary.measures} measures, ` +

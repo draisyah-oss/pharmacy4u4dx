@@ -45,7 +45,15 @@
       </fieldset>
       <%- include('partials/photo-input', { id: 'ph-report', label: 'Add a photo (optional)' }) %>
       <% if (errors.photo) { %><span class="wk-error"><%= errors.photo %></span><% } %>
-      <label class="oo-urgent"><input type="checkbox" name="urgent" value="1"<%= t.urgent ? ' checked' : '' %>> Urgent – chronic patient waiting</label>
+      <fieldset class="oo-set">
+        <legend>How urgent?</legend>
+        <% const tu = t.urgency || (t.urgent ? 'urgent' : 'routine'); %>
+        <div class="yesno yesno-3">
+          <% [['urgent', 'Urgent', 'chronic patient waiting'], ['soon', 'Soon', 'within a few days'], ['routine', 'Routine', 'next order is fine']].forEach(function (o) { %>
+            <label class="yn <%= o[0] === 'urgent' ? 'yn-no' : 'yn-yes' %>"><input type="radio" name="urgency" value="<%= o[0] %>"<%= tu === o[0] ? ' checked' : '' %>><span><%= o[1] %><small><%= o[2] %></small></span></label>
+          <% }) %>
+        </div>
+      </fieldset>
       <label class="oo-label">Note (optional)
         <input name="note" maxlength="200" autocomplete="off" value="<%= t.note || '' %>" placeholder="e.g. patient collects every 2 weeks">
         <% if (errors.note) { %><span class="wk-error"><%= errors.note %></span><% } %>
@@ -69,7 +77,7 @@
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="table-wrap"><table class="oo-table oo-btable" data-xfilter aria-label="Our out-of-stock items">
         <thead><tr><% if (canClose) { %><th data-xfilter-off title="Received – back in stock / accept the delivery">✔ Got it</th><th data-xfilter-off title="Cancel – not needed any more">✕ Cancel</th><% } %>
-          <th>Item</th><th>Status</th><th>Inventory’s answer</th><th>Reported</th><th>Left</th><th>Customers asking</th><th>Urgent</th><th>Note</th><th class="n">Sales lost (RM)</th></tr></thead>
+          <th>Item</th><th>Status</th><th>Inventory’s answer</th><th>Reported</th><th>Left</th><th>Customers asking</th><th>How urgent</th><th>Note</th><th class="n">Sales lost (RM)</th></tr></thead>
         <tbody>
         <% items.forEach(function (it) { const k = 'r[i' + it.id + ']'; const ed = canClose && it.isOpen; const ask = it.customers_count >= 3 ? '3+' : it.customers_count ? '1-2' : '0'; %>
           <tr id="oos-<%= it.id %>" class="<%= it.late ? 'is-late' : '' %><%= it.isOpen ? '' : ' is-closed' %>">
@@ -84,7 +92,7 @@
             <td class="small" data-xf="<%= it.reported_by_name || '' %>"><%= of.when(it.reported_at, at) %><br><span class="muted"><%= it.reported_by_name || '–' %></span></td>
             <td data-xf="<%= it.left_qty === null || it.left_qty === undefined ? '' : it.left_qty %>"><% if (ed) { %><input name="<%= k %>[left]" inputmode="numeric" class="num oo-qty" value="<%= it.left_qty === null || it.left_qty === undefined ? '' : it.left_qty %>" aria-label="Left: <%= it.item %>"><% } else { %><%= it.left_qty === null || it.left_qty === undefined ? '–' : it.left_qty %><% } %></td>
             <td><% if (ed) { %><select name="<%= k %>[asking]" aria-label="Customers asking: <%= it.item %>"><% [['0', 'None'], ['1-2', '1–2'], ['3+', '3+']].forEach(function (o) { %><option value="<%= o[0] %>" <%= ask === o[0] ? 'selected' : '' %>><%= o[1] %></option><% }) %></select><% } else { %><%= ask === '0' ? 'None' : ask === '1-2' ? '1–2' : '3+' %><% } %></td>
-            <td data-xf="<%= it.urgent ? 'Urgent' : '' %>"><% if (ed) { %><input type="checkbox" name="<%= k %>[urgent]" value="1" <%= it.urgent ? 'checked' : '' %> aria-label="Urgent: <%= it.item %>"><% } else { %><%= it.urgent ? 'Urgent' : '' %><% } %></td>
+            <% const ug = it.urgency || (it.urgent ? 'urgent' : 'routine'); %><td data-xf="<%= ug === 'urgent' ? 'Urgent' : ug === 'soon' ? 'Soon' : 'Routine' %>"><% if (ed) { %><select name="<%= k %>[urgency]" aria-label="How urgent: <%= it.item %>"><% [['urgent', 'Urgent'], ['soon', 'Soon'], ['routine', 'Routine']].forEach(function (o) { %><option value="<%= o[0] %>" <%= ug === o[0] ? 'selected' : '' %>><%= o[1] %></option><% }) %></select><% } else { %><%= ug === 'urgent' ? 'Urgent' : ug === 'soon' ? 'Soon' : 'Routine' %><% } %></td>
             <td data-xf="<%= it.note || '' %>"><% if (ed) { %><input name="<%= k %>[note]" maxlength="200" value="<%= it.note || '' %>" placeholder="note / why cancel" aria-label="Note: <%= it.item %>"><% } else { %><span class="small"><%= it.note || '' %></span><% } %></td>
             <td class="n"><%= it.estLoss ? Math.round(it.estLoss).toLocaleString('en-MY') : '' %></td>
           </tr>
@@ -99,7 +107,7 @@
         <header class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></header>
         <p class="oo-line"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></p>
         <%- include('partials/oos-steps', { it: it, of: of, at: at }) %>
-        <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : '' %><%= it.estLoss ? ' · ≈ RM ' + Math.round(it.estLoss).toLocaleString('en-MY') + ' sales lost' : '' %>
+        <p class="oo-meta">Reported <%= of.when(it.reported_at, at) %> by <%= it.reported_by_name || '–' %><%= it.left_qty === 0 ? ' · none left' : it.left_qty ? ' · ' + it.left_qty + ' left' : '' %><%= it.urgent ? ' · urgent' : it.urgency === 'soon' ? ' · soon' : '' %><%= it.estLoss ? ' · ≈ RM ' + Math.round(it.estLoss).toLocaleString('en-MY') + ' sales lost' : '' %>
           <%= it.seen_at ? ' · seen by ' + (it.seen_by_name || 'Inventory') + ' ' + of.when(it.seen_at, at) : ' · not seen by Inventory yet' %><%= it.answered_at ? ' · answered ' + of.when(it.answered_at, at) : '' %><%= it.sent_at ? ' · sent ' + of.when(it.sent_at, at) : '' %><%= it.received_at ? (it.closed_by_hq ? ' · closed by Inventory ' : ' · accepted ') + of.when(it.received_at, at) : '' %></p>
         <%- include('partials/oos-thread', { it: it, action: '/oos/' + it.id + '/message', back: '/oos' + bq + '#oos-' + it.id, canTalk: canTalk, of: of, at: at, open: false }) %>
         <% if (canClose && it.isOpen) { %>

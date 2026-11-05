@@ -23,7 +23,7 @@
         <% g.rows.forEach(function (it) { const k = 'r[i' + it.id + ']'; const a = val(it, 'answer', it.answer || ''); const bad = rowErrors[it.id]; %>
           <tr class="<%= it.urgent && it.unanswered ? 'is-urgent' : '' %><%= bad ? ' is-error' : '' %>" data-row>
             <td class="nowrap"><%= of.when(it.reported_at, at) %><br><small class="muted"><%= it.seen_at ? 'seen ' + (it.seen_by_name || '') : 'not opened' %></small></td>
-            <td class="oo-titem"><a href="/oos/<%= it.id %>"><b><%= it.item %></b></a><% if (it.product_stock_id) { %> <small class="pp-code"><%= it.product_stock_id %><%= it.product_uom ? ' · ' + it.product_uom : '' %></small><% } %><% if (it.urgent && it.unanswered) { %> <span class="oo-chip oc-bad">URGENT</span><% } %>
+            <td class="oo-titem"><a href="/oos/<%= it.id %>"><b><%= it.item %></b></a><% if (it.product_stock_id) { %> <small class="pp-code"><%= it.product_stock_id %><%= it.product_uom ? ' · ' + it.product_uom : '' %></small><% } %><% if (it.urgent && it.unanswered) { %> <span class="oo-chip oc-bad">URGENT</span><% } else if (it.urgency === 'soon' && it.unanswered) { %> <span class="oo-chip oc-soon">SOON</span><% } %>
               <br><small class="muted"><%= it.b2b_customer ? it.b2b_customer + ' · ' : '' %><%= it.left_qty === 0 ? '0 left' : it.left_qty ? it.left_qty + ' left' : '' %><%= it.customers_count ? ' · ' + (it.customers_count >= 3 ? '3+' : '1–2') + ' asking' : '' %><%= it.note ? ' · “' + it.note + '”' : '' %><%= it.photo_id ? ' · 📷' : '' %><%= it.timesThisMonth > 1 ? ' · ' + it.timesThisMonth + '× this month' : '' %><% if (it.estLoss) { %> · <span class="oo-loss">≈ RM <%= Math.round(it.estLoss).toLocaleString('en-MY') %> lost</span><% } %></small>
               <% if (it.awaitingHq) { %><br><a class="oo-due s-watch" href="/oos/<%= it.id %>">💬 Branch replied</a><% } else if ((it.messages || []).length) { %><br><a class="small" href="/oos/<%= it.id %>">💬 <%= it.messages.length %></a><% } %>
             </td>
@@ -61,7 +61,7 @@
       <label class="oo-label">B2B customer<input name="customer" maxlength="80" autocomplete="off" required placeholder="e.g. Klinik Mesra"></label>
     </div>
     <label class="oo-label">Note (optional)<input name="note" maxlength="200" autocomplete="off" placeholder="e.g. needs 20 boxes by Friday"></label>
-    <label class="oo-urgent"><input type="checkbox" name="urgent" value="1"> Urgent</label>
+    <label class="oo-label">How urgent<select name="urgency"><option value="urgent">Urgent</option><option value="soon">Soon</option><option value="routine" selected>Routine</option></select></label>
     <button class="button secondary" type="submit">Add B2B item</button>
   </form>
 </section>
