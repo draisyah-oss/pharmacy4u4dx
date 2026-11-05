@@ -28,6 +28,7 @@
 
 <section class="mh-card" aria-labelledby="hl-news">
   <h2 id="hl-news">📣 News</h2>
+  <% if (H.rally) { %><%- include('rally', { R: H.rally, myCode: H.myCode }) %><% } %>
   <% if (H.achievers) { %><%- include('achievers', { A: H.achievers }) %><% } %>
   <% if (H.tazkirah) { const z = H.tazkirah; %>
     <div class="hl-tazkirah"><span class="hl-emoji" aria-hidden="true"><%= z.emoji %></span>

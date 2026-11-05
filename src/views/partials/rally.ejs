@@ -1,0 +1,20 @@
+<%# 6 Nov: Dr Aisyah's push for the day (src/home/rally.js). Input: R, myCode %>
+<article class="rly" aria-labelledby="rly-h">
+  <p class="rly-k">🔥 Today’s push · from <%= R.from_name %></p>
+  <h3 id="rly-h" class="rly-t"><%= R.title %></h3>
+  <p><%= R.lead %></p>
+  <table class="rly-tab">
+    <caption class="sr-only">Yesterday’s till sales and today’s walk-in target per branch</caption>
+    <thead><tr><th scope="col">Branch</th><th scope="col">Yesterday</th><th scope="col">Today’s target</th></tr></thead>
+    <tbody>
+      <% R.branches.forEach(function (b) { const pct = Math.round(b.yesterday / b.target * 100); %>
+        <tr class="<%= myCode === b.code ? 'is-me' : '' %>"><th scope="row"><%= b.code %><%= b.star ? ' ⭐' : '' %></th>
+          <td>RM<%= Math.round(b.yesterday).toLocaleString('en-MY') %> <small>(<%= pct %>%)</small></td>
+          <td><b>RM<%= b.target.toLocaleString('en-MY') %></b></td></tr>
+      <% }) %>
+    </tbody>
+  </table>
+  <p class="rly-sub"><b>5 things that move today’s number</b></p>
+  <ol class="rly-list"><% R.actions.forEach(function (a) { %><li><%= a %></li><% }) %></ol>
+  <p class="rly-close"><%= R.close %></p>
+</article>

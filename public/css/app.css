@@ -1450,3 +1450,16 @@ details.inv-sec .iv-tile { background: var(--page); }
 .ach-foot { text-align: center; display: flex; flex-direction: column; gap: 2px; }
 .ach-foot p:last-child { color: #BFD8D5; font-size: 0.9rem; }
 @media (max-width: 520px) { .ach { padding: 20px 12px; } .ach-grid { grid-template-columns: 1fr; } .ach-b-br { font-size: 1.9rem; } .ach-podium { gap: 5px; } .ach-p { padding: 10px 3px; } .ach-p1 { padding: 16px 3px 10px; } .ach-name { font-size: 0.85rem; } .ach-p1 .ach-name { font-size: 0.95rem; } .ach-amt { font-size: 0.72rem; } .ach-tag { font-size: 0.62rem; letter-spacing: 1px; } }
+
+/* 6 Nov: Dr Aisyah's push for the day, top of 📣 News */
+.rly { margin: 0 0 16px; padding: 18px; border-radius: 16px; background: #fff7ed; border: 2px solid #f59e0b; color: #1f2937; display: flex; flex-direction: column; gap: 10px; }
+.rly p { margin: 0; }
+.rly-k { font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #9a3412; }
+.rly-t { margin: 0; font-size: 1.5rem; color: var(--brand-deep, #003a88); }
+.rly-tab { width: 100%; border-collapse: collapse; background: #fff; border-radius: 10px; overflow: hidden; font-size: 0.95rem; }
+.rly-tab th, .rly-tab td { padding: 7px 10px; text-align: left; border-bottom: 1px solid #fde4c3; }
+.rly-tab thead th { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.5px; color: #6b7280; background: #fffbf5; }
+.rly-tab td small { color: #6b7280; }
+.rly-tab tr.is-me { background: #e8f1ff; }
+.rly-list { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 4px; }
+.rly-close { font-weight: 700; }
