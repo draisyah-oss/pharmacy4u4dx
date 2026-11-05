@@ -77,6 +77,10 @@ test('the sync reads every supplier folder; the page shows it; "After SOA check"
   const soa = soaMod.createSoaSync(db, { account, fetchImpl, now, log: () => {} });
   const r = await soa.syncNow();
   assert.deepEqual([r.folders, r.read], [3, 2]);
+  // An empty folder list = not shared with the app → a clear message.
+  const empty = soaMod.createSoaSync(db, { account, fetchImpl: async (url) => (new URL(url).host === 'oauth2.googleapis.com' ? { ok: true, status: 200, json: async () => ({ access_token: 't' }) } : { ok: true, status: 200, json: async () => ({ files: [] }) }), now, log: () => {} });
+  await assert.rejects(empty.syncNow(), /Share the SOA folder \(Viewer\) with mr-you@/);
+  await soa.syncNow({ force: true });
   assert.equal(downloads, 2);
   assert.equal((await soa.syncNow({ force: true })).same, 2, 'unchanged files are not read again');
   assert.equal(downloads, 2);
@@ -99,7 +103,9 @@ test('the sync reads every supplier folder; the page shows it; "After SOA check"
     assert.match(html, /RM1,103 overdue/);
     assert.match(html, /AA ALIVE SDN BHD/);
     assert.match(html, /Open \(SOA clear\)/);
-    assert.match(html, /Check SOA now/);
+    assert.match(html, /<details class="iv-soa-sub" id="soa">/, 'inside Can I order – not its own section');
+    assert.doesNotMatch(html, /id="soa" open/);
+    assert.match(html, /Supplier SOA folder/);
   } finally { server.close(); }
 });
 

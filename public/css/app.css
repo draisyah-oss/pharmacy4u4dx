@@ -1387,3 +1387,5 @@ details.inv-sec .iv-tile { background: var(--page); }
 .iv-soa-bad { color: var(--short); font-weight: 700; }
 .iv-soa-ok { color: var(--good); }
 .iv-soa-row-bad th { color: var(--short); }
+.iv-soa-sub { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
+.iv-soa-sub > summary { cursor: pointer; }

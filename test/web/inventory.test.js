@@ -104,7 +104,7 @@ test('every section folds; Excel-style filters on the supplier, today and approv
   assert.match(html, /data-fold="close">Fold all<\/button>/);
   assert.equal((html.match(/data-xfilter aria-label=/g) || []).length, 3);
   assert.match(html, /<th data-xfilter-off>Done<\/th>/);
-  assert.match(html, /<script src="\/js\/inventory\.js\?v=1" defer><\/script>/);
+  assert.match(html, /<script src="\/js\/inventory\.js\?v=2" defer><\/script>/);
   assert.match(html, /<script src="\/js\/table-filter\.js\?v=2" defer><\/script>/);
   assert.match(html, /as Dr Aisyah updated it on 3 Nov/);
 });

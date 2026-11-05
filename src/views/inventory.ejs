@@ -42,19 +42,10 @@
         <td class="small" data-xf="<%= b.soa ? (b.soa.overdue > 0 ? 'Overdue' : 'Clear') : 'No SOA' %>"><% if (b.soa) { %><a href="https://drive.google.com/file/d/<%= b.soa.file_id %>/view" target="_blank" rel="noopener" class="<%= b.soa.overdue > 0 ? 'iv-soa-bad' : 'iv-soa-ok' %>"><%= b.soa.overdue > 0 ? rm(b.soa.overdue) + ' overdue' : 'Nothing overdue' %></a><br><span class="muted"><%= rm(b.soa.unpaid) %> unpaid<%= b.soa.last_paid ? ' · paid ' + dmy(b.soa.last_paid) : '' %></span><% } else { %><span class="muted">–</span><% } %></td></tr><% }) %></tbody>
     </table></div>
     <p class="muted small">Total PO budget: <b><%= rm(S.po_budget_total) %></b>. Buy in this order: out-of-stock A items, A items at reorder point, then B items under 2 weeks. C items only when a customer asks, or by transfer.</p>
-  </details>
-
-  <details class="oo-card inv-sec" id="soa" open>
+    <details class="iv-soa-sub" id="soa">
     <% const SOA = d.soa.filter(function (x) { return x.file_id; }); const totO = SOA.reduce(function (a, x) { return a + (x.consignment ? 0 : x.overdue); }, 0); const totU = SOA.reduce(function (a, x) { return a + (x.consignment ? 0 : x.unpaid); }, 0); %>
-    <summary><h2>Supplier SOA status <small class="muted">· from the SOA folder in Drive</small></h2></summary>
-    <p class="muted small">Read from each supplier’s SOA sheet (Payment status, date paid, PV). Unpaid = not marked PAID (rows with a PV number or a date paid count as paid); overdue = unpaid past its due date. A supplier marked “After SOA check” opens by itself once nothing is overdue. Update the SOA in Drive – this page follows (every 6 hours, or Check SOA now).</p>
-    <div class="iv-drive">
-      <p class="small"><% if (soaStatus.checked_at) { %>Last checked <%= ago(soaStatus.checked_at) %><%= soaStatus.folders ? ' · ' + soaStatus.folders + ' supplier folders' : '' %>.<% } else { %>Not read yet.<% } %>
-        <a href="https://drive.google.com/drive/folders/<%= soaStatus.folder_id || '' %>" target="_blank" rel="noopener">Open the SOA folder</a></p>
-      <% if (soaStatus.error) { %><p class="alert alert-bad small">Couldn’t read the SOA folder: <%= soaStatus.error %></p><% } %>
-      <% if (soaStatus.problems && soaStatus.problems.length) { %><p class="small muted">Not read: <%= soaStatus.problems.join(' · ') %></p><% } %>
-      <% if (soaStatus.configured) { %><form method="post" action="/inventory/soa"><%- hidden('soa') %><button class="button secondary small">Check SOA now</button></form><% } %>
-    </div>
+      <summary><b>Supplier SOA status</b> <span class="muted small">· from the SOA folder in Drive – <% if (SOA.length) { %><span class="iv-soa-bad"><%= rm(totO) %> overdue</span> · <%= rm(totU) %> unpaid<% } else { %>not read yet<% } %></span></summary>
+      <p class="muted small">From each supplier’s SOA sheet: unpaid = not marked PAID (a PV number or date paid counts as paid); overdue = unpaid past its due date. “After SOA check” opens by itself once nothing is overdue. Read with Mr Eve’s plan – <a href="#today">Check Drive now</a> under Today’s list. <a href="https://drive.google.com/drive/folders/<%= soaStatus.folder_id || '' %>" target="_blank" rel="noopener">Open the SOA folder</a></p>
     <% if (!SOA.length) { %><p class="muted">No SOA read yet.</p><% } else { %>
     <p><b class="iv-soa-bad"><%= rm(totO) %> overdue</b> · <%= rm(totU) %> unpaid across <%= SOA.filter(function (x) { return !x.consignment; }).length %> suppliers <span class="muted small">(consignment suppliers listed, not counted)</span></p>
     <div class="mo-scroll"><table class="mo-t" data-xfilter aria-label="Supplier SOA status">
@@ -68,6 +59,8 @@
         <td class="small"><a href="https://drive.google.com/file/d/<%= x.file_id %>/view" target="_blank" rel="noopener"><%= x.file_name %></a><%= x.error ? ' · ' + x.error : '' %></td></tr><% }) %></tbody>
     </table></div>
     <% } %>
+    </details>
+
   </details>
 
   <details class="oo-card inv-sec" id="today" open>
@@ -79,10 +72,13 @@
           <% if (drive.file) { %>Last loaded: <%= drive.file %> (<%= drive.lines %> lines, <%= ago(drive.imported_at) %>).<% } %>
           <% if (drive.checked_at) { %><span class="muted">Last checked <%= ago(drive.checked_at) %>.</span><% } %></p>
         <% if (drive.error) { %><p class="alert alert-bad small">Couldn’t read Mr Eve’s plan from Google Drive: <%= drive.error %></p><% } %>
-        <form method="post" action="/inventory/drive" class="iv-inline"><%- hidden('today') %><button class="button secondary small">Check Drive now</button></form>
+        <form method="post" action="/inventory/drive" class="iv-inline"><%- hidden('today') %><button class="button secondary small" title="Mr Eve’s plan and the supplier SOA folder">Check Drive now</button></form>
       <% } else if (can.admin) { %>
         <p class="alert alert-info small"><b>Mr Eve → 4DX is not switched on yet.</b> The app can load Mr Eve’s newest “Mr Eve Daily Plan” sheet from the Inventory Agent Inputs folder by itself every 30 minutes. To switch it on: (1) in Google Cloud, turn on the <b>Google Drive API</b> for the service account’s project; (2) share the <b>Inventory Agent Inputs</b> folder with the service account’s email as <b>Viewer</b>; (3) on Railway add <code>INVENTORY_GOOGLE_SERVICE_ACCOUNT_JSON</code> with the key file’s text (or the sales sheet’s <code>GOOGLE_SERVICE_ACCOUNT_JSON</code> is used). <% if (drive && drive.keyError) { %>Key problem: <%= drive.keyError %><% } %></p>
       <% } %>
+        <p class="small"><b>Supplier SOA folder</b> – checked every 6 hours. <% if (soaStatus.checked_at) { %><span class="muted">Last checked <%= ago(soaStatus.checked_at) %><%= soaStatus.folders ? ' · ' + soaStatus.folders + ' suppliers' : '' %>.</span><% } %> <a href="#soa">See SOA status</a></p>
+        <% if (soaStatus.error) { %><p class="alert alert-bad small">Couldn’t read the SOA folder: <%= soaStatus.error %></p><% } %>
+        <% if (soaStatus.problems && soaStatus.problems.length) { %><p class="small muted">SOA not read: <%= soaStatus.problems.join(' · ') %></p><% } %>
     </div><% } %>
     <% if (d.plans.length > 1) { %><p class="small">Other days: <% d.plans.forEach(function (p, i) { %><%- i ? ' · ' : '' %><% if (d.plan && p.id === d.plan.id) { %><b><%= dmy(p.plan_date) %></b><% } else { %><a href="/inventory?date=<%= p.plan_date %>#today"><%= dmy(p.plan_date) %></a><% } %><% }) %></p><% } %>
     <nav class="iv-chips" aria-label="Show">
@@ -172,7 +168,7 @@
     <% } %>
   </details>
 </main>
-<script src="/js/inventory.js?v=1" defer></script>
+<script src="/js/inventory.js?v=2" defer></script>
 <script src="/js/table-filter.js?v=2" defer></script>
 </body>
 </html>

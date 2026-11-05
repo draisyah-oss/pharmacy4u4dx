@@ -193,6 +193,8 @@ function createSoaSync(db, { env = process.env, fetchImpl = fetch, now = () => n
       const token = await getAccessToken(acct, fetchImpl, DRIVE_SCOPE);
       const root = await folderId();
       const folders = await list(token, `'${root}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
+      // Drive answers an empty list (not an error) when the folder isn't shared with the app.
+      if (!folders.length) throw new Error(`No supplier folders visible. Share the SOA folder (Viewer) with ${acct.email}.`);
       const known = new Map((await db.query('SELECT folder_id, file_id, file_modified FROM inv_soa')).rows.map((r) => [r.folder_id, r]));
       let read = 0; let same = 0; let none = 0; const problems = [];
       for (const fo of folders) {

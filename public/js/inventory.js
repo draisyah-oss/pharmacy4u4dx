@@ -25,6 +25,8 @@
     // The section itself (#today) or something inside it (#l12 after ticking a line, #p3 after a payment).
     var d = t && (t.matches('details.inv-sec') ? t : t.closest('details.inv-sec'));
     if (d && !d.open) { d.open = true; save(); if (t !== d) t.scrollIntoView(); }
+    // A folded part inside a section (#soa – the supplier SOA table) opens too.
+    if (t && t.matches('details:not(.inv-sec)') && !t.open) { t.open = true; t.scrollIntoView(); }
   }
   window.addEventListener('hashchange', openTarget);
   openTarget();

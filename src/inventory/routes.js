@@ -42,8 +42,15 @@ function inventoryRoutes(db, { now, drive = null, events = null, sheet = null, t
       if (!inv.canSee(req.user)) return deny(res);
       if (!drive || !drive.configured()) return back(req, res, 'The Google Drive link isn’t set up yet.', 'err');
       try {
-        const r = await drive.syncNow({ force: true });
-        back(req, res, r.unchanged ? 'Checked Google Drive – no newer plan from Mr Eve.' : `Loaded Mr Eve’s plan from Google Drive (${r.lines} lines).`);
+        // 5 Nov (CEO): one button – Mr Eve's plan and the supplier SOA folder together.
+        const [plan, s] = await Promise.allSettled([drive.syncNow({ force: true }), soa && soa.configured() ? soa.syncNow({ force: true }) : Promise.resolve(null)]);
+        const parts = [];
+        let bad = false;
+        if (plan.status === 'fulfilled') parts.push(plan.value.unchanged ? 'No newer plan from Mr Eve' : `Loaded Mr Eve’s plan (${plan.value.lines} lines)`);
+        else { bad = true; parts.push(`Mr Eve’s plan: ${plan.reason.message}`); }
+        if (s.status === 'fulfilled' && s.value) parts.push(`SOA: ${s.value.folders} suppliers (${s.value.read} read again)`);
+        else if (s.status === 'rejected') { bad = true; parts.push(`SOA: ${s.reason.message}`); }
+        back(req, res, `Checked Google Drive – ${parts.join(' · ')}.`, bad ? 'err' : 'ok');
       } catch (err) { back(req, res, err.message, 'err'); }
     } catch (err) { next(err); }
   });
