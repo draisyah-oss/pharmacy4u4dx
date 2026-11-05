@@ -58,6 +58,6 @@ test('everyone in charge sees it: front page and the branch’s out-of-stock pag
   const home = (await req('GET', '/')).html;
   assert.match(home, /Sales lost to out of stock – November/);
   assert.match(home, /RM 11<\/b> lost at WM/);
-  const page = (await req('GET', '/oos')).html;
+  const page = (await req('GET', '/oos?view=cards')).html;
   assert.match(page, /≈ RM 11 sales lost/);
 });

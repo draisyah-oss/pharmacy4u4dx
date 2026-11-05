@@ -61,6 +61,39 @@
     <% const openLoss = items.filter(function (it) { return it.isOpen; }).reduce(function (a, it) { return a + (it.estLoss || 0); }, 0);
        if (openLoss) { %><p class="oo-loss-line">💸 Still out of stock: <b>≈ RM <%= Math.round(openLoss).toLocaleString('en-MY') %></b> in sales lost so far (selling price × customers asking). Push to get them back.</p><% } %>
     <% if (!items.length) { %><p class="muted">Nothing out of stock right now.</p><% } %>
+    <% const vq = function (v) { return '/oos' + (bq ? bq + '&' : '?') + 'view=' + v; }; %>
+    <% if (items.length) { %><nav class="strip oo-view" aria-label="Show as"><a href="<%= vq('table') %>" class="strip-pill<%= view === 'table' ? ' is-current' : '' %>">Table – tick &amp; adjust</a><a href="<%= vq('cards') %>" class="strip-pill<%= view === 'cards' ? ' is-current' : '' %>">Cards</a></nav><% } %>
+    <% if (view === 'table' && items.length) { %>
+    <%# 5 Nov (CEO): like Excel – tick received / cancel, adjust left, customers, urgent, note; one Save. ▾ filters per column. %>
+    <form method="post" action="/oos/table<%= bq %>" class="oo-btable-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="table-wrap"><table class="oo-table oo-btable" data-xfilter aria-label="Our out-of-stock items">
+        <thead><tr><% if (canClose) { %><th data-xfilter-off title="Received – back in stock / accept the delivery">✔ Got it</th><th data-xfilter-off title="Cancel – not needed any more">✕ Cancel</th><% } %>
+          <th>Item</th><th>Status</th><th>Inventory’s answer</th><th>Reported</th><th>Left</th><th>Customers asking</th><th>Urgent</th><th>Note</th><th class="n">Sales lost (RM)</th></tr></thead>
+        <tbody>
+        <% items.forEach(function (it) { const k = 'r[i' + it.id + ']'; const ed = canClose && it.isOpen; const ask = it.customers_count >= 3 ? '3+' : it.customers_count ? '1-2' : '0'; %>
+          <tr id="oos-<%= it.id %>" class="<%= it.late ? 'is-late' : '' %><%= it.isOpen ? '' : ' is-closed' %>">
+            <% if (canClose) { %>
+              <td><% if (ed && it.answer !== 'discontinue') { %><label class="oo-tick"><input type="checkbox" name="<%= k %>[received]" value="1" aria-label="Got it: <%= it.item %>"><span><%= it.answer === 'hq_deliver' || it.answer === 'transfer' ? 'Accept' + (it.answer_qty ? ' ' + it.answer_qty : '') : it.answer === 'substitute' ? 'Sorted' : 'Back' %></span></label><% } %></td>
+              <td><% if (ed) { %><label class="oo-tick is-x"><input type="checkbox" name="<%= k %>[cancel]" value="1" aria-label="Cancel: <%= it.item %>"><span>Cancel</span></label><% } %></td>
+            <% } %>
+            <th><b><%= it.item %></b><% if (it.product_stock_id) { %> <small class="pp-code"><%= it.product_stock_id %><%= it.product_uom ? ' · ' + it.product_uom : '' %></small><% } %>
+              <% if (it.messages && it.messages.length) { %><br><a class="small<%= it.awaitingBranch ? ' oo-asked' : '' %>" href="<%= vq('cards') %>#oos-<%= it.id %>">💬 <%= it.awaitingBranch ? 'Inventory asked – reply' : it.messages.length + ' message' + (it.messages.length === 1 ? '' : 's') %></a><% } %></th>
+            <td data-xf="<%= it.status %>"><%- include('partials/oos-chip', { it: it, of: of }) %></td>
+            <td class="small"><%- include('partials/oos-answer-line', { it: it, of: of, at: at }) %></td>
+            <td class="small" data-xf="<%= it.reported_by_name || '' %>"><%= of.when(it.reported_at, at) %><br><span class="muted"><%= it.reported_by_name || '–' %></span></td>
+            <td data-xf="<%= it.left_qty === null || it.left_qty === undefined ? '' : it.left_qty %>"><% if (ed) { %><input name="<%= k %>[left]" inputmode="numeric" class="num oo-qty" value="<%= it.left_qty === null || it.left_qty === undefined ? '' : it.left_qty %>" aria-label="Left: <%= it.item %>"><% } else { %><%= it.left_qty === null || it.left_qty === undefined ? '–' : it.left_qty %><% } %></td>
+            <td><% if (ed) { %><select name="<%= k %>[asking]" aria-label="Customers asking: <%= it.item %>"><% [['0', 'None'], ['1-2', '1–2'], ['3+', '3+']].forEach(function (o) { %><option value="<%= o[0] %>" <%= ask === o[0] ? 'selected' : '' %>><%= o[1] %></option><% }) %></select><% } else { %><%= ask === '0' ? 'None' : ask === '1-2' ? '1–2' : '3+' %><% } %></td>
+            <td data-xf="<%= it.urgent ? 'Urgent' : '' %>"><% if (ed) { %><input type="checkbox" name="<%= k %>[urgent]" value="1" <%= it.urgent ? 'checked' : '' %> aria-label="Urgent: <%= it.item %>"><% } else { %><%= it.urgent ? 'Urgent' : '' %><% } %></td>
+            <td data-xf="<%= it.note || '' %>"><% if (ed) { %><input name="<%= k %>[note]" maxlength="200" value="<%= it.note || '' %>" placeholder="note / why cancel" aria-label="Note: <%= it.item %>"><% } else { %><span class="small"><%= it.note || '' %></span><% } %></td>
+            <td class="n"><%= it.estLoss ? Math.round(it.estLoss).toLocaleString('en-MY') : '' %></td>
+          </tr>
+        <% }) %>
+        </tbody>
+      </table></div>
+      <% if (canClose) { %><div class="oo-table-save"><button class="button" type="submit">Save changes</button> <span class="muted small">Tick ✔ when it arrived or ✕ to cancel (the note becomes the reason); change left / customers / urgent / note and Save. Questions &amp; photos and steps are in Cards.</span></div><% } %>
+    </form>
+    <% } else { %>
     <% items.forEach(function (it) { %>
       <article class="oo-item<%= it.late ? ' is-late' : '' %><%= it.isOpen ? '' : ' is-closed' %>" id="oos-<%= it.id %>">
         <header class="oo-top"><b><%= it.item %></b><%- include('partials/oos-chip', { it: it, of: of }) %></header>
@@ -87,9 +120,11 @@
         <% } %>
       </article>
     <% }) %>
+    <% } %>
   </section>
 </main>
 <script src="/js/photo.js?v=1" defer></script>
 <script src="/js/product-pick.js?v=1" defer></script>
+<script src="/js/table-filter.js?v=2" defer></script>
 </body>
 </html>

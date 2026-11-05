@@ -268,8 +268,8 @@ test('Mr Eve sends the daily plan by the agent API', async () => {
   r = await api('GET', '/inventory');
   const j = await r.json();
   assert.equal(j.plan.plan_date, '2026-11-04');
-  assert.equal(j.lines.length, 2); assert.equal(j.lines[0].section, 'urgent'); assert.equal(j.lines[1].section, 'hq');
-  assert.equal(j.summary.order_now_lines, 1);
+  const own = j.lines.filter((l) => !l.backlog); assert.equal(own.length, 2); assert.equal(own[0].section, 'urgent'); assert.equal(own[1].section, 'hq');
+  assert.ok(j.summary.order_now_lines >= 1, 'the new line + backlog from 3 Nov');
   assert.ok(j.payments.every((p) => p.approved_by === undefined));
   r = await api('POST', '/inventory/plan', { date: 'x', rows });
   assert.equal(r.status, 400);

@@ -46,6 +46,7 @@ function oosRoutes(db, { now, trackerStart }) {
       bq: many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : '',
       typed: extra.typed || {}, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || req.query.err || null,
       targets: await oos.targets(db), productList: (await require('./products').count(db)) > 0,
+      view: req.query.view === 'cards' ? 'cards' : 'table',
     });
   }
 
@@ -66,6 +67,18 @@ function oosRoutes(db, { now, trackerStart }) {
       const r = await oos.report(db, req.user, branch, req.body, { now });
       if (r.errors) return renderBranch(req, res, branch, { status: 400, errors: r.errors, typed: req.body, err: 'Not sent – check the boxes in red.' });
       back(res, `/oos${many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : ''}`, `Sent to Inventory: ${String(req.body.item).trim()}.`);
+    } catch (err) { next(err); }
+  });
+
+  // 5 Nov: the branch's table – tick received / cancel and adjust, one Save.
+  router.post('/oos/table', async (req, res, next) => {
+    try {
+      const branch = await branchFor(req);
+      if (!branch || !oos.canReport(req.user, branch)) return forbid(res, 'Only this branch’s staff can change its out-of-stock items.');
+      const r = await oos.saveBranchTable(db, req.user, branch, req.body, { now });
+      const to = `/oos${many(req.user) ? `?branch=${encodeURIComponent(branch.code)}` : ''}`;
+      if (r.errors.length) return back(res, to, `${r.saved} saved. Not saved: ${r.errors.join('; ')}`, 'err');
+      back(res, to, r.saved ? `${r.saved} item${r.saved === 1 ? '' : 's'} saved.` : 'Nothing changed.');
     } catch (err) { next(err); }
   });
 

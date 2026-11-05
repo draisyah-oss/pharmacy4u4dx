@@ -110,3 +110,30 @@ test('the sync reads every supplier folder; the page shows it; "After SOA check"
 });
 
 function soaXlsx() { return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'; }
+
+test('5 Nov: lines not done on an earlier plan are brought forward (backlog) until ticked or on a newer plan', async () => {
+  const base = await inv.loadPage(db, { today: '2026-11-05' });
+  const old = base.todo.filter((t) => !t.backlog);
+  assert.equal(base.plan.plan_date, '2026-11-03');
+  const done = old.find((t) => /Hydrocyn Aqua 100ml/i.test(t.item));
+  await db.query('UPDATE inv_plan_lines SET done_at = $2 WHERE id = $1', [done.id, new Date('2026-11-04T10:00:00+08:00')]);
+  await inv.savePlan(db, { date: '2026-11-05', title: 'Mr Eve Daily Plan 05 Nov 2026', rows: [
+    { Action: 'SECTION 1: URGENT', Item: '' },
+    { Action: 'URGENT 1 - TRANSFER', Item: 'Panadol Regular Coated 10s (A) - NEW', 'Branches/short at': 'JH 0', 'Transfer from (qty)': 'BR 5', Supplier: 'Zuellig', 'Supplier status': 'OPEN NOW' },
+    { Action: 'URGENT 2 - ORDER', Item: 'Brand new thing 10s', 'Branches/short at': 'WM 0', Supplier: 'Apex', 'Supplier status': 'OPEN NOW', 'Order qty': '2', 'Approx RM': '20' },
+  ] });
+  const d = await inv.loadPage(db, { today: '2026-11-05' });
+  assert.equal(d.plan.plan_date, '2026-11-05');
+  const back = d.todo.filter((t) => t.backlog);
+  const key = (x) => x.toLowerCase().replace(/\([a-c]\)|-\s*new\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
+  const expect = new Set(old.filter((t) => t.id !== done.id && !/Panadol Regular Coated/i.test(t.item)).map((t) => key(t.item)));
+  assert.equal(back.length, expect.size, 'all 3 Nov lines (one per item) except the one done and the one on today’s plan');
+  assert.ok(back.every((t) => t.from_date === '2026-11-03'));
+  assert.ok(!back.some((t) => /Panadol Regular Coated/i.test(t.item)), 'today’s plan has it');
+  assert.equal(d.S.counts.backlog, back.length);
+  // Ticked today → still shown (done); viewing the old day shows no backlog
+  await inv.tick(db, { id: 1 }, back[0].id, true, { now });
+  const d2 = await inv.loadPage(db, { today: '2026-11-05', view: 'backlog' });
+  assert.ok(d2.shown.find((t) => t.id === back[0].id).done_at);
+  assert.equal((await inv.loadPage(db, { today: '2026-11-05', date: '2026-11-03' })).todo.filter((t) => t.backlog).length, 0);
+});

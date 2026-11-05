@@ -234,7 +234,7 @@ test('25 Oct: HQ delivers to Ampang – picked/on the way shown to the branch, b
   assert.match(form, /value="hq_deliver" checked/);
   assert.match(form, /Done – delivered \/ fulfilled/);
   assert.equal((await alia.post(`/oos/${eldon}/answer`, { answer: 'hq_deliver', qty: '10', expected_back: '2026-10-27' })).status, 302);
-  let page = (await amp.get('/oos')).html;
+  let page = (await amp.get('/oos?view=cards')).html;
   assert.match(page, /HQ sends 10/);
   assert.match(page, /HQ WILL SEND/);
   assert.match(page, /aria-current="step"[^>]*>[\s\S]*?Picked at HQ/);
@@ -244,7 +244,7 @@ test('25 Oct: HQ delivers to Ampang – picked/on the way shown to the branch, b
   assert.match(xf, /Deliveries to send/);
   assert.match(xf, /<b>HQ<\/b> → <b>Ampang<\/b>/);
   await fariz.post(`/oos/${eldon}/picked`, {});
-  assert.match((await amp.get('/oos')).html, /PICKED – BEING PACKED/);
+  assert.match((await amp.get('/oos?view=cards')).html, /PICKED – BEING PACKED/);
   await fariz.post(`/oos/${eldon}/sent`, {});
   const daily = (await amp.get('/daily')).html;
   assert.match(daily, /ON THE WAY – ACCEPT WHEN IT ARRIVES/);
@@ -260,7 +260,7 @@ test('25 Oct: HQ delivers to Ampang – picked/on the way shown to the branch, b
   assert.equal(done.status, 302);
   const row = (await db.query('SELECT status, closed_by_hq, answer, answered_at FROM oos_items WHERE id = $1', [oat])).rows[0];
   assert.equal(row.status, 'Back in stock'); assert.equal(row.closed_by_hq, true); assert.equal(row.answer, 'hq_deliver'); assert.ok(row.answered_at);
-  assert.match((await amp.get('/oos')).html, /DONE – DELIVERED[\s\S]*closed by Inventory/);
+  assert.match((await amp.get('/oos?view=cards')).html, /DONE – DELIVERED[\s\S]*closed by Inventory/);
   // A closed item can't be answered again
   const again = await alia.post(`/oos/${oat}/answer`, { answer: 'order', qty: '2', expected_back: '2026-10-30' });
   assert.equal(again.status, 400);
@@ -291,7 +291,7 @@ test('27 Oct: questions & photos on an out-of-stock item; new item requests (not
   const ask = await alia.post(`/oos/${it.id}/message`, { message: 'Brg apa ni? Brand apa?', back: `/oos/${it.id}` });
   assert.equal(ask.location.split('?')[0], `/oos/${it.id}`);
   // The branch sees the question (thread open), on Daily entry and in Needs you
-  const page = (await staff.get('/oos')).html;
+  const page = (await staff.get('/oos?view=cards')).html;
   assert.match(page, /<details class="oo-thread" open>[\s\S]*INVENTORY ASKED[\s\S]*Brg apa ni\? Brand apa\?/);
   assert.match((await staff.get('/daily')).html, /Inventory asked a question/);
   assert.match((await staff.get('/daily')).html, /Inventory asked you to clarify an item/);
@@ -334,7 +334,7 @@ test('28 Oct: "seen by Inventory" when Alia opens an item; activity log for the 
   const staff = await login('pin', 'hazera', '1111');
   await staff.post('/oos', { item: 'Gaviscon 150ml', left: 'none', asking: '0' });
   const id = (await db.query("SELECT id FROM oos_items WHERE item = 'Gaviscon 150ml'")).rows[0].id;
-  assert.match((await staff.get('/oos')).html, /Gaviscon 150ml[\s\S]*?not seen by Inventory yet/);
+  assert.match((await staff.get('/oos?view=cards')).html, /Gaviscon 150ml[\s\S]*?not seen by Inventory yet/);
   // The CEO (admin) opening it doesn't count as seen; Alia opening it does
   const admin = await login('password', 'admin', 'admin-pass-1');
   await admin.get(`/oos/${id}`);
@@ -346,7 +346,7 @@ test('28 Oct: "seen by Inventory" when Alia opens an item; activity log for the 
   await alia.get(`/oos/${id}`);
   const row = (await db.query('SELECT seen_at, seen_by FROM oos_items WHERE id = $1', [id])).rows[0];
   assert.equal(new Date(row.seen_at).toISOString(), clock.toISOString());
-  assert.match((await staff.get('/oos')).html, /Gaviscon 150ml[\s\S]*?seen by Alia today 9:20 am/);
+  assert.match((await staff.get('/oos?view=cards')).html, /Gaviscon 150ml[\s\S]*?seen by Alia today 9:20 am/);
   await alia.post(`/oos/${id}/message`, { message: 'Saiz berapa?' });
   act = (await admin.get('/oos/activity?branch=WM')).html;
   assert.doesNotMatch(act, /Not opened by Inventory yet[\s\S]*Gaviscon 150ml/);
@@ -571,4 +571,35 @@ test('3 Nov: items are picked from the Dynamod product list – search, report w
   // The bundled prices are encrypted – without the right token nothing is loaded.
   assert.deepEqual(await products.loadPricesOnce(db, () => {}, {}), { skipped: 'no token' });
   assert.deepEqual(await products.loadPricesOnce(db, () => {}, { AGENT_API_TOKEN: 'wrong-token-0123456789abcdef' }), { skipped: 'key' });
+});
+
+test('5 Nov: the branch’s out-of-stock items as a table – tick received / cancel, adjust, one Save', async () => {
+  const staff = await login('pin', 'hazera', '1111');
+  const wm = (await db.query("SELECT * FROM branches WHERE code = 'WM'")).rows[0];
+  const user = (await db.query("SELECT * FROM users WHERE username = 'hazera'")).rows[0];
+  const now = () => new Date('2026-11-05T10:00:00+08:00');
+  const prods = (await db.query("SELECT id, description FROM products WHERE active ORDER BY id LIMIT 3")).rows;
+  const mk = async (p) => { const r = await oos.report(db, user, wm, p ? { product_id: String(p.id), item: p.description, left: 'none', asking: '0' } : {}, { now }); assert.ok(r.id, JSON.stringify(r.errors)); return r.id; };
+  const a = await mk(prods[0]); const b = await mk(prods[1]); const c = await mk(prods[2]);
+  const page = (await staff.get('/oos')).html;
+  assert.match(page, /Table – tick &amp; adjust/);
+  assert.match(page, /data-xfilter aria-label="Our out-of-stock items"/);
+  assert.match(page, new RegExp(`name="r\\[i${a}\\]\\[received\\]"`));
+  assert.match((await staff.get('/oos?view=cards')).html, /Received – back in stock|Accept – received/);
+  const r = await staff.post('/oos/table', {
+    [`r[i${a}][received]`]: '1',
+    [`r[i${b}][cancel]`]: '1', [`r[i${b}][note]`]: 'customer took another brand',
+    [`r[i${c}][left]`]: '2', [`r[i${c}][asking]`]: '3+', [`r[i${c}][urgent]`]: '1', [`r[i${c}][note]`]: 'chronic patient',
+  });
+  assert.equal(r.status, 302);
+  assert.match(decodeURIComponent(r.location), /3 items saved/);
+  const row = async (id) => (await db.query('SELECT status, left_qty, customers_count, urgent, note, cancel_reason FROM oos_items WHERE id = $1', [id])).rows[0];
+  assert.equal((await row(a)).status, 'Back in stock');
+  const rb = await row(b); assert.equal(rb.status, 'Cancelled'); assert.equal(rb.cancel_reason, 'customer took another brand');
+  const rc = await row(c); assert.deepEqual([rc.left_qty, rc.customers_count, rc.urgent, rc.note], [2, 3, true, 'chronic patient']);
+  // Nothing changed → nothing saved; another branch's item is ignored; bad number reported
+  const again = await staff.post('/oos/table', { [`r[i${c}][left]`]: '2', [`r[i${c}][asking]`]: '3+', [`r[i${c}][urgent]`]: '1', [`r[i${c}][note]`]: 'chronic patient' });
+  assert.match(decodeURIComponent(again.location), /Nothing changed/);
+  const bad = await staff.post('/oos/table', { [`r[i${c}][left]`]: 'two', [`r[i${c}][asking]`]: '3+' });
+  assert.match(decodeURIComponent(bad.location), /left – Type a whole number/);
 });

@@ -414,6 +414,45 @@ async function cancelItem(db, user, item, body, { now }) {
   return { ok: true };
 }
 
+// 5 Nov (CEO: "make the OOS items like Excel so the staff can tick and adjust"): the branch's
+// out-of-stock table – one Save for every row. Per open row: ✔ received (back in stock / accept
+// delivery), ✕ cancel (with an optional reason in the note box), or adjust how many are left,
+// customers asking, urgent and the note. Rows with nothing changed are skipped; a row with a problem
+// is reported back by item, the others are saved. body.r = { i<id>: { received, cancel, left, asking, urgent, note } }
+async function saveBranchTable(db, user, branch, body, { now }) {
+  const rows = (body && body.r) || {};
+  const at = now();
+  let saved = 0; const errors = [];
+  for (const [k, v] of Object.entries(rows)) {
+    const id = Number(String(k).replace(/^i/, ''));
+    if (!id || !v || typeof v !== 'object') continue;
+    const item = await loadItem(db, id);
+    if (!item || item.branch_id !== branch.id || !OPEN.includes(item.status)) continue;
+    if (v.received === '1') { await markReceived(db, user, item, { now }); saved++; continue; }
+    if (v.cancel === '1') {
+      const r = await cancelItem(db, user, item, { reason: v.note && v.note !== (item.note || '') ? v.note : '' }, { now });
+      if (r.error) errors.push(`${item.item}: ${r.error}`); else saved++;
+      continue;
+    }
+    const left = int(v.left, { min: 0, max: 999 });
+    if (left.error) { errors.push(`${item.item}: left – ${left.error}`); continue; }
+    const asking = v.asking === undefined ? item.customers_count : ({ 0: 0, '1-2': 2, '3+': 3 })[v.asking] ?? item.customers_count;
+    const urgent = v.urgent === '1';
+    const note = cleanText(v.note, { max: 200, label: 'Note' });
+    if (note.error) { errors.push(`${item.item}: ${note.error}`); continue; }
+    const next = { left_qty: v.left === undefined ? item.left_qty : left.value, customers_count: asking, urgent, note: v.note === undefined ? (item.note || null) : (note.value || null) };
+    const before = { left_qty: item.left_qty, customers_count: item.customers_count, urgent: Boolean(item.urgent), note: item.note || null };
+    if (JSON.stringify(next) === JSON.stringify({ ...before, note: before.note })) continue;
+    await db.transaction(async (tx) => {
+      await tx.query(`UPDATE oos_items SET left_qty = $2, customers_count = $3, customers_asking = $4, urgent = $5, note = $6, updated_by = $7, updated_at = $8 WHERE id = $1`,
+        [item.id, next.left_qty, next.customers_count, next.customers_count ? `${next.customers_count >= 3 ? '3+' : '1-2'} customers asking` : null, next.urgent, next.note, user.id, at]);
+      await audit(tx, user, 'update', `${item.branch_code} #${item.id} adjusted`, before, next);
+    });
+    saved++;
+  }
+  return { saved, errors };
+}
+
 async function flagLate(db, user, item, { now }) {
   const at = now();
   await db.transaction(async (tx) => {
@@ -513,5 +552,5 @@ async function branchWeekSummary(db, { branchId, week, now }) {
 module.exports = {
   branchWeekSummary,
   OPEN, ANSWERS, DELIVERS, isDelivery, markDone, markSeen, saveTable, reportB2b, canReport, canAnswer, canSend, canSeeBoard, targets, answerDueFor,
-  report, loadItem, loadInbox, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, cancelItem, buildBoard,
+  report, loadItem, loadInbox, saveBranchTable, countToAnswer, loadBranchItems, loadTransfers, answerItem, markTransfer, markReceived, flagLate, cancelItem, buildBoard,
 };

@@ -1389,3 +1389,17 @@ details.inv-sec .iv-tile { background: var(--page); }
 .iv-soa-row-bad th { color: var(--short); }
 .iv-soa-sub { margin-top: 10px; border-top: 1px solid var(--line); padding-top: 8px; }
 .iv-soa-sub > summary { cursor: pointer; }
+.iv-backlog { display: inline-block; font-size: 0.72rem; font-weight: 700; color: #7a4a00; background: #fdf0d8; border-radius: 6px; padding: 1px 6px; margin-bottom: 2px; }
+/* 5 Nov: branch out-of-stock table */
+.oo-view { margin: 4px 0 10px; }
+.oo-btable { min-width: 1100px; }
+.oo-btable tr.is-closed th, .oo-btable tr.is-closed td { opacity: 0.55; }
+.oo-btable tr.is-late th { color: var(--short); }
+.oo-btable input:not([type=checkbox]), .oo-btable select { font-size: 0.9rem; padding: 5px 7px; border: 1px solid var(--line); border-radius: 8px; max-width: 100%; }
+.oo-btable input[name$="[note]"] { min-width: 160px; }
+.oo-tick { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; font-size: 0.72rem; color: var(--good); font-weight: 700; cursor: pointer; }
+.oo-tick input { width: 22px; height: 22px; accent-color: var(--good); }
+.oo-tick.is-x { color: var(--short); }
+.oo-tick.is-x input { accent-color: var(--short); }
+.oo-table-save { position: sticky; bottom: 0; background: var(--page); padding: 10px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.oo-asked { color: var(--short); font-weight: 700; }

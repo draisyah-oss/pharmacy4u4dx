@@ -73,6 +73,7 @@ const VIEWS = {
   asking: { label: 'Customers asking', test: (t) => t.section === 'asking' },
   recount: { label: 'Recount', test: (t) => t.section === 'recount' },
   done: { label: 'Done', test: (t) => Boolean(t.done_at) },
+  backlog: { label: 'Backlog', test: (t) => Boolean(t.backlog) },
 };
 
 function supplierView(budget, todo, paidMap, soaMap = null) {
@@ -144,8 +145,26 @@ async function latestPlan(db, date) {
   const plan = (date && plans.find((p) => p.plan_date === date)) || plans[0] || null;
   const lines = plan ? (await db.query(`SELECT l.*, u.display_name AS done_by_name FROM inv_plan_lines l LEFT JOIN users u ON u.id = l.done_by
     WHERE l.plan_id = $1 ORDER BY l.line`, [plan.id])).rows : [];
+  // 5 Nov (CEO): "backlog that's not done and checked – bring it forward". On the newest plan, lines
+  // from earlier plans (last 14) not ticked done come along (newest first), unless the same item is
+  // on a newer plan – that newer line decides (shown, or done there). Ticked today → still shown, done.
+  if (plan && plan.id === plans[0].id && plans.length > 1) {
+    const older = plans.slice(1).map((p) => p.id);
+    const prev = (await db.query(`SELECT l.*, p.plan_date::text AS from_date, u.display_name AS done_by_name,
+        (l.done_at AT TIME ZONE 'Asia/Kuala_Lumpur')::date::text AS done_day
+      FROM inv_plan_lines l JOIN inv_plans p ON p.id = l.plan_id LEFT JOIN users u ON u.id = l.done_by
+      WHERE l.plan_id = ANY($1) ORDER BY p.plan_date DESC, l.line`, [older])).rows;
+    const seen = new Set(lines.map((l) => itemKey(l.item)));
+    for (const l of prev) {
+      const k = itemKey(l.item);
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      if (!l.done_at || l.done_day >= plan.plan_date) lines.push({ ...l, backlog: true });
+    }
+  }
   return { plan, plans, lines };
 }
+const itemKey = (s) => String(s || '').toLowerCase().replace(/\([a-c]\)|-\s*new\b/g, ' ').replace(/[^a-z0-9]+/g, ' ').trim();
 
 async function currentMonth(db, today) {
   const m = today.slice(0, 7);
@@ -172,7 +191,7 @@ async function loadPage(db, { today, date, view = 'all', q = '' } = {}) {
     if (x.next_due && (!m.next_due || x.next_due < m.next_due)) m.next_due = x.next_due;
     if (x.last_paid && (!m.last_paid || x.last_paid > m.last_paid)) m.last_paid = x.last_paid;
   }
-  const todo = lines.map((l) => lineView({ ...l, plan_date: plan ? plan.plan_date : null }, paidMap, soaMap));
+  const todo = lines.map((l) => lineView({ ...l, plan_date: l.from_date || (plan ? plan.plan_date : null) }, paidMap, soaMap));
   await attachOosMatches(db, todo);
   const suppliers = supplierView(budget, todo, paidMap, soaMap);
   const S = summary(todo, pay, budget);
