@@ -1,0 +1,43 @@
+<%# 5 Nov: the month's achievers poster in 📣 News (src/home/achievers.js). Input: A %>
+<% const order = [2, 1, 3].map(function (p) { return A.podium.find(function (x) { return x.place === p; }); }).filter(Boolean); %>
+<article class="ach" aria-labelledby="ach-h">
+  <% [['g', 4, 6, 25], ['c', 13, 2, -30], ['w', 22, 12, 0], ['t', 8, 20, 60], ['g', 3, 32, 0], ['g', 30, 4, -50], ['c', 40, 2, 0], ['w', 50, 4, 35], ['t', 62, 2, -20], ['g', 72, 5, 0], ['c', 80, 2, 48], ['g', 90, 7, -35], ['w', 95, 17, 20], ['t', 84, 14, 0], ['c', 93, 29, -60], ['g', 4, 94, 30], ['c', 12, 97, 0], ['t', 90, 95, -40], ['g', 96, 88, 0]].forEach(function (c, i) { %><span class="ach-bit ach-<%= c[0] %><%= c[3] === 0 ? ' ach-dot' : '' %>" style="left: <%= c[1] %>%; top: <%= c[2] %>%; transform: rotate(<%= c[3] %>deg)" aria-hidden="true"></span><% }) %>
+  <header class="ach-top">
+    <p class="ach-kicker">Pharmacy4U · Iman Wellness &amp; Health</p>
+    <svg class="ach-cup" width="72" height="72" viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M18 8h28v14c0 9-6 16-14 16s-14-7-14-16V8z" fill="#D4AF37"></path>
+      <path d="M18 12H8c0 8 4 14 11 15M46 12h10c0 8-4 14-11 15" fill="none" stroke="#D4AF37" stroke-width="3" stroke-linecap="round"></path>
+      <rect x="28" y="38" width="8" height="10" fill="#D4AF37"></rect>
+      <rect x="20" y="48" width="24" height="7" rx="2" fill="#D4AF37"></rect>
+      <path d="M32 13l2.6 5.3 5.8.8-4.2 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.2-4.1 5.8-.8z" fill="#0F3D3E"></path>
+    </svg>
+    <h3 id="ach-h" class="ach-title">Congratulations!</h3>
+    <p class="ach-sub">Monthly achievers · <%= A.label %></p>
+  </header>
+
+  <section class="ach-block" aria-label="<%= A.podiumTitle %>">
+    <p class="ach-sec"><%= A.podiumTitle %></p>
+    <ol class="ach-podium">
+      <% order.forEach(function (p) { %>
+        <li class="ach-p ach-p<%= p.place %>"><span class="ach-rank" aria-label="Place <%= p.place %>"><%= p.place %></span>
+          <b class="ach-name"><%= p.name %></b><span class="ach-amt"><%= p.amount %></span><% if (p.tag) { %><span class="ach-tag"><%= p.tag %></span><% } %></li>
+      <% }) %>
+    </ol>
+    <p class="ach-prize"><%= A.podiumPrize %></p>
+  </section>
+
+  <section class="ach-block" aria-label="Branch awards">
+    <p class="ach-sec">Branch awards</p>
+    <div class="ach-grid">
+      <% A.branches.forEach(function (b) { %>
+        <div class="ach-b<%= b.gold ? ' is-gold' : '' %>">
+          <p class="ach-b-t"><%= b.title %></p><% if (b.note) { %><p class="ach-b-n"><%= b.note %></p><% } %>
+          <p class="ach-b-br"><%= b.branch %></p><% if (b.value) { %><p class="ach-b-v"><%= b.value %></p><% } %>
+          <ul class="ach-chips"><% b.prizes.forEach(function (z) { %><li><%= z %></li><% }) %></ul>
+        </div>
+      <% }) %>
+    </div>
+  </section>
+
+  <footer class="ach-foot"><p><b><%= A.thanks %></b></p><p><%= A.next %></p></footer>
+</article>

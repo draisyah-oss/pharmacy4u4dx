@@ -28,6 +28,7 @@
 
 <section class="mh-card" aria-labelledby="hl-news">
   <h2 id="hl-news">📣 News</h2>
+  <% if (H.achievers) { %><%- include('achievers', { A: H.achievers }) %><% } %>
   <% if (H.tazkirah) { const z = H.tazkirah; %>
     <div class="hl-tazkirah"><span class="hl-emoji" aria-hidden="true"><%= z.emoji %></span>
       <div><small class="hl-tz-k"><%= z.kind === 'Reminder' ? 'Today’s reminder' : z.kind + ' – today’s reminder' %></small>
@@ -38,7 +39,7 @@
       <div><small class="hl-tip-k">Tip of the day – <%= H.tip.kind === 'effective' ? 'work smooth and efficient' : 'look after yourself, find meaning at work' %></small>
         <p><b><%= H.tip.title %>.</b> <%= H.tip.text %></p></div></div>
   <% } %>
-  <% if (!H.news.length && !H.tazkirah && !H.tip) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
+  <% if (!H.news.length && !H.tazkirah && !H.tip && !H.achievers) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
   <ul class="hl-news">
     <% H.news.forEach(function (n) { %>
       <li class="<%= n.pinned ? 'is-pinned' : '' %>"><span class="hl-emoji" aria-hidden="true"><%= n.emoji || '📌' %></span>

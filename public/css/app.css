@@ -1409,3 +1409,44 @@ details.inv-sec .iv-tile { background: var(--page); }
 /* 5 Nov: change requests – the CEO approves right on the list */
 .cr-quick { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .cr-quick .button { min-height: 36px; padding: 0 12px; font-size: 0.9rem; width: auto; }
+
+/* 5 Nov: month's achievers poster in 📣 News (CEO's "October Achievers" design) */
+.ach { position: relative; overflow: hidden; margin: 0 0 16px; padding: 24px 18px; border-radius: 16px; color: #F6F1E7;
+  background: radial-gradient(circle at 50% 0%, #1B6B66 0%, #0F3D3E 55%, #0A2B2C 100%); display: flex; flex-direction: column; gap: 22px; }
+.ach p { margin: 0; }
+.ach-bit { position: absolute; width: 8px; height: 17px; pointer-events: none; }
+.ach-dot { width: 9px; height: 9px; border-radius: 50%; }
+.ach-g { background: #D4AF37; } .ach-c { background: #E8715A; } .ach-w { background: #F6F1E7; } .ach-t { background: #5FB3A8; }
+.ach-top, .ach-block, .ach-foot { position: relative; }
+.ach-top { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.ach-kicker { font-size: 0.78rem; font-weight: 700; letter-spacing: 3px; color: #D4AF37; text-transform: uppercase; }
+.ach-title { margin: 0; font-family: 'Playfair Display', Georgia, serif; font-size: clamp(2.1rem, 10vw, 4.6rem); font-weight: 800; line-height: 1.05; color: #D4AF37; }
+.ach-sub { font-size: 1.15rem; font-weight: 700; }
+.ach-sec { text-align: center; font-size: 0.85rem; font-weight: 700; letter-spacing: 2px; color: #D4AF37; text-transform: uppercase; margin-bottom: 10px !important; }
+.ach-podium { list-style: none; margin: 0; padding: 0; display: flex; align-items: flex-end; gap: 8px; }
+.ach-p { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 12px 6px; text-align: center;
+  background: rgba(246, 241, 231, 0.12); border: 1px solid rgba(212, 175, 55, 0.6); border-radius: 14px; }
+.ach-p1 { padding: 22px 6px 14px; background: #F6F1E7; color: #14282A; border: 3px solid #D4AF37; }
+.ach-rank { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #14282A;
+  font-family: 'Playfair Display', Georgia, serif; font-weight: 800; font-size: 1.1rem; background: #C9D3D1; }
+.ach-p1 .ach-rank { width: 42px; height: 42px; font-size: 1.35rem; background: #D4AF37; }
+.ach-p3 .ach-rank { background: #C98B5A; }
+.ach-name { font-size: 1.05rem; text-transform: uppercase; }
+.ach-p1 .ach-name { font-size: 1.25rem; color: #0F3D3E; }
+.ach-amt { font-size: 0.9rem; font-weight: 600; }
+.ach-tag { font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; color: #7A5F00; text-transform: uppercase; }
+.ach-prize { text-align: center; margin-top: 10px !important; color: #BFD8D5; font-size: 0.9rem; }
+.ach-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.ach-b { display: flex; flex-direction: column; gap: 4px; padding: 14px; background: #F6F1E7; color: #14282A; border-radius: 14px; }
+.ach-b-t { font-size: 0.78rem; font-weight: 700; letter-spacing: 1px; line-height: 1.25; color: #7A5F00; text-transform: uppercase; }
+.ach-b-n { font-size: 0.82rem; color: #4A5B5C; }
+.ach-b-br { font-family: 'Playfair Display', Georgia, serif; font-size: 2.2rem; font-weight: 700; line-height: 1.1; color: #0F3D3E; }
+.ach-b-v { font-size: 1.05rem; font-weight: 700; }
+.ach-chips { list-style: none; margin: auto 0 0; padding: 4px 0 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.ach-chips li { padding: 3px 10px; font-size: 0.78rem; font-weight: 700; background: #0F3D3E; color: #F6F1E7; border-radius: 999px; }
+.ach-b.is-gold { background: rgba(246, 241, 231, 0.08); color: #F6F1E7; border: 2px solid #D4AF37; }
+.ach-b.is-gold .ach-b-t, .ach-b.is-gold .ach-b-br { color: #D4AF37; }
+.ach-b.is-gold .ach-chips li { background: #D4AF37; color: #14282A; }
+.ach-foot { text-align: center; display: flex; flex-direction: column; gap: 2px; }
+.ach-foot p:last-child { color: #BFD8D5; font-size: 0.9rem; }
+@media (max-width: 520px) { .ach { padding: 20px 12px; } .ach-grid { grid-template-columns: 1fr; } .ach-b-br { font-size: 1.9rem; } .ach-podium { gap: 5px; } .ach-p { padding: 10px 3px; } .ach-p1 { padding: 16px 3px 10px; } .ach-name { font-size: 0.85rem; } .ach-p1 .ach-name { font-size: 0.95rem; } .ach-amt { font-size: 0.72rem; } .ach-tag { font-size: 0.62rem; letter-spacing: 1px; } }
