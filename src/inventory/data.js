@@ -174,12 +174,14 @@ async function loadPage(db, { today, date, view = 'all', q = '' } = {}) {
   }
   const todo = lines.map((l) => lineView({ ...l, plan_date: plan ? plan.plan_date : null }, paidMap, soaMap));
   await attachOosMatches(db, todo);
-  const suppliers = supplierView(budget, todo, paidMap, soaMap);
+  // 5 Nov: Mr Eve's "Supplier_Status (from SOA)" sheet – his suggestion per supplier, shown beside ours (never opens a gate).
+  const mreve = await require('./supplier-status').loadMap(db);
+  const suppliers = supplierView(budget, todo, paidMap, soaMap).map((b) => ({ ...b, mreve: mreve.map[b.key] || null }));
   const S = summary(todo, pay, budget);
   const v = VIEWS[view] ? view : 'all';
   const needle = String(q || '').trim().toLowerCase();
   const shown = todo.filter(VIEWS[v].test).filter((t) => !needle || [t.item, t.short_at, t.transfer_from, t.supplier, t.action].join(' ').toLowerCase().includes(needle));
-  return { month, budget, cash, pay, plan, plans, todo, shown, suppliers, soa, soaMap, S, view: v, q: String(q || ''), VIEWS, FLOOR };
+  return { month, budget, cash, pay, plan, plans, todo, shown, suppliers, soa, soaMap, mreve, S, view: v, q: String(q || ''), VIEWS, FLOOR };
 }
 
 const audit = (db, userId, action, key, value) => db.query(
