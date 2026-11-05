@@ -101,3 +101,18 @@ test('the queue sheet is rewritten through the Sheets API (RAW, A:K)', async () 
   assert.match(put.url, /valueInputOption=RAW/);
   assert.equal(JSON.parse(put.body).values[0][2], 'What to change');
 });
+
+test('5 Nov (CEO): Ampang activities – PWP 3, In-house 2, Beecrobes 2, Loose 2, Short-expiry 1, POCT 1, in that order', async () => {
+  const rows = (await db.query(`SELECT m.code, m.label, t.target FROM measures m JOIN branches b ON b.id = m.branch_id
+      JOIN measure_targets t ON t.measure_id = m.id AND t.month = '2026-11'
+    WHERE b.code = 'Ampang' AND m.active AND m.code IN ('T2','P1','P2','P5','P6','P7','P8','P9') ORDER BY m.sort_order`)).rows;
+  assert.deepEqual(rows.map((r) => [r.label, Number(r.target)]), [
+    ['PWP units sold', 3], ['Target product: In-house products', 2], ['Target product: Beecrobes', 2],
+    ['Target product: Loose supplements', 2], ['Target product: Short-expiry products', 1], ['Target product: POCT', 1]]);
+  const oct = (await db.query(`SELECT t.target FROM measures m JOIN branches b ON b.id = m.branch_id JOIN measure_targets t ON t.measure_id = m.id
+    WHERE b.code = 'Ampang' AND m.code = 'T2' AND t.month = '2026-10'`)).rows[0];
+  assert.equal(Number(oct.target), 5, 'October kept');
+  const boxes = (await db.query(`SELECT f.key FROM daily_fields f JOIN branches b ON b.id = f.branch_id
+    WHERE b.code = 'Ampang' AND f.active AND f.key IN ('pwp','p1','p2','p5','p6','p7','p8','p9') ORDER BY f.sort_order`)).rows.map((r) => r.key);
+  assert.deepEqual(boxes, ['pwp', 'p8', 'p5', 'p6', 'p7', 'p9']);
+});
