@@ -332,7 +332,7 @@ test('19 Oct: super admin (Dr Aisyah) + admin logins for Iman and Hanin', async 
   assert.equal((await (await iman()).get('/hq/today')).status, 200);
 });
 
-test('28 Oct: Request a change – staff asks, Mr 4DX plans via the API, asker checks, only the CEO approves', async () => {
+test('Request a change – staff asks, only the CEO approves, Mr 4DX marks it Live', async () => {
   process.env.AGENT_API_TOKEN = 'test-token-0123456789abcdefghij';
   const st = await staff();
   assert.match((await st.get('/daily')).html, /Request a change/);
@@ -348,20 +348,18 @@ test('28 Oct: Request a change – staff asks, Mr 4DX plans via the API, asker c
   assert.equal(list.open.find((x) => x.id === id).title, 'Add Eldon strip box');
   assert.equal((await api('POST', `/requests/${id}`, { status: 'Approved' })).status, 403);
   assert.equal((await api('POST', `/requests/${id}`, { status: 'Live' })).status, 409);
-  assert.equal((await api('POST', `/requests/${id}`, { status: 'Ready to check', plan: 'Add box p6 "Eldon strip units sold", 2 a day', preview_url: 'https://preview.example.com', message: 'Preview ready' })).status, 200);
-  // Needs you: the asker checks the preview
-  assert.match((await st.get('/daily')).html, /Check a preview of your app change/);
+  // 5 Nov: no plan / preview / check steps – the CEO approves; staff and managers can't.
   const page = (await st.get(`/requests/${id}`)).html;
-  assert.match(page, /Mr 4DX[\s\S]*Planned|New → Ready to check – Preview ready/);
-  assert.match(page, /Open the preview/);
-  // Another staff member / a manager can't do the asker's check; an admin who isn't the CEO can't approve
+  assert.match(page, /Dr Aisyah approves/);
+  assert.doesNotMatch(page, /Your decision/);
   const m = await manager();
-  assert.equal((await m.post(`/requests/${id}/act`, { action: 'looks_right' })).status, 403);
-  assert.match(decodeURIComponent((await st.post(`/requests/${id}/act`, { action: 'not_right' })).location), /Say what isn’t right/);
-  await st.post(`/requests/${id}/act`, { action: 'looks_right' });
+  assert.equal((await m.post(`/requests/${id}/act`, { action: 'approve' })).status, 403);
   const ceo = await admin();
-  assert.match((await ceo.get('/requests')).html, /App changes waiting for your approval/);
-  await ceo.post(`/requests/${id}/act`, { action: 'approve' });
+  const lst = (await ceo.get('/requests')).html;
+  assert.match(lst, /App change requests to approve/);
+  assert.match(lst, /✔ Approve/);
+  const ok = await ceo.post(`/requests/${id}/act`, { action: 'approve', back: 'list' });
+  assert.match(decodeURIComponent(ok.location), /^\/requests\?ok=#\d+ approved/);
   let row = (await db.query('SELECT status, approved_by FROM change_requests WHERE id = $1', [id])).rows[0];
   assert.equal(row.status, 'Approved'); assert.ok(row.approved_by);
   assert.equal((await api('POST', `/requests/${id}`, { status: 'Live', message: 'Deployed' })).status, 200);

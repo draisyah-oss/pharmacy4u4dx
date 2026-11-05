@@ -44,3 +44,60 @@ test('#3: a report can be Urgent, Soon or Routine; legacy urgent=1 still works; 
   const c2 = await oos.loadItem(db, c.id);
   assert.deepEqual([c2.urgency, c2.urgent], ['urgent', true]);
 });
+
+test('5 Nov flow: the CEO approves; Mr 4DX asks / marks Live through its log; answering sends it back; the queue sheet rows', async () => {
+  const rq = require('../../src/requests/data');
+  const { applyMr4dx } = require('../../src/requests/mr4dx');
+  const { queueRows } = require('../../src/requests/queue');
+  const ceo = (await db.query("SELECT * FROM users WHERE username = 'admin'")).rows[0];
+  const staff = (await db.query("SELECT * FROM users WHERE role = 'branch_staff' AND active LIMIT 1")).rows[0];
+  const a = await rq.create(db, staff, { title: 'Bigger buttons', area: 'Daily entry' }, { now });
+  const b = await rq.create(db, ceo, { title: 'CEO idea', area: 'Other' }, { now });
+  assert.equal(b.approved, true);
+  assert.equal((await rq.load(db, b.id)).status, 'Approved', 'the CEO’s own request is approved at once');
+  // Not approved yet → Mr 4DX can't mark it Live
+  let out = await applyMr4dx(db, { entries: [{ id: a.id, live: 'done' }], now, log: () => {} });
+  assert.match(out[0].skipped, /not approved/);
+  assert.equal((await rq.load(db, a.id)).status, 'New');
+  assert.deepEqual(rq.actionsFor(staff, await rq.load(db, a.id)), { comment: true, approve: false, reject: false });
+  assert.equal((await rq.act(db, ceo, await rq.load(db, a.id), 'approve', '', { now })).ok, true);
+  // Mr 4DX asks → Need more info; the asker answers → back to Approved
+  await applyMr4dx(db, { entries: [{ id: a.id, ask: 'Which page – Daily entry or the week sheet?' }], now, log: () => {} });
+  assert.equal((await rq.load(db, a.id)).status, 'Need more info');
+  await rq.addNote(db, staff, await rq.load(db, a.id), 'Daily entry');
+  assert.equal((await rq.load(db, a.id)).status, 'Approved');
+  // The queue sheet lists approved requests first, with the conversation
+  const rows = await queueRows(db, { now });
+  assert.equal(rows[0][0], 'Status');
+  assert.equal(rows[1][0], 'Approved');
+  assert.match(rows.find((r) => r[1] === a.id)[8], /Which page[\s\S]*Daily entry/);
+  // Live once, with what changed
+  out = await applyMr4dx(db, { entries: [{ id: a.id, live: 'Buttons are bigger', commit: 'abc1234' }], now, log: () => {} });
+  assert.equal(out[0].ok, true);
+  const r = await rq.load(db, a.id);
+  assert.equal(r.status, 'Live'); assert.ok(r.live_at);
+  assert.match(r.notes.at(-1).body, /Buttons are bigger \(abc1234\)/);
+  assert.equal((await applyMr4dx(db, { entries: [{ id: a.id, live: 'Buttons are bigger', commit: 'abc1234' }], now, log: () => {} })).length, 0, 'applied once');
+  // The real log is valid JSON with ids and text
+  const real = require('../../src/requests/mr4dx').readLog();
+  assert.ok(real.length >= 2 && real.every((e) => Number.isInteger(e.id) && (e.live || e.ask)));
+});
+
+test('the queue sheet is rewritten through the Sheets API (RAW, A:K)', async () => {
+  const crypto = require('crypto');
+  const { createRequestQueue } = require('../../src/requests/queue');
+  const { privateKey } = crypto.generateKeyPairSync('rsa', { modulusLength: 1024 });
+  const account = { email: 'sa@x.iam.gserviceaccount.com', privateKey: privateKey.export({ type: 'pkcs8', format: 'pem' }) };
+  const calls = [];
+  const fetchImpl = async (url, opts = {}) => {
+    calls.push({ url, method: opts.method || 'GET', body: opts.body });
+    const body = url.includes('oauth2') ? { access_token: 't' } : url.includes('fields=sheets') ? { sheets: [{ properties: { title: 'Sheet1' } }] } : {};
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const q = createRequestQueue(db, { account, fetchImpl, now, log: () => {} });
+  const r = await q.syncNow();
+  assert.ok(r.ok && r.rows >= 2);
+  const put = calls.find((c) => c.method === 'PUT');
+  assert.match(put.url, /valueInputOption=RAW/);
+  assert.equal(JSON.parse(put.body).values[0][2], 'What to change');
+});

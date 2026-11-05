@@ -1405,3 +1405,7 @@ details.inv-sec .iv-tile { background: var(--page); }
 .oo-asked { color: var(--short); font-weight: 700; }
 .oo-chip.oc-soon { background: #fdf0d8; color: #7a4a00; }
 .yesno-3 .yn span small { display: block; font-size: 0.72rem; font-weight: 400; opacity: 0.8; }
+
+/* 5 Nov: change requests – the CEO approves right on the list */
+.cr-quick { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+.cr-quick .button { min-height: 36px; padding: 0 12px; font-size: 0.9rem; width: auto; }

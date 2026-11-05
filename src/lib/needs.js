@@ -196,10 +196,9 @@ async function buildNeeds(db, user, { at }) {
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);
   if ((user.role === 'branch_manager' || user.role === 'branch_staff') && user.branch_id) await forBranch(db, user, today, at, add);
   try { await forReview(db, user, today, add); } catch (err) { console.error('Needs you – review:', err.message); }
-  // 28 Oct: change requests – the CEO approves, other admins see new ones, the asker checks previews.
-  const cr = await db.query(`SELECT count(*) FILTER (WHERE status = 'Waiting for approval')::int AS approval,
-      count(*) FILTER (WHERE status = 'New')::int AS fresh,
-      count(*) FILTER (WHERE status = 'Ready to check' AND created_by = $1)::int AS mine FROM change_requests`, [user.id]);
+  // 5 Nov: change requests – the CEO approves new ones; the asker answers Mr 4DX's questions.
+  const cr = await db.query(`SELECT count(*) FILTER (WHERE status = 'New')::int AS fresh,
+      count(*) FILTER (WHERE status = 'Need more info' AND created_by = $1)::int AS asked FROM change_requests`, [user.id]);
   const c = cr.rows[0];
   if (user.role === 'admin' && user.is_super) {
     const lc = await one(db, "SELECT count(*) AS n FROM measure_changes WHERE status = 'Waiting'", []);
@@ -216,9 +215,8 @@ async function buildNeeds(db, user, { at }) {
       if (n) add('today', n, 'Supplier payments to mark paid', 'approved and due', '/inventory#payments');
     }
   } catch (err) { console.error('Needs you – payments:', err.message); }
-  if (user.role === 'admin' && user.is_super && c.approval) add('today', c.approval, 'App changes waiting for your approval', 'checked by the person who asked', '/requests');
-  if (user.role === 'admin' && !user.is_super && c.fresh) add('todo', c.fresh, 'New app change requests', 'Request a change', '/requests');
-  if (c.mine) add('today', c.mine, 'Check a preview of your app change', 'looks right? / not right yet', '/requests');
+  if (user.role === 'admin' && user.is_super && c.fresh) add('today', c.fresh, 'App change requests to approve', 'Mr 4DX makes them once you approve', '/requests');
+  if (c.asked) add('today', c.asked, 'Mr 4DX asked about your app change', 'answer so it can be made', '/requests');
   items.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);
   return { items: items.slice(0, MAX), more: Math.max(0, items.length - MAX) };
 }

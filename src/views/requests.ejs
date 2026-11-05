@@ -7,7 +7,7 @@
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
   <section class="oo-card" aria-labelledby="new-h">
     <h1 id="new-h">Request a change</h1>
-    <p class="muted">Something in the app that could work better – a box, a target, a page, a button? Tell Mr 4DX. You’ll check a preview before anything changes, and Dr Aisyah approves it before it goes live.</p>
+    <p class="muted">Something in the app that could work better – a box, a target, a page, a button? Ask here. <b>Dr Aisyah approves</b>, then <b>Mr 4DX makes the change</b> and marks it Live – you’ll see it on this list.</p>
     <form method="post" action="/requests" class="oo-form" novalidate>
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <label class="oo-label">What should change?
@@ -23,7 +23,7 @@
       </label>
       <%- include('partials/photo-input', { id: 'ph-cr', label: 'Add a screenshot (optional)' }) %>
       <% if (errors.photo) { %><span class="wk-error"><%= errors.photo %></span><% } %>
-      <button class="button wide" type="submit">Send to Mr 4DX</button>
+      <button class="button wide" type="submit"><%= ceo ? 'Send – approved' : 'Send to Dr Aisyah' %></button>
     </form>
   </section>
 
@@ -32,10 +32,19 @@
     <% if (!open.length && !done.length) { %><p class="muted">No requests yet.</p><% } %>
     <div class="oo-list">
       <% open.concat(done).forEach(function (r) { %>
-        <a class="oo-item oo-link<%= ['Live', 'Not doing'].includes(r.status) ? ' is-closed' : '' %>" href="/requests/<%= r.id %>">
-          <span class="oo-top"><b>#<%= r.id %> · <%= r.title %></b><%- include('partials/request-status', { s: r.status }) %></span>
-          <span class="oo-meta"><%= r.area %> · <%= r.asked_by_name || '–' %><%= r.asked_from ? ' (' + r.asked_from + ')' : '' %> · <%= of.when(r.created_at, at) %><%= r.source === 'whatsapp' ? ' · via WhatsApp' : '' %></span>
-        </a>
+        <div class="oo-item<%= ['Live', 'Not doing'].includes(r.status) ? ' is-closed' : '' %>">
+          <a class="oo-link" href="/requests/<%= r.id %>">
+            <span class="oo-top"><b>#<%= r.id %> · <%= r.title %></b><%- include('partials/request-status', { s: r.status }) %></span>
+            <span class="oo-meta"><%= r.area %> · <%= r.asked_by_name || '–' %><%= r.asked_from ? ' (' + r.asked_from + ')' : '' %> · <%= of.when(r.created_at, at) %><%= r.source === 'whatsapp' ? ' · via WhatsApp' : '' %><%= r.status === 'Approved' ? ' · Mr 4DX is on it' : r.status === 'Live' && r.live_at ? ' · live ' + of.when(r.live_at, at) : '' %></span>
+          </a>
+          <% if (ceo && ['New', 'Need more info'].includes(r.status) && !r.approved_at) { %>
+            <form method="post" action="/requests/<%= r.id %>/act" class="cr-quick">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="list">
+              <button class="button small oo-good" name="action" value="approve">✔ Approve</button>
+              <button class="button small secondary" name="action" value="reject">Not doing</button>
+            </form>
+          <% } %>
+        </div>
       <% }) %>
     </div>
   </section>

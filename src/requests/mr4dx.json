@@ -1,0 +1,4 @@
+[
+  { "id": 3, "live": "Out-of-stock reports now have three levels: Urgent (chronic patient waiting), Soon (within a few days) and Routine. Branches pick it when reporting and can change it in their table; the inbox lists Urgent first, then Soon.", "commit": "3c9689f" },
+  { "id": 2, "live": "BR's \"New neuropathy customers\" box and measure are removed (history kept). It stays tracked under POCT incl. Vibrasense.", "commit": "3c9689f" }
+]

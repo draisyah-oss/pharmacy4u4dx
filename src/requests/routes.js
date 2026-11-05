@@ -4,14 +4,15 @@ const express = require('express');
 const rq = require('./data');
 const of = require('../oos/format');
 
-function requestRoutes(db, { now }) {
+function requestRoutes(db, { now, queue = null }) {
   const router = express.Router();
+  const changed = () => { if (queue) queue.syncSoon(); };
   const back = (res, path, msg, kind = 'ok') => res.redirect(`${path}${path.includes('?') ? '&' : '?'}${kind}=${encodeURIComponent(msg)}`);
 
   async function renderList(req, res, extra = {}) {
     const { open, done } = await rq.list(db);
     res.status(extra.status || 200).render('requests', {
-      title: 'Request a change', open, done, areas: rq.AREAS, of, at: now(),
+      title: 'Request a change', open, done, areas: rq.AREAS, of, at: now(), ceo: rq.isCeo(req.user),
       typed: extra.typed || {}, errors: extra.errors || {}, ok: req.query.ok || null, err: extra.err || req.query.err || null,
     });
   }
@@ -22,7 +23,8 @@ function requestRoutes(db, { now }) {
     try {
       const r = await rq.create(db, req.user, req.body, { now });
       if (r.errors) return renderList(req, res, { status: 400, errors: r.errors, typed: req.body, err: 'Not sent – check the boxes in red.' });
-      back(res, `/requests/${r.id}`, 'Sent. Mr 4DX will plan it; you’ll check a preview before anything changes, and Dr Aisyah approves it.');
+      changed();
+      back(res, `/requests/${r.id}`, r.approved ? 'Sent and approved – Mr 4DX will make the change and mark it Live.' : 'Sent to Dr Aisyah. Once she approves, Mr 4DX makes the change and marks it Live here.');
     } catch (err) { next(err); }
   });
 
@@ -30,7 +32,7 @@ function requestRoutes(db, { now }) {
     try {
       const r = await rq.load(db, req.params.id);
       if (!r) return res.status(404).render('message', { title: 'Not found', message: 'That request isn’t on the list.' });
-      res.render('request', { title: `Change #${r.id}`, r, can: rq.actionsFor(req.user, r), statuses: rq.STATUSES, of, at: now(), ok: req.query.ok || null, err: req.query.err || null });
+      res.render('request', { title: `Change #${r.id}`, r, can: rq.actionsFor(req.user, r), of, at: now(), ok: req.query.ok || null, err: req.query.err || null });
     } catch (err) { next(err); }
   });
 
@@ -40,6 +42,7 @@ function requestRoutes(db, { now }) {
       if (!r) return res.status(404).render('message', { title: 'Not found', message: 'That request isn’t on the list.' });
       const out = await rq.addNote(db, req.user, r, req.body.message);
       if (out.error) return back(res, `/requests/${r.id}`, out.error, 'err');
+      changed();
       back(res, `/requests/${r.id}`, 'Message added.');
     } catch (err) { next(err); }
   });
@@ -49,24 +52,11 @@ function requestRoutes(db, { now }) {
       const r = await rq.load(db, req.params.id);
       if (!r) return res.status(404).render('message', { title: 'Not found', message: 'That request isn’t on the list.' });
       const out = await rq.act(db, req.user, r, String(req.body.action || ''), req.body.message, { now });
-      if (out.forbidden) return res.status(403).render('message', { title: 'Not allowed', message: 'Only the person who asked checks the preview, and only Dr Aisyah approves.' });
+      if (out.forbidden) return res.status(403).render('message', { title: 'Not allowed', message: 'Only Dr Aisyah approves app changes.' });
       if (out.error) return back(res, `/requests/${r.id}`, out.error, 'err');
-      back(res, `/requests/${r.id}`, 'Saved.');
-    } catch (err) { next(err); }
-  });
-
-  router.post('/requests/:id/status', async (req, res, next) => {
-    try {
-      if (req.user.role !== 'admin') return res.status(403).render('message', { title: 'Not allowed', message: 'Only admin changes a request’s status.' });
-      const r = await rq.load(db, req.params.id);
-      if (!r) return res.status(404).render('message', { title: 'Not found', message: 'That request isn’t on the list.' });
-      // Approving is the CEO's: other admins can't set Approved / Live from here.
-      if (['Approved', 'Live'].includes(req.body.status) && !rq.isCeo(req.user) && r.status !== req.body.status) {
-        return back(res, `/requests/${r.id}`, 'Only Dr Aisyah approves – use the Approve button on her login.', 'err');
-      }
-      const out = await rq.setStatus(db, req.user, r, { status: req.body.status, plan: req.body.plan, preview_url: req.body.preview_url, message: req.body.message }, { now });
-      if (out.error) return back(res, `/requests/${r.id}`, out.error, 'err');
-      back(res, `/requests/${r.id}`, 'Saved.');
+      changed();
+      const to = req.body.back === 'list' ? '/requests' : `/requests/${r.id}`;
+      back(res, to, req.body.action === 'approve' ? `#${r.id} approved – Mr 4DX will make the change.` : `#${r.id}: not doing.`);
     } catch (err) { next(err); }
   });
 

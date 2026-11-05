@@ -28,7 +28,7 @@ const fmt = require('./scoreboard/format');
 const { companySalesForWeek } = require('./group/company');
 
 // options.now lets tests pretend it's a particular day.
-function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDrive = null, inventoryEvents = null, inventorySheet = null, telegram = null, inventorySoa = null } = {}) {
+function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDrive = null, inventoryEvents = null, inventorySheet = null, telegram = null, inventorySoa = null, requestQueue = null } = {}) {
   const app = express();
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
@@ -178,7 +178,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   app.use(inventoryRoutes(db, { now, drive: inventoryDrive, events: inventoryEvents, sheet: inventorySheet, telegram, soa: inventorySoa }));
   app.use(zakatRoutes(db, { now }));
   app.use(wigRoutes(db, { now, trackerStart }));
-  app.use(requestRoutes(db, { now }));
+  app.use(requestRoutes(db, { now, queue: requestQueue }));
   app.use(policyRoutes());
   app.use(reviewRoutes(db, { now, trackerStart }));
   app.use(monthRoutes(db, { now, trackerStart }));

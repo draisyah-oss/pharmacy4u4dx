@@ -53,7 +53,11 @@ async function main() {
   const inventoryDrive = createInventoryDrive(db, { now, onPlanLoaded: (date) => inventoryEvents.planLoaded(date, require('./inventory/data').loadPage) });
   // 5 Nov: supplier SOA status from the SOA folder in Drive, every 6 hours.
   const inventorySoa = require('./inventory/soa').createSoaSync(db, { now });
-  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram, inventorySoa });
+  // 5 Nov: change requests – Mr 4DX's log marks finished ones Live; the queue sheet tells Mr 4DX what's approved.
+  await require('./requests/mr4dx').applyMr4dx(db, { now }).catch((err) => console.error('Mr 4DX log:', err.message));
+  const requestQueue = require('./requests/queue').createRequestQueue(db, { now });
+  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram, inventorySoa, requestQueue });
+  requestQueue.schedule(30);
   inventorySoa.schedule(360);
   inventoryDrive.schedule(30);
   inventorySheet.schedule(30);

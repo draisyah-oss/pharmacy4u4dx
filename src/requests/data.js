@@ -1,10 +1,12 @@
-// 28 Oct: "Request a change" for the 4DX app.
+// "Request a change" for the 4DX app (simplified 5 Nov, CEO: "request needs my approval; once I approve,
+// Mr 4DX changes it without me prompting"):
 //   1 Anyone logged in asks (what to change, why, which part, optional screenshot) → New.
-//   2 Mr 4DX (Claude, through the agent API) or an admin plans it: Need more info / Planned / Not doing.
-//   3 A preview is built → Ready to check (preview link). The person who asked taps "Looks right"
-//     (→ Waiting for approval) or "Not right yet" with a note (→ Planned).
-//   4 The CEO (super admin) Approves (→ Approved) or says Not doing. Nothing goes live without that.
-//   5 Mr 4DX / admin marks it Live once deployed.
+//      A request Dr Aisyah writes herself is approved at once.
+//   2 Dr Aisyah (super admin) taps Approve (→ Approved) or Not doing. Nothing is built without that.
+//   3 Mr 4DX (Claude on a schedule) reads approved requests from the queue sheet (queue.js), builds,
+//      tests and deploys the change, and lists it in src/requests/mr4dx.json – on start the app marks
+//      it Live with what changed (mr4dx.js). If a request is unclear, Mr 4DX asks (→ Need more info);
+//      any answer in the conversation sends it back (to Approved if it was approved, else New).
 // Every step leaves a note in the thread and the audit log.
 
 const { cleanText } = require('../weekly/access');
@@ -12,6 +14,8 @@ const chat = require('../oos/chat');
 
 const STATUSES = ['New', 'Need more info', 'Planned', 'Ready to check', 'Waiting for approval', 'Approved', 'Live', 'Not doing'];
 const OPEN = ['New', 'Need more info', 'Planned', 'Ready to check', 'Waiting for approval', 'Approved'];
+// The steps shown since 5 Nov (the other statuses stay valid for old rows / the database check).
+const FLOW = ['New', 'Approved', 'Live'];
 const AREAS = ['Daily entry', 'Scoreboard / targets', 'Out of stock', 'Weekly update / WIG', 'HQ pages', 'Login / people', 'Other'];
 
 const isAdmin = (u) => u.role === 'admin';
@@ -49,7 +53,11 @@ async function create(db, user, body, { now, source = 'app' } = {}) {
       `INSERT INTO change_requests (title, details, area, photo_id, source, created_by, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $7) RETURNING id`, [title.value, details.value, area, photoId, source, user.id, at]);
     await audit(tx, user, `#${rows[0].id} new`, null, { title: title.value, area });
-    return { id: rows[0].id };
+    if (isCeo(user)) {
+      await tx.query("UPDATE change_requests SET status = 'Approved', approved_at = $2, approved_by = $3 WHERE id = $1", [rows[0].id, at, user.id]);
+      await note(tx, rows[0].id, user, 'New → Approved – asked and approved by Dr Aisyah.');
+    }
+    return { id: rows[0].id, approved: isCeo(user) };
   });
 }
 
@@ -70,12 +78,9 @@ async function list(db) {
 
 // Who may do what on a request (UI buttons and server checks use the same rules).
 function actionsFor(user, r) {
-  const mine = r.created_by === user.id;
   return {
     comment: true,
-    manage: isAdmin(user), // status, plan, preview link
-    check: (mine || isAdmin(user)) && r.status === 'Ready to check',
-    approve: isCeo(user) && ['Waiting for approval', 'Ready to check', 'Planned'].includes(r.status),
+    approve: isCeo(user) && ['New', 'Need more info'].includes(r.status) && !r.approved_at,
     reject: isCeo(user) && OPEN.includes(r.status),
   };
 }
@@ -86,7 +91,10 @@ async function addNote(db, user, r, body, author = null) {
   if (!text.value) return { error: 'Type a message.' };
   await db.transaction(async (tx) => {
     await note(tx, r.id, user, text.value, author);
-    await tx.query('UPDATE change_requests SET updated_at = now() WHERE id = $1', [r.id]);
+    // An answer to Mr 4DX's question sends the request back to where it was.
+    const back = !author && r.status === 'Need more info' ? (r.approved_at ? 'Approved' : 'New') : null;
+    await tx.query('UPDATE change_requests SET updated_at = now(), status = COALESCE($2, status) WHERE id = $1', [r.id, back]);
+    if (back) await note(tx, r.id, null, `Need more info → ${back} – answered, back to ${back === 'Approved' ? 'Mr 4DX' : 'Dr Aisyah'}.`, 'Mr 4DX');
   });
   return { ok: true };
 }
@@ -115,21 +123,15 @@ async function setStatus(db, user, r, { status, plan, preview_url: previewUrl, m
   return { ok: true };
 }
 
-// CEO decisions and the requester's check, with the rules above.
+// The CEO's decisions.
 async function act(db, user, r, action, message, { now }) {
   const can = actionsFor(user, r);
-  if (action === 'looks_right' && can.check) return setStatus(db, user, r, { status: 'Waiting for approval', message: message || 'Checked the preview – looks right.' }, { now });
-  if (action === 'not_right' && can.check) {
-    if (!String(message || '').trim()) return { error: 'Say what isn’t right yet.' };
-    return setStatus(db, user, r, { status: 'Planned', message }, { now });
-  }
-  if (action === 'approve' && can.approve) return setStatus(db, user, r, { status: 'Approved', message: message || 'Approved – go live.' }, { now });
+  if (action === 'approve' && can.approve) return setStatus(db, user, r, { status: 'Approved', message: message || 'Approved – Mr 4DX will make the change.' }, { now });
   if (action === 'reject' && can.reject) return setStatus(db, user, r, { status: 'Not doing', message: message || 'Not doing this.' }, { now });
   return { forbidden: true };
 }
 
 const counts = async (db) => (await db.query(
-  `SELECT count(*) FILTER (WHERE status = 'New')::int AS fresh, count(*) FILTER (WHERE status = 'Waiting for approval')::int AS approval,
-     count(*) FILTER (WHERE status = 'Ready to check')::int AS check FROM change_requests`)).rows[0];
+  `SELECT count(*) FILTER (WHERE status = 'New')::int AS fresh, count(*) FILTER (WHERE status = 'Approved')::int AS approved FROM change_requests`)).rows[0];
 
-module.exports = { STATUSES, OPEN, AREAS, create, load, list, actionsFor, addNote, setStatus, act, counts, isCeo };
+module.exports = { STATUSES, OPEN, FLOW, AREAS, create, load, list, actionsFor, addNote, setStatus, act, counts, isCeo };
