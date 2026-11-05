@@ -11,7 +11,7 @@ const express = require('express');
 const calc = require('../calc');
 const inv = require('./data');
 
-function inventoryRoutes(db, { now, drive = null, events = null, sheet = null, telegram = null, soa = null }) {
+function inventoryRoutes(db, { now, drive = null, events = null, sheet = null, telegram = null, soa = null, supplierStatus = null }) {
   const router = express.Router();
   const deny = (res) => res.status(403).render('message', { title: 'Not available', message: 'Ordering & payments is for HQ.' });
   const back = (req, res, msg, kind = 'ok') => {
@@ -43,13 +43,16 @@ function inventoryRoutes(db, { now, drive = null, events = null, sheet = null, t
       if (!drive || !drive.configured()) return back(req, res, 'The Google Drive link isn’t set up yet.', 'err');
       try {
         // 5 Nov (CEO): one button – Mr Eve's plan and the supplier SOA folder together.
-        const [plan, s] = await Promise.allSettled([drive.syncNow({ force: true }), soa && soa.configured() ? soa.syncNow({ force: true }) : Promise.resolve(null)]);
+        const [plan, s, ss] = await Promise.allSettled([drive.syncNow({ force: true }), soa && soa.configured() ? soa.syncNow({ force: true }) : Promise.resolve(null),
+          supplierStatus && supplierStatus.configured() ? supplierStatus.syncNow({ force: true }) : Promise.resolve(null)]);
         const parts = [];
         let bad = false;
         if (plan.status === 'fulfilled') parts.push(plan.value.unchanged ? 'No newer plan from Mr Eve' : `Loaded Mr Eve’s plan (${plan.value.lines} lines)`);
         else { bad = true; parts.push(`Mr Eve’s plan: ${plan.reason.message}`); }
         if (s.status === 'fulfilled' && s.value) parts.push(`SOA: ${s.value.folders} suppliers (${s.value.read} read again)`);
         else if (s.status === 'rejected') { bad = true; parts.push(`SOA: ${s.reason.message}`); }
+        if (ss.status === 'fulfilled' && ss.value && ss.value.suppliers) parts.push(`Mr Eve’s SOA check: ${ss.value.suppliers} suppliers`);
+        else if (ss.status === 'rejected') { bad = true; parts.push(`Mr Eve’s SOA check: ${ss.reason.message}`); }
         back(req, res, `Checked Google Drive – ${parts.join(' · ')}.`, bad ? 'err' : 'ok');
       } catch (err) { back(req, res, err.message, 'err'); }
     } catch (err) { next(err); }
