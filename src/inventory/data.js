@@ -47,14 +47,17 @@ function paidByKey(pay) {
 }
 const allPaid = (m, k) => (m[k] || []).length > 0 && m[k].every(Boolean);
 
-const GATE_LABEL = { open: 'Open now', paid: 'Open (paid)', wait: 'After payment', after_payment: 'After payment', soa: 'After SOA check', hold: 'On hold', check: 'Check terms', none: '–' };
+const GATE_LABEL = { open: 'Open now', paid: 'Open (paid)', soaok: 'Open (SOA clear)', wait: 'After payment', after_payment: 'After payment', soa: 'After SOA check', hold: 'On hold', check: 'Check terms', none: '–' };
 
 // One plan line → what to do and whether its supplier is open.
-function lineView(r, paidMap) {
+// 5 Nov: soaMap (supplier key → SOA summary from Drive) – "After SOA check" opens once its SOA has nothing overdue.
+const soaClear = (soaMap, k) => Boolean(soaMap && soaMap[k] && soaMap[k].overdue <= 0);
+function lineView(r, paidMap, soaMap = null) {
   const st = String(r.status_text || '').toLowerCase();
   let gate = st === '' ? 'none' : /on hold/.test(st) ? 'hold' : /^open now|^open \(/.test(st) ? 'open' : /open once/.test(st) ? 'wait' : /soa/.test(st) ? 'soa' : /after/.test(st) ? 'wait' : 'check';
   const key = keyOf(r.supplier);
   if (gate === 'wait' && allPaid(paidMap, key)) gate = 'paid';
+  if (gate === 'soa' && soaClear(soaMap, key)) gate = 'soaok';
   const action = r.action || '';
   const later = /ORDER LATER/i.test(action);
   return { ...r, rm: Number(r.rm || 0), supplier_key: key, gate, status_label: GATE_LABEL[gate], transfer: /TRANSFER/i.test(action), order: /ORDER/i.test(action) && !later, later };
@@ -64,7 +67,7 @@ const VIEWS = {
   all: { label: 'All', test: () => true },
   urgent: { label: 'Urgent', test: (t) => t.section === 'urgent' },
   transfer: { label: 'Transfer first', test: (t) => t.transfer && t.section !== 'asking' && t.section !== 'recount' },
-  order_now: { label: 'Order now', test: (t) => t.order && !t.transfer && (t.gate === 'open' || t.gate === 'paid') && t.section !== 'asking' && t.section !== 'recount' },
+  order_now: { label: 'Order now', test: (t) => t.order && !t.transfer && ['open', 'paid', 'soaok'].includes(t.gate) && t.section !== 'asking' && t.section !== 'recount' },
   check: { label: 'Check terms', test: (t) => t.order && !t.transfer && (t.gate === 'check' || t.gate === 'none') && t.section !== 'asking' && t.section !== 'recount' },
   wait: { label: 'Wait for payment', test: (t) => (t.order || t.later) && !t.transfer && ['wait', 'soa', 'hold'].includes(t.gate) && t.section !== 'asking' && t.section !== 'recount' },
   asking: { label: 'Customers asking', test: (t) => t.section === 'asking' },
@@ -72,13 +75,14 @@ const VIEWS = {
   done: { label: 'Done', test: (t) => Boolean(t.done_at) },
 };
 
-function supplierView(budget, todo, paidMap) {
+function supplierView(budget, todo, paidMap, soaMap = null) {
   const known = new Set(budget.map((b) => b.key));
   return budget.map((b) => {
     const lines = todo.filter((t) => (t.order || t.later) && (b.key === 'OTHERS' ? t.supplier_key && !known.has(t.supplier_key) : t.supplier_key === b.key));
     let gate = b.gate;
     if (gate === 'after_payment' && b.unlock_key && allPaid(paidMap, b.unlock_key)) gate = 'paid';
-    return { ...b, po_budget: Number(b.po_budget || 0), gate, status_label: gate === 'check' ? 'Check first' : GATE_LABEL[gate] || gate, today_lines: lines.length, today_rm: lines.reduce((s, t) => s + t.rm, 0) };
+    if (gate === 'soa' && soaClear(soaMap, b.key)) gate = 'soaok';
+    return { ...b, soa: soaMap ? soaMap[b.key] || null : null, po_budget: Number(b.po_budget || 0), gate, status_label: gate === 'check' ? 'Check first' : GATE_LABEL[gate] || gate, today_lines: lines.length, today_rm: lines.reduce((s, t) => s + t.rm, 0) };
   });
 }
 
@@ -157,14 +161,25 @@ async function loadPage(db, { today, date, view = 'all', q = '' } = {}) {
   const pay = await loadPayments(db, today);
   const paidMap = paidByKey(pay);
   const { plan, plans, lines } = await latestPlan(db, date);
-  const todo = lines.map((l) => lineView({ ...l, plan_date: plan ? plan.plan_date : null }, paidMap));
+  // 5 Nov: supplier SOA status from the SOA folder in Drive (src/inventory/soa.js), summed per supplier key.
+  const soa = await require('./soa').loadAll(db, today);
+  const soaMap = {};
+  for (const x of soa) {
+    if (x.consignment || !x.file_id) continue;
+    const m = soaMap[x.key] || (soaMap[x.key] = { key: x.key, supplier: x.supplier, unpaid: 0, overdue: 0, overdue_n: 0, oldest_due: null, next_due: null, last_paid: null, file_id: x.file_id });
+    m.unpaid += x.unpaid; m.overdue += x.overdue; m.overdue_n += x.overdue_n;
+    if (x.oldest_due && (!m.oldest_due || x.oldest_due < m.oldest_due)) m.oldest_due = x.oldest_due;
+    if (x.next_due && (!m.next_due || x.next_due < m.next_due)) m.next_due = x.next_due;
+    if (x.last_paid && (!m.last_paid || x.last_paid > m.last_paid)) m.last_paid = x.last_paid;
+  }
+  const todo = lines.map((l) => lineView({ ...l, plan_date: plan ? plan.plan_date : null }, paidMap, soaMap));
   await attachOosMatches(db, todo);
-  const suppliers = supplierView(budget, todo, paidMap);
+  const suppliers = supplierView(budget, todo, paidMap, soaMap);
   const S = summary(todo, pay, budget);
   const v = VIEWS[view] ? view : 'all';
   const needle = String(q || '').trim().toLowerCase();
   const shown = todo.filter(VIEWS[v].test).filter((t) => !needle || [t.item, t.short_at, t.transfer_from, t.supplier, t.action].join(' ').toLowerCase().includes(needle));
-  return { month, budget, cash, pay, plan, plans, todo, shown, suppliers, S, view: v, q: String(q || ''), VIEWS, FLOOR };
+  return { month, budget, cash, pay, plan, plans, todo, shown, suppliers, soa, soaMap, S, view: v, q: String(q || ''), VIEWS, FLOOR };
 }
 
 const audit = (db, userId, action, key, value) => db.query(

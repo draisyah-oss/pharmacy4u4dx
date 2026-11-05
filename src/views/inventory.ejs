@@ -36,11 +36,38 @@
     <summary><h2>Can I order from this supplier?</h2></summary>
     <p class="muted small">A supplier waiting for payment shows as open once every payment line for it is marked Paid. PO budget for <%= new Date(d.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' }) %> as Dr Aisyah updated it on 3 Nov.</p>
     <div class="mo-scroll"><table class="mo-t" data-xfilter aria-label="Supplier ordering status">
-      <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c">PO budget (RM)</th><th>Falls due</th></tr></thead>
+      <thead><tr><th>Supplier</th><th>Can order?</th><th>When to order</th><th>Terms</th><th class="mo-c">Lines today</th><th class="mo-c">Today (RM)</th><th class="mo-c">PO budget (RM)</th><th>Falls due</th><th>SOA (Drive)</th></tr></thead>
       <tbody><% d.suppliers.forEach(function (b) { %><tr><th><%= b.supplier %></th><td><%- pill(b.gate, b.status_label) %></td><td><%= b.when_text %></td><td><%= b.terms %></td>
-        <td class="mo-c"><%= b.today_lines %></td><td class="mo-c"><%= n0(b.today_rm) || '0' %></td><td class="mo-c"><%= n0(b.po_budget) %></td><td><%= b.falls_due %></td></tr><% }) %></tbody>
+        <td class="mo-c"><%= b.today_lines %></td><td class="mo-c"><%= n0(b.today_rm) || '0' %></td><td class="mo-c"><%= n0(b.po_budget) %></td><td><%= b.falls_due %></td>
+        <td class="small" data-xf="<%= b.soa ? (b.soa.overdue > 0 ? 'Overdue' : 'Clear') : 'No SOA' %>"><% if (b.soa) { %><a href="https://drive.google.com/file/d/<%= b.soa.file_id %>/view" target="_blank" rel="noopener" class="<%= b.soa.overdue > 0 ? 'iv-soa-bad' : 'iv-soa-ok' %>"><%= b.soa.overdue > 0 ? rm(b.soa.overdue) + ' overdue' : 'Nothing overdue' %></a><br><span class="muted"><%= rm(b.soa.unpaid) %> unpaid<%= b.soa.last_paid ? ' · paid ' + dmy(b.soa.last_paid) : '' %></span><% } else { %><span class="muted">–</span><% } %></td></tr><% }) %></tbody>
     </table></div>
     <p class="muted small">Total PO budget: <b><%= rm(S.po_budget_total) %></b>. Buy in this order: out-of-stock A items, A items at reorder point, then B items under 2 weeks. C items only when a customer asks, or by transfer.</p>
+  </details>
+
+  <details class="oo-card inv-sec" id="soa" open>
+    <% const SOA = d.soa.filter(function (x) { return x.file_id; }); const totO = SOA.reduce(function (a, x) { return a + (x.consignment ? 0 : x.overdue); }, 0); const totU = SOA.reduce(function (a, x) { return a + (x.consignment ? 0 : x.unpaid); }, 0); %>
+    <summary><h2>Supplier SOA status <small class="muted">· from the SOA folder in Drive</small></h2></summary>
+    <p class="muted small">Read from each supplier’s SOA sheet (Payment status, date paid, PV). Unpaid = not marked PAID (rows with a PV number or a date paid count as paid); overdue = unpaid past its due date. A supplier marked “After SOA check” opens by itself once nothing is overdue. Update the SOA in Drive – this page follows (every 6 hours, or Check SOA now).</p>
+    <div class="iv-drive">
+      <p class="small"><% if (soaStatus.checked_at) { %>Last checked <%= ago(soaStatus.checked_at) %><%= soaStatus.folders ? ' · ' + soaStatus.folders + ' supplier folders' : '' %>.<% } else { %>Not read yet.<% } %>
+        <a href="https://drive.google.com/drive/folders/<%= soaStatus.folder_id || '' %>" target="_blank" rel="noopener">Open the SOA folder</a></p>
+      <% if (soaStatus.error) { %><p class="alert alert-bad small">Couldn’t read the SOA folder: <%= soaStatus.error %></p><% } %>
+      <% if (soaStatus.problems && soaStatus.problems.length) { %><p class="small muted">Not read: <%= soaStatus.problems.join(' · ') %></p><% } %>
+      <% if (soaStatus.configured) { %><form method="post" action="/inventory/soa"><%- hidden('soa') %><button class="button secondary small">Check SOA now</button></form><% } %>
+    </div>
+    <% if (!SOA.length) { %><p class="muted">No SOA read yet.</p><% } else { %>
+    <p><b class="iv-soa-bad"><%= rm(totO) %> overdue</b> · <%= rm(totU) %> unpaid across <%= SOA.filter(function (x) { return !x.consignment; }).length %> suppliers <span class="muted small">(consignment suppliers listed, not counted)</span></p>
+    <div class="mo-scroll"><table class="mo-t" data-xfilter aria-label="Supplier SOA status">
+      <thead><tr><th>Supplier</th><th class="mo-c">Overdue (RM)</th><th class="mo-c">Unpaid (RM)</th><th>Oldest overdue</th><th>Next due</th><th>Last paid</th><th class="mo-c">Invoices</th><th>SOA file</th></tr></thead>
+      <tbody><% SOA.forEach(function (x) { %><tr class="<%= x.overdue > 0 && !x.consignment ? 'iv-soa-row-bad' : '' %>">
+        <th><%= x.supplier %><%= x.consignment ? ' (consignment)' : '' %></th>
+        <td class="mo-c<%= x.overdue > 0 ? ' iv-soa-bad' : '' %>"><%= x.overdue ? n0(x.overdue) : '0' %><%= x.overdue_n ? ' (' + x.overdue_n + ')' : '' %></td>
+        <td class="mo-c"><%= n0(x.unpaid) || '0' %><%= x.unpaid_n ? ' (' + x.unpaid_n + ')' : '' %></td>
+        <td><%= x.oldest_due ? dmy(x.oldest_due) : '–' %></td><td><%= x.next_due ? dmy(x.next_due) : '–' %></td><td><%= x.last_paid ? dmy(x.last_paid) : '–' %></td>
+        <td class="mo-c"><%= x.invoices %></td>
+        <td class="small"><a href="https://drive.google.com/file/d/<%= x.file_id %>/view" target="_blank" rel="noopener"><%= x.file_name %></a><%= x.error ? ' · ' + x.error : '' %></td></tr><% }) %></tbody>
+    </table></div>
+    <% } %>
   </details>
 
   <details class="oo-card inv-sec" id="today" open>

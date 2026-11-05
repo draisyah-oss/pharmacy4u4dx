@@ -1382,3 +1382,8 @@ details.inv-sec .iv-tile { background: var(--page); }
 .iv-oos { display: inline-block; margin-top: 4px; font-size: 0.78rem; color: var(--brand-deep); background: var(--brand-tint); border-radius: 8px; padding: 2px 7px; }
 .iv-oos.is-done { color: var(--good); background: var(--good-tint); }
 .iv-oos a { color: inherit; }
+/* 5 Nov: supplier SOA status */
+.iv-pill.g-soaok { background: var(--good-tint); color: var(--good); }
+.iv-soa-bad { color: var(--short); font-weight: 700; }
+.iv-soa-ok { color: var(--good); }
+.iv-soa-row-bad th { color: var(--short); }

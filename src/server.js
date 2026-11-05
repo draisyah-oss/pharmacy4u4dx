@@ -51,7 +51,10 @@ async function main() {
   const inventorySheet = createPaymentsSheet(db, { now });
   const inventoryEvents = createInventoryEvents(db, { telegram, sheet: inventorySheet, now });
   const inventoryDrive = createInventoryDrive(db, { now, onPlanLoaded: (date) => inventoryEvents.planLoaded(date, require('./inventory/data').loadPage) });
-  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram });
+  // 5 Nov: supplier SOA status from the SOA folder in Drive, every 6 hours.
+  const inventorySoa = require('./inventory/soa').createSoaSync(db, { now });
+  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram, inventorySoa });
+  inventorySoa.schedule(360);
   inventoryDrive.schedule(30);
   inventorySheet.schedule(30);
   salesSheet.schedule(Number(process.env.SALES_SHEET_SYNC_MINUTES) || 10);
