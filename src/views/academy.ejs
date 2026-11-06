@@ -5,9 +5,16 @@
   <h1>Pharmacy4U Academy</h1>
   <p class="muted">5 minutes a day to learn, take a quick quiz, and practise at the counter.</p>
 
-  <div class="wk-card ac-xp">
-    <span class="muted">Your XP</span>
-    <strong class="ac-xp-num"><%= xp %></strong>
+  <div class="wk-card ac-hero">
+    <div class="ac-hero-top">
+      <span class="muted">Level <%= me.level.n %> · <%= me.level.name %></span>
+      <span class="ac-flame" title="Days in a row"><%= me.streak > 0 ? '🔥' : '○' %> <strong><%= me.streak %></strong></span>
+    </div>
+    <strong class="ac-xp-num"><%= xp %></strong><span class="muted"> XP</span>
+    <div class="ac-bar" role="progressbar" aria-valuenow="<%= me.level.pct %>" aria-valuemin="0" aria-valuemax="100"><span style="width:<%= me.level.pct %>%"></span></div>
+    <span class="muted"><% if (me.level.next) { %><%= me.level.toNext %> XP to <%= me.level.next.name %>.<% } else { %>Top level reached.<% } %>
+      Finish one step on 3 days in a row for +10 XP, 5 days for +20 XP. Days are counted on the calendar for now.</span>
+    <span><a href="/academy/ranks">Ranks and badges</a> · <label class="muted"><input type="checkbox" data-ac-anim-off> Animations off</label></span>
   </div>
 
   <% rows.forEach(function (r) { %>
@@ -28,5 +35,6 @@
   <% if (showManager) { %><p><a class="button secondary" href="/academy/manager">Manager page: who has finished</a></p><% } %>
   <p class="muted">Learning aid only. When unsure, ask the pharmacist.</p>
 </main>
+<script src="/js/academy.js"></script>
 </body>
 </html>

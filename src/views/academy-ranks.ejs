@@ -1,0 +1,52 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'academyranks' }) %>
+<main class="page narrow">
+  <h1>Ranks</h1>
+  <p class="muted"><%= branch.name %> · week from <%= weekFrom %> · resets every Monday</p>
+  <% if (pick) { %><p><% branches.forEach(function (b) { %><a class="button secondary" href="/academy/ranks?branch=<%= b.code %>"><%= b.code %></a> <% }) %></p><% } %>
+
+  <div class="wk-card">
+    <strong>Team goal this week</strong>
+    <div class="ac-bar"><span style="width:<%= Math.min(100, Math.round(teamXp / goal * 100)) %>%"></span></div>
+    <span class="muted"><%= teamXp %> of <%= goal %> XP as a team<%= teamXp >= goal ? ' · Goal reached! 🎉' : '' %> (target to be confirmed by Dr Aisyah)</span>
+  </div>
+
+  <div class="wk-card">
+    <strong>Top 3 this week (XP earned)</strong>
+    <% top.forEach(function (p, i) { %>
+      <div class="ac-rank<%= p.id === meId ? ' is-me' : '' %>">
+        <span class="ac-rank-n"><%= i + 1 %></span>
+        <span class="ac-rank-name"><%= p.id === meId ? 'You, ' : '' %><%= p.name %><%= p.level.n >= 2 ? ' ⭐' : '' %><%= p.level.n >= 3 ? ' · ' + p.level.name : '' %></span>
+        <strong><%= p.week %></strong>
+      </div>
+    <% }) %>
+    <% if (!top.length) { %><p class="muted">No XP yet this week. Be the first!</p><% } %>
+    <% if (meRow && meRow.rank > 3) { %>
+      <div class="ac-rank is-me"><span class="ac-rank-n"><%= meRow.rank %></span><span class="ac-rank-name">You, <%= meRow.name %></span><strong><%= meRow.week %></strong></div>
+    <% } %>
+    <p class="muted">Only XP is shown, never quiz scores. Shift rosters are not in the app yet, so the score is XP earned this week (module XP counts for up to 4 modules). XP is never given for sales.</p>
+  </div>
+
+  <div class="wk-card">
+    <strong>My level</strong>
+    <p>Level <%= me.level.n %> · <%= me.level.name %> · <%= me.xp %> XP · 🔥 <%= me.streak %> days</p>
+    <div class="ac-bar"><span style="width:<%= me.level.pct %>%"></span></div>
+    <span class="muted"><%= me.level.next ? me.level.toNext + ' XP to ' + me.level.next.name : 'Top level reached' %></span>
+  </div>
+
+  <div class="wk-card">
+    <strong>My badges</strong>
+    <% me.badges.forEach(function (b) { %>
+      <div class="ac-rank ac-badge<%= b.earned ? ' is-earned' : '' %>">
+        <span class="ac-badge-icon"><%= b.icon %></span>
+        <span class="ac-rank-name"><%= b.name %><br><span class="muted"><%= b.earned ? 'Earned' + (b.date ? ' ' + b.date : '') + ': ' + b.why : b.note %></span></span>
+        <span class="muted"><%= b.earned ? '✔' : b.progress %></span>
+      </div>
+    <% }) %>
+  </div>
+  <p><a class="button secondary" href="/academy">Back to Academy</a></p>
+</main>
+<script src="/js/academy.js"></script>
+</body>
+</html>

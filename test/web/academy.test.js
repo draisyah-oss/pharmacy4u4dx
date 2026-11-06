@@ -35,7 +35,7 @@ async function session(path, form) {
   const cookie = res.headers.get('set-cookie').split(';')[0];
   const get = (p) => fetch(base + p, { redirect: 'manual', headers: { cookie } });
   const post = async (p, body) => {
-    const page = await (await get('/academy')).text();
+    const page = await (await get('/academy?skip=1')).text();
     const csrf = page.match(/name="_csrf" value="([^"]+)"/)?.[1] || (await (await get('/daily')).text()).match(/name="_csrf" value="([^"]+)"/)[1];
     return fetch(base + p, { method: 'POST', redirect: 'manual', headers: { cookie, 'content-type': 'application/x-www-form-urlencoded' }, body: encode({ _csrf: csrf, ...body }) });
   };
@@ -96,7 +96,7 @@ test('staff flow: cards, failed quiz blocks a retry today, role-play, challenge,
   assert.equal((await s.post(`/academy/verify/${id}`, { k0: 'on', k1: 'on', k2: 'on' })).status, 403);
 
   // XP so far: 5.1 cards 5 + roleplay 10; 1.5 quiz 15 = 30. Challenge not verified yet.
-  html = await (await s.get('/academy')).text();
+  html = await (await s.get('/academy?skip=1')).text();
   assert.match(html, /ac-xp-num">30</);
 
   // The manager sees it waiting, and verifies it.
@@ -104,8 +104,31 @@ test('staff flow: cards, failed quiz blocks a retry today, role-play, challenge,
   html = await (await m.get('/academy/manager')).text();
   assert.match(html, /Glucose test strips/);
   assert.equal((await m.post(`/academy/verify/${id}`, { k0: 'on', k1: 'on', k2: 'on' })).status, 302);
-  html = await (await s.get('/academy')).text();
+  // Earned moments are shown once, one at a time, before the next page (never on a form post).
+  let r = await s.get('/academy');
+  assert.equal(r.status, 302);
+  assert.match(r.headers.get('location'), /^\/academy\/celebrate/);
+  html = await (await s.get('/academy/celebrate')).text();
+  assert.match(html, /VERIFIED/);
+  assert.match(html, /\+50 XP/);
+  for (let i = 0; i < 6; i += 1) {
+    const page = await (await s.get('/academy/celebrate')).text().catch(() => '');
+    if (!/ac-card/.test(page)) break;
+    await s.post('/academy/celebrate', { next: '/academy' });
+  }
+  r = await s.get('/academy');
+  assert.equal(r.status, 200);
+  html = await r.text();
   assert.match(html, /ac-xp-num">80</);
+
+  // Ranks: level, streak, weekly XP and badges.
+  assert.match(html, /Level 1 · Trainee/);
+  assert.match(html, /ac-flame/);
+  html = await (await s.get('/academy/ranks')).text();
+  assert.match(html, /XP earned this week/);
+  assert.match(html, /You, /);
+  assert.match(html, /Stock Hero/);
+  assert.match(html, /Team goal this week/);
 });
 
 test('a manager cannot verify another branch’s challenge, and a 2 of 3 check is not verified', async () => {

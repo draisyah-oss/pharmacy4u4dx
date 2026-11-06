@@ -11,7 +11,7 @@
     </p>
     <% result.results.forEach(function (x, i) { %>
       <section class="wk-card">
-        <h2><%= i + 1 %>. <%= x.right ? 'Syabas!' : 'Not quite.' %></h2>
+        <h2><%= i + 1 %>. <%= x.right ? 'Syabas! ✔' : 'Not quite.' %><% if (x.right) { %> <span class="ac-xp-pop">+3 XP</span><% } %></h2>
         <p><%= x.q.q %></p>
         <p><strong>Correct:</strong> <%= x.q.correct.map(function (n) { return x.q.options[n]; }).join('; ') %></p>
         <% if (!x.right) { %><p class="muted">You chose: <%= x.picked.length ? x.picked.map(function (n) { return x.q.options[n]; }).join('; ') : 'nothing' %></p><% } %>
@@ -38,5 +38,6 @@
   <% } %>
   <p class="muted">Learning aid only. When unsure, ask the pharmacist.</p>
 </main>
+<script src="/js/academy.js"></script>
 </body>
 </html>

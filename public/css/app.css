@@ -1485,3 +1485,25 @@ details.inv-sec .iv-tile { background: var(--page); }
 .ac-table-wrap { overflow-x: auto; }
 .ac-table { border-collapse: collapse; width: 100%; }
 .ac-table th, .ac-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ac-rank{display:flex;align-items:center;gap:12px;padding:8px 6px;border-top:1px solid var(--line,#e5e7eb)}
+.ac-rank.is-me{background:#e6f0fb;border-radius:10px}
+.ac-rank-n{width:22px;font-weight:700}
+.ac-rank-name{flex:1}
+.ac-hero{display:grid;gap:6px}
+.ac-hero-top{display:flex;justify-content:space-between;align-items:center}
+.ac-flame{font-size:1.2rem}
+.ac-bar{height:12px;border-radius:999px;background:#e5e9f0;overflow:hidden}
+.ac-bar span{display:block;height:100%;background:var(--brand,#004aad);border-radius:999px;transition:width 1s ease}
+.ac-badge{opacity:.55}.ac-badge.is-earned{opacity:1}
+.ac-badge-icon{font-size:1.6rem;width:32px;text-align:center}
+.ac-celebrate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(160deg,#003a88,#308eff)}
+.ac-card{background:#fff;border-radius:22px;padding:28px 22px;max-width:380px;width:100%;text-align:center;display:grid;gap:8px}
+.ac-big{font-size:4rem}
+.ac-xp-pop{display:inline-block;color:#0a7a3c;font-weight:700;animation:ac-float 1s ease-out}
+.ac-pop{animation:ac-pop .6s ease-out}
+.ac-flame-anim{animation:ac-flame 1s ease-in-out}
+@keyframes ac-float{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes ac-pop{from{transform:scale(.8);opacity:0}to{transform:none;opacity:1}}
+@keyframes ac-flame{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+.ac-no-anim *{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){.ac-xp-pop,.ac-pop,.ac-flame-anim{animation:none}.ac-bar span{transition:none}}

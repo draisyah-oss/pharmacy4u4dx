@@ -7,6 +7,8 @@ const { audit } = require('../admin/common');
 const { mentionsSalary, SALARY_MESSAGE } = require('../privacy');
 const { isRealDate } = require('../lib/dates');
 const data = require('./data');
+const ranks = require('./ranks');
+const { safePath } = require('../lib/safe-path');
 
 const learner = (u) => u.role === 'branch_staff' || u.role === 'branch_manager';
 const canManage = (u) => u.role === 'branch_manager' || u.role === 'admin';
@@ -30,6 +32,40 @@ function academyRoutes(db, { now = () => new Date() } = {}) {
     return { mod, s: prog.get(req.user.id, mod.id) };
   }
 
+  // ───────── Celebrations (level-up, badge, streak bonus, module complete, verified) ─────────
+  async function nextCelebration(userId) {
+    const aw = await ranks.awards(db, [userId]);
+    const sum = ranks.summary(aw, userId, today());
+    const shown = new Set((await db.query('SELECT kind, key FROM academy_seen WHERE user_id = $1', [userId])).rows.map((r) => `${r.kind}:${r.key}`));
+    const todo = ranks.celebrations(sum, aw).filter((c) => !shown.has(`${c.kind}:${c.key}`))
+      .sort((a, b) => ranks.ORDER[a.kind] - ranks.ORDER[b.kind]);
+    return { c: todo[0] || null, count: todo.length, sum };
+  }
+  // Show what was earned on the next page the person opens (never on a form post, so no step is blocked).
+  router.use('/academy', async (req, res, next) => {
+    try {
+      if (req.method !== 'GET' || req.path === '/celebrate' || !learner(req.user) || req.query.skip) return next();
+      const { c } = await nextCelebration(req.user.id);
+      return c ? res.redirect(`/academy/celebrate?next=${encodeURIComponent(req.originalUrl)}`) : next();
+    } catch (err) { return next(err); }
+  });
+  router.get('/academy/celebrate', async (req, res, next) => {
+    try {
+      const { c, count, sum } = await nextCelebration(req.user.id);
+      const nextUrl = safePath(req.query.next, '/academy');
+      if (!c) return res.redirect(nextUrl);
+      view(res, 'academy-celebrate', { title: 'Academy', c, count, sum, nextUrl });
+    } catch (err) { next(err); }
+  });
+  router.post('/academy/celebrate', async (req, res, next) => {
+    try {
+      const { c } = await nextCelebration(req.user.id);
+      if (c) await db.query('INSERT INTO academy_seen (user_id, kind, key) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [req.user.id, c.kind, c.key]);
+      const nextUrl = safePath(req.body.next, '/academy');
+      res.redirect(nextUrl);
+    } catch (err) { next(err); }
+  });
+
   // ───────── Home ─────────
   router.get('/academy', async (req, res, next) => {
     try {
@@ -37,7 +73,36 @@ function academyRoutes(db, { now = () => new Date() } = {}) {
       const prog = await data.progressFor(db, [req.user.id]);
       const rows = modules.map((m) => { const s = prog.get(req.user.id, m.id); return { m, s, done: data.isDone(s), xp: data.xpOf(s) }; });
       const xp = rows.reduce((n, r) => n + r.xp, 0);
-      view(res, 'academy', { title: 'Academy', rows, xp, showManager: canSeeManager(req.user) });
+      const aw = await ranks.awards(db, [req.user.id]);
+      const me = ranks.summary(aw, req.user.id, today());
+      view(res, 'academy', { title: 'Academy', rows, xp: me.xp, me, showManager: canSeeManager(req.user) });
+    } catch (err) { next(err); }
+  });
+
+  // ───────── Ranks ─────────
+  router.get('/academy/ranks', async (req, res, next) => {
+    try {
+      const all = (await db.query('SELECT id, code, name FROM branches WHERE active ORDER BY sort_order')).rows;
+      const own = req.user.branch_id != null;
+      const branch = (own ? all.find((b) => b.id === req.user.branch_id) : all.find((b) => b.code === req.query.branch)) || all[0];
+      const users = (await db.query(
+        `SELECT id, display_name FROM users WHERE active AND role IN ('branch_staff','branch_manager') AND branch_id = $1`,
+        [branch.id])).rows;
+      const ids = users.map((u) => u.id).concat([req.user.id]);
+      const aw = await ranks.awards(db, ids);
+      const t = today();
+      const board = users.map((u) => ({ id: u.id, name: u.display_name, ...ranks.summary(aw, u.id, t) }))
+        .sort((a, b) => b.week - a.week || b.xp - a.xp || a.name.localeCompare(b.name))
+        .map((p, i) => ({ ...p, rank: i + 1 }));
+      const meRow = board.find((p) => p.id === req.user.id);
+      const goalRow = (await db.query("SELECT value FROM app_settings WHERE key = 'academy_team_goal'")).rows[0];
+      const goal = Number(goalRow && goalRow.value) || 600;
+      const teamXp = board.reduce((n, p) => n + p.week, 0);
+      view(res, 'academy-ranks', {
+        title: 'Academy: ranks', navActive: 'academyranks', top: board.filter((p) => p.week > 0).slice(0, 3), meRow,
+        me: ranks.summary(aw, req.user.id, t), branch, branches: all, pick: !own, weekFrom: ranks.mondayOf(t), meId: req.user.id,
+        goal, teamXp, count: board.length,
+      });
     } catch (err) { next(err); }
   });
 

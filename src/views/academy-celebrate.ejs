@@ -1,0 +1,41 @@
+<%- include('partials/head') %>
+<main class="ac-celebrate">
+  <div class="ac-card ac-pop" role="dialog" aria-live="polite">
+    <% if (c.kind === 'level') { %>
+      <div class="ac-big">⭐</div>
+      <p class="muted">LEVEL UP</p>
+      <h1>Level <%= c.level.n %> · <%= c.level.name %></h1>
+      <p><%= c.level.cheer %></p>
+      <p class="muted"><%= sum.xp %> XP</p>
+    <% } else if (c.kind === 'badge') { %>
+      <div class="ac-big"><%= c.badge.icon %></div>
+      <p class="muted">BADGE EARNED</p>
+      <h1><%= c.badge.name %></h1>
+      <p><%= c.badge.why %></p>
+    <% } else if (c.kind === 'streak') { %>
+      <div class="ac-big ac-flame-anim">🔥</div>
+      <p class="muted">STREAK BONUS</p>
+      <h1>+<%= c.xp %> XP</h1>
+      <p><%= c.run %> days in a row. Keep the flame going!</p>
+    <% } else if (c.kind === 'module') { %>
+      <div class="ac-big">🎓</div>
+      <p class="muted">MODULE COMPLETE</p>
+      <h1><%= c.mod.title %></h1>
+      <p><%= c.mod.xp %> XP earned in this module.</p>
+    <% } else { %>
+      <div class="ac-big">✅</div>
+      <p class="muted">VERIFIED</p>
+      <h1>+<%= c.xp %> XP</h1>
+      <p>Your manager verified your Counter Challenge<%= c.title ? ': ' + c.title : '' %>.</p>
+    <% } %>
+    <form method="post" action="/academy/celebrate">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <input type="hidden" name="next" value="<%= nextUrl %>">
+      <button class="button" autofocus><%= count > 1 ? 'Continue' : 'Continue' %></button>
+    </form>
+    <p><a class="muted" href="<%= nextUrl %><%= nextUrl.includes('?') ? '&' : '?' %>skip=1">Skip for now</a></p>
+  </div>
+  <script src="/js/academy.js"></script>
+</main>
+</body>
+</html>
