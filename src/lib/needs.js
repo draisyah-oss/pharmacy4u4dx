@@ -215,6 +215,14 @@ async function buildNeeds(db, user, { at }) {
       if (n) add('today', n, 'Supplier payments to mark paid', 'approved and due', '/inventory#payments');
     }
   } catch (err) { console.error('Needs you – payments:', err.message); }
+  // 6 Nov: scanned supplier invoices – Finance (the payments team) enters them in Dynamod.
+  try {
+    if (user.payments) {
+      const n = await one(db, "SELECT count(*) AS n FROM invoices WHERE status = 'Received'", []);
+      const old = n ? await one(db, "SELECT count(*) AS n FROM invoices WHERE status = 'Received' AND created_at < $1::timestamptz - interval '3 days'", [at]) : 0;
+      if (n) add(old ? 'late' : 'todo', n, 'Invoices not yet entered in Dynamod', old ? `${old} scanned over 3 days ago` : 'scanned by HQ and the outlets', '/invoices?status=Received');
+    }
+  } catch (err) { console.error('Needs you – invoices:', err.message); }
   if (user.role === 'admin' && user.is_super && c.fresh) add('today', c.fresh, 'App change requests to approve', 'Mr 4DX makes them once you approve', '/requests');
   if (c.asked) add('today', c.asked, 'Mr 4DX asked about your app change', 'answer so it can be made', '/requests');
   items.sort((a, b) => LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]);

@@ -1,0 +1,57 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'invoices' }) %>
+<main class="page oo-page in-page">
+  <p><a href="/invoices">‹ Invoices</a></p>
+  <h1>Scan an invoice</h1>
+  <p class="muted">Take a photo of each page. The app makes one PDF and saves it in the Finance inbox for Mr Eve.</p>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <form method="post" action="/invoices" class="oo-card oo-form" data-invoice-form novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% if (duplicate) { %>
+      <div class="alert alert-bad" role="alert">
+        <p>This supplier and invoice no. is already saved:</p>
+        <ul><% duplicate.forEach(function (d) { %><li><a href="/invoices/<%= d.id %>/pdf"><%= d.file_name %></a> – <%= d.from_code %>, by <%= d.by_name || '–' %></li><% }) %></ul>
+        <label class="in-check"><input type="checkbox" name="confirm_dup" value="1"> It’s a different invoice / a second copy is needed – save it anyway</label>
+      </div>
+    <% } %>
+    <label class="oo-label">From
+      <select name="from" class="in-select">
+        <option value="HQ"<%= values.from === 'HQ' ? ' selected' : '' %>>HQ</option>
+        <% branches.forEach(function (b) { %><option value="<%= b.code %>"<%= values.from === b.code ? ' selected' : '' %>><%= b.code %> – <%= b.name %></option><% }) %>
+      </select>
+    </label>
+    <label class="oo-label">Supplier
+      <input name="supplier" list="in-suppliers" maxlength="120" autocomplete="off" value="<%= values.supplier || '' %>" placeholder="Pick from the list or type a new one" data-dup-check>
+      <datalist id="in-suppliers"><% suppliers.forEach(function (s) { %><option value="<%= s %>"><% }) %></datalist>
+    </label>
+    <label class="oo-label">Invoice no.
+      <input name="invoice_no" maxlength="60" autocomplete="off" value="<%= values.invoice_no || '' %>" data-dup-check>
+    </label>
+    <p class="alert alert-bad in-dup" data-dup-msg hidden></p>
+    <label class="oo-label">Invoice date
+      <input type="date" name="invoice_date" value="<%= values.invoice_date || '' %>">
+    </label>
+    <label class="oo-label">Amount (RM)
+      <input name="amount" inputmode="decimal" value="<%= values.amount || '' %>" placeholder="e.g. 1250.40">
+    </label>
+    <label class="oo-label">PO ref <span class="muted small">(optional)</span>
+      <input name="po_ref" maxlength="60" value="<%= values.po_ref || '' %>">
+    </label>
+    <fieldset class="in-pages">
+      <legend>Photos of the invoice <span class="muted small">(one per page, up to <%= maxPages %>)</span></legend>
+      <div class="in-thumbs" data-pages>
+        <% pages.forEach(function (p, i) { %>
+          <figure class="in-thumb"><img src="<%= p %>" alt="Page <%= i + 1 %>"><input type="hidden" name="page" value="<%= p %>"><figcaption>Page <%= i + 1 %> <button type="button" class="link-button" data-remove>Remove</button></figcaption></figure>
+        <% }) %>
+      </div>
+      <label class="ph-pick" for="in-file"><span aria-hidden="true">📷</span> Add a page</label>
+      <input type="file" id="in-file" accept="image/*" capture="environment" multiple class="ph-file" data-page-file>
+      <span class="muted small" data-page-msg aria-live="polite"></span>
+    </fieldset>
+    <button class="button wide" type="submit">Save invoice</button>
+  </form>
+</main>
+<script src="/js/invoice.js?v=1" defer></script>
+</body>
+</html>

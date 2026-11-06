@@ -56,7 +56,10 @@ async function main() {
   // 5 Nov: change requests – Mr 4DX's log marks finished ones Live; the queue sheet tells Mr 4DX what's approved.
   await require('./requests/mr4dx').applyMr4dx(db, { now }).catch((err) => console.error('Mr 4DX log:', err.message));
   const requestQueue = require('./requests/queue').createRequestQueue(db, { now });
-  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram, inventorySoa, requestQueue });
+  // 6 Nov: scanned invoices → the P4U Finance inbox on Google Drive (retried every 15 minutes).
+  const invoiceDrive = require('./invoices/drive').createInvoiceDrive(db, { now });
+  const app = createApp(db, { now, salesSheet, inventoryDrive, inventoryEvents, inventorySheet, telegram, inventorySoa, requestQueue, invoiceDrive });
+  invoiceDrive.schedule(15);
   requestQueue.schedule(30);
   inventorySoa.schedule(360);
   inventoryDrive.schedule(30);

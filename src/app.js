@@ -22,6 +22,7 @@ const { reviewRoutes } = require('./review/routes');
 const { monthRoutes } = require('./month/routes');
 const { academyRoutes } = require('./academy/routes');
 const { branchMeasureRoutes } = require('./branchmeasures/routes');
+const { invoiceRoutes } = require('./invoices/routes');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
@@ -29,7 +30,7 @@ const fmt = require('./scoreboard/format');
 const { companySalesForWeek } = require('./group/company');
 
 // options.now lets tests pretend it's a particular day.
-function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDrive = null, inventoryEvents = null, inventorySheet = null, telegram = null, inventorySoa = null, requestQueue = null } = {}) {
+function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDrive = null, inventoryEvents = null, inventorySheet = null, telegram = null, inventorySoa = null, requestQueue = null, invoiceDrive = null } = {}) {
   const app = express();
   app.set('view engine', 'ejs');
   app.set('views', path.join(__dirname, 'views'));
@@ -40,6 +41,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   // 27 Oct: out-of-stock forms can carry a photo (shrunk on the phone, sent as a data URL).
   app.use('/oos/products', express.urlencoded({ extended: true, limit: '15mb' })); // 3 Nov: Dynamod masterlist upload
   app.use('/oos', express.urlencoded({ extended: true, limit: '3mb' }));
+  app.use('/invoices', express.urlencoded({ extended: true, limit: '25mb' })); // 6 Nov: invoice scan – up to 10 page photos
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
@@ -185,6 +187,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   app.use(monthRoutes(db, { now, trackerStart }));
   app.use(academyRoutes(db, { now }));
   app.use(branchMeasureRoutes(db, { now }));
+  app.use(invoiceRoutes(db, { now, drive: invoiceDrive }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

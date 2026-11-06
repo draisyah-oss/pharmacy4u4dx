@@ -1507,3 +1507,18 @@ details.inv-sec .iv-tile { background: var(--page); }
 @keyframes ac-flame{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
 .ac-no-anim *{animation:none!important;transition:none!important}
 @media (prefers-reduced-motion:reduce){.ac-xp-pop,.ac-pop,.ac-flame-anim{animation:none}.ac-bar span{transition:none}}
+
+/* 6 Nov: invoice scan (/invoices) */
+.in-select { height: 50px; border: 2px solid var(--line); border-radius: var(--radius-input); padding: 0 10px; font: inherit; font-weight: 400; background: #fff; }
+.in-pages { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.in-pages legend { font-weight: 700; margin-bottom: 6px; }
+.in-thumbs { display: flex; flex-wrap: wrap; gap: 10px; }
+.in-thumb { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; }
+.in-thumb img { width: 96px; height: 128px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); }
+.in-check { display: flex; gap: 8px; align-items: flex-start; font-weight: 400; margin-top: 8px; }
+.in-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin: 0 0 12px; }
+.in-filters label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; font-weight: 700; }
+.in-filters select { min-height: 44px; border: 1px solid var(--line); border-radius: 8px; padding: 0 8px; font: inherit; font-weight: 400; background: #fff; max-width: 200px; }
+.in-inline { display: inline; }
+.in-table tr.is-done td { color: var(--ink-soft); }
+.in-warn { color: var(--short); font-weight: 700; font-size: 0.82rem; }

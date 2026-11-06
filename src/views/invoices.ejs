@@ -1,0 +1,60 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'invoices' }) %>
+<%
+  const money = function (n) { return 'RM ' + Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  const when = function (t) { return t ? new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''; };
+  const dmy = function (d) { return d ? new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short', year: 'numeric' }) : ''; };
+  const MON = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const mLabel = function (k) { const p = k.split('-'); return MON[+p[1] - 1] + ' ' + p[0]; };
+  const total = rows.reduce(function (s, r) { return s + r.amount; }, 0);
+  const keep = '<input type="hidden" name="_csrf" value="' + csrfToken + '">' + ['supplier', 'from', 'month', 'status'].map(function (k) {
+    return f[k] ? '<input type="hidden" name="f_' + k + '" value="' + String(f[k]).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '">' : ''; }).join('');
+%>
+<main class="page in-page">
+  <h1>Invoices</h1>
+  <p class="muted">Supplier invoices scanned at HQ and the outlets. Each one is a PDF in the P4U Finance inbox on Google Drive (a folder per month) for Mr Eve<%= finance ? '; tick it once it’s entered in Dynamod' : '' %>.</p>
+  <p><a class="button" href="/invoices/new">📷 Scan an invoice</a></p>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+  <% if (finance && notEntered) { %><p class="alert alert-info"><b><%= notEntered %></b> invoice<%= notEntered === 1 ? '' : 's' %> not yet entered in Dynamod. <a href="/invoices?status=Received">Show them</a></p><% } %>
+  <% if (finance && !driveOn) { %><p class="alert alert-info">Google Drive isn’t connected (no service account key) – invoices are kept in the app until it is.</p><% } %>
+
+  <form method="get" action="/invoices" class="in-filters" aria-label="Filter invoices">
+    <label>Supplier<select name="supplier"><option value="">All</option><% suppliers.forEach(function (s) { %><option<%= f.supplier === s ? ' selected' : '' %>><%= s %></option><% }) %></select></label>
+    <% if (seesAll) { %><label>From<select name="from"><option value="">All</option><option<%= f.from === 'HQ' ? ' selected' : '' %>>HQ</option><% branches.forEach(function (b) { %><option<%= f.from === b.code ? ' selected' : '' %>><%= b.code %></option><% }) %></select></label><% } %>
+    <label>Month<select name="month"><option value="">All</option><% months.forEach(function (m) { %><option value="<%= m %>"<%= f.month === m ? ' selected' : '' %>><%= mLabel(m) %></option><% }) %></select></label>
+    <label>Status<select name="status"><option value="">All</option><% statuses.forEach(function (s) { %><option<%= f.status === s ? ' selected' : '' %>><%= s %></option><% }) %></select></label>
+    <button class="button small-button" type="submit">Show</button>
+    <% if (f.supplier || f.from || f.month || f.status) { %><a href="/invoices">Clear</a><% } %>
+  </form>
+
+  <p class="small muted"><%= rows.length %> invoice<%= rows.length === 1 ? '' : 's' %> · <%= money(total) %></p>
+  <% if (!rows.length) { %><p class="muted">No invoices yet.</p><% } else { %>
+  <div class="table-wrap"><table class="admin-table in-table">
+    <thead><tr><th>Invoice date</th><th>From</th><th>Supplier</th><th>Invoice no.</th><th class="n">Amount</th><th>PO ref</th><th>File</th><th>Status</th><th>Scanned</th></tr></thead>
+    <tbody>
+    <% rows.forEach(function (r) { %>
+      <tr id="i<%= r.id %>"<%= r.status === 'Received' ? '' : ' class="is-done"' %>>
+        <td><%= dmy(r.invoice_date) %></td>
+        <td><%= r.from_code %></td>
+        <td><%= r.supplier %></td>
+        <td><%= r.invoice_no %><% if (r.same_count > 1) { %> <span class="in-warn" title="Same supplier and invoice no. saved <%= r.same_count %> times">⚠ <%= r.same_count %>×</span><% } %></td>
+        <td class="n"><%= money(r.amount) %></td>
+        <td><%= r.po_ref || '' %></td>
+        <td><a href="/invoices/<%= r.id %>/pdf" target="_blank" rel="noopener">PDF</a> <span class="small muted">· <%= r.pages %> page<%= r.pages === 1 ? '' : 's' %></span>
+          <span class="t-meta"><% if (r.drive_file_id) { %>✔ In Drive<% if (finance && r.drive_link) { %> · <a href="<%= r.drive_link %>" target="_blank" rel="noopener">open</a><% } %><% } else { %>⏳ Not in Drive yet<% if (finance) { %><% if (r.drive_error) { %> – <%= r.drive_error %><% } %>
+            <form method="post" action="/invoices/<%= r.id %>/drive" class="in-inline"><%- keep %><button class="link-button" type="submit">Try again</button></form><% } %><% } %></span></td>
+        <td><b><%= r.status %></b><% if (r.entered_at) { %><span class="t-meta"><%= when(r.entered_at) %> · <%= r.entered_by_name || '' %></span><% } %>
+          <% if (finance) { %><form method="post" action="/invoices/<%= r.id %>/entered" class="in-inline"><%- keep %>
+            <% if (r.status === 'Received') { %><button class="button small-button" type="submit">✔ Entered in Dynamod</button><% } else { %><input type="hidden" name="undo" value="1"><button class="link-button" type="submit">Undo</button><% } %>
+          </form><% } %></td>
+        <td><%= when(r.created_at) %><span class="t-meta"><%= r.by_name || '' %></span></td>
+      </tr>
+    <% }) %>
+    </tbody>
+  </table></div>
+  <% } %>
+</main>
+</body>
+</html>
