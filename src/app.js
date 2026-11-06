@@ -2,6 +2,7 @@
 
 const path = require('path');
 const express = require('express');
+const { safePath } = require('./lib/safe-path');
 const { loadUser, requireLogin, checkCsrf } = require('./auth/sessions');
 const { loginRoutes } = require('./auth/routes');
 const { dailyRoutes } = require('./daily/routes');
@@ -56,7 +57,20 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.locals.fmtDate = fmtDate;
+    // 6 Nov (CEO): Phone / Desktop view, chosen by each person on their device (cookie p4u_view).
+    const vm = /(?:^|;\s*)p4u_view=(desktop|phone)/.exec(req.headers.cookie || '');
+    res.locals.viewMode = vm ? vm[1] : 'auto';
+    res.locals.herePath = req.originalUrl;
     next();
+  });
+
+  // Switch view: /view?mode=desktop|phone|auto&back=/page – remembered on this device for a year.
+  app.get('/view', (req, res) => {
+    const mode = ['desktop', 'phone', 'auto'].includes(req.query.mode) ? req.query.mode : 'auto';
+    const secure = req.secure ? '; Secure' : '';
+    res.setHeader('Set-Cookie', mode === 'auto' ? `p4u_view=; Path=/; Max-Age=0; SameSite=Lax${secure}`
+      : `p4u_view=${mode}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`);
+    res.redirect(safePath(req.query.back, '/'));
   });
 
   let startCache;

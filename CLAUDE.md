@@ -376,6 +376,10 @@ This project is a small web app that replaces the Excel 4DX trackers. Branch sta
 - Statuses **Received → Entered in Dynamod**: Finance (payments team – app_settings payments_team, Azwani – and admin) ticks it (entered_at / entered_by saved, Undo; audited). List filters: supplier, from, month, status. Branch people see their own branch's invoices (and their own scans), HQ / HQ staff / admin all. Needs you (payments team): "Invoices not yet entered in Dynamod" (late when one was scanned over 3 days ago).
 - Later (not built): match each invoice to the supplier SOA.
 
+## Phone / Desktop view (6 Nov, CEO: "staff can choose whenever they want – some content needs desktop view")
+- A button in the top bar on every page: on a phone **🖥 Desktop view** (the page is laid out 1280px wide – the full desktop layout, pinch to zoom; for wide tables like the OOS inbox, inventory, month scoreboard); on a big screen **📱 Phone view** (a phone-width column, menu slides in from Menu). In either mode the button switches back ("📱 Phone view" / "🖥 Desktop view"). On phones ≤ 420px only the icon shows.
+- GET /view?mode=desktop|phone|auto&back=<page> (before login; back through safePath) sets cookie **p4u_view** (1 year, SameSite=Lax, Secure on https; auto clears it) – per person per device, no database. src/app.js sets res.locals.viewMode ('auto' | 'desktop' | 'phone') and herePath; partials/head.ejs writes the viewport meta (desktop → width=1280) and body class view-<mode>; partials/topbar.ejs the button; styles .view-btn, body.view-phone (app.css v=62). Test: test/web/viewmode.test.js.
+
 ## Name and menu (16 Oct)
 - The app's name is **Pharmacy4U 4DX** (top bar "4DX" tag, side menu, login, page titles, web-app manifest: short name "P4U 4DX").
 

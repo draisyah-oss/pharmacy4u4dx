@@ -1522,3 +1522,24 @@ details.inv-sec .iv-tile { background: var(--page); }
 .in-inline { display: inline; }
 .in-table tr.is-done td { color: var(--ink-soft); }
 .in-warn { color: var(--short); font-weight: 700; font-size: 0.82rem; }
+
+/* 6 Nov (CEO): Phone / Desktop view switch in the top bar – each person picks, remembered on the device.
+   Desktop view on a phone = the page is laid out 1280px wide (pinch to zoom); Phone view on a big screen
+   = a phone-width column with the menu sliding in. */
+.view-btn {
+  display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; padding: 5px 10px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.45); color: #fff; text-decoration: none; font-size: 0.85rem; font-weight: 700; white-space: nowrap;
+}
+.view-btn:hover { background: rgba(255,255,255,0.12); }
+.view-btn:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.view-btn-wide { display: none; }
+@media (min-width: 960px) { .view-btn-auto { display: none; } .view-btn-wide { display: inline-flex; } }
+@media (max-width: 420px) { .view-btn span { display: none; } .view-btn { padding: 5px 8px; font-size: 1rem; } }
+body.view-phone { max-width: 480px; margin-left: auto !important; margin-right: auto !important; padding-left: 0 !important;
+  box-shadow: 0 0 0 100vmax #d9e0ea; clip-path: inset(0 -100vmax); min-height: 100vh; }
+html body.view-phone .sidenav { transform: translateX(-102%) !important; visibility: hidden !important; }
+html body.view-phone .nav-check:checked ~ .sidenav { transform: none !important; visibility: visible !important; }
+html body.view-phone .nav-check:checked ~ .nav-backdrop { display: block !important; }
+html body.view-phone .menu-btn { display: inline-flex !important; }
+html body.view-phone .sn-close { display: inline-flex !important; }
+html body.view-phone .sn-collapse { display: none !important; }

@@ -1,6 +1,15 @@
 <header class="topbar">
   <% if (user) { %><label for="nav-open" class="menu-btn" role="button" tabindex="0" aria-controls="sidenav">☰ <span>Menu</span></label><% } %>
   <a class="brand" href="/"><img class="brand-mark" src="/img/mark-white.png" alt="" width="20" height="24"><img class="brand-word" src="/img/wordmark-white.png" alt="Pharmacy4U" width="121" height="14"><span class="brand-app">4DX</span><% if (typeof branch !== 'undefined' && branch) { %> <span class="brand-branch"><%= branch.name %></span><% } %></a>
+  <% const _vm2 = typeof viewMode !== 'undefined' ? viewMode : 'auto'; const _back = encodeURIComponent(typeof herePath !== 'undefined' ? herePath : '/'); %>
+  <% if (_vm2 === 'desktop') { %>
+    <a class="view-btn" href="/view?mode=auto&amp;back=<%= _back %>" title="Switch to phone view – fits your screen">📱 <span>Phone view</span></a>
+  <% } else if (_vm2 === 'phone') { %>
+    <a class="view-btn" href="/view?mode=auto&amp;back=<%= _back %>" title="Switch back to full desktop view">🖥 <span>Desktop view</span></a>
+  <% } else { %>
+    <a class="view-btn view-btn-auto" href="/view?mode=desktop&amp;back=<%= _back %>" title="Show the full desktop layout – for wide tables">🖥 <span>Desktop view</span></a>
+    <a class="view-btn view-btn-wide" href="/view?mode=phone&amp;back=<%= _back %>" title="Show the phone layout">📱 <span>Phone view</span></a>
+  <% } %>
   <% if (user) { %>
     <form method="post" action="/logout" class="who">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
