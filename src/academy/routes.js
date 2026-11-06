@@ -96,7 +96,8 @@ function academyRoutes(db, { now = () => new Date() } = {}) {
         .map((p, i) => ({ ...p, rank: i + 1 }));
       const meRow = board.find((p) => p.id === req.user.id);
       const goalRow = (await db.query("SELECT value FROM app_settings WHERE key = 'academy_team_goal'")).rows[0];
-      const goal = Number(goalRow && goalRow.value) || 600;
+      const perModule = Object.values(data.XP).reduce((n, x) => n + x, 0); // 80 XP = one full module
+      const goal = Number(goalRow && goalRow.value) || Math.max(1, board.length) * perModule;
       const teamXp = board.reduce((n, p) => n + p.week, 0);
       view(res, 'academy-ranks', {
         title: 'Academy: ranks', navActive: 'academyranks', top: board.filter((p) => p.week > 0).slice(0, 3), meRow,
