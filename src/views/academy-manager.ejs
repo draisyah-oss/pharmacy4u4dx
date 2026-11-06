@@ -1,0 +1,51 @@
+<%- include('partials/head', { bodyClass: 'board-body' }) %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'academymanager' }) %>
+<main class="page wk">
+  <p><a href="/academy">‹ Academy</a></p>
+  <header class="board-head">
+    <h1>Academy: who has finished</h1>
+    <p class="muted">A module is done after the cards, a quiz pass (80%) and at least one logged challenge.</p>
+  </header>
+  <% if (flash === 'yes') { %><p class="alert alert-good">Verified. XP added.</p><% } %>
+  <% if (flash === 'no') { %><p class="alert alert-info">Saved as not verified.</p><% } %>
+
+  <section class="wk-card">
+    <h2>Challenges waiting to be verified (<%= waiting.length %>)</h2>
+    <% if (!waiting.length) { %><p class="muted">Nothing waiting.</p><% } %>
+    <% waiting.forEach(function (w) { %>
+      <form method="post" action="/academy/verify/<%= w.c.id %>" class="ac-verify">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <strong><%= w.person.display_name %></strong> · <%= w.m.title %>
+        <div class="muted"><% w.m.challenge.fields.forEach(function (f) { %><%= f.label %>: <%= w.c.entry[f.key] %>; <% }) %></div>
+        <% if (canVerify) { %>
+          <p class="muted">Tick what you saw. Verified when <%= w.m.challenge.needed %> of <%= w.m.challenge.checks.length %> are ticked.</p>
+          <% w.m.challenge.checks.forEach(function (label, i) { %>
+            <label class="ac-opt"><input type="checkbox" name="k<%= i %>"> <span><%= label %></span></label>
+          <% }) %>
+          <button class="button" type="submit">Save verification</button>
+        <% } else { %><p class="muted">Only the branch manager can verify.</p><% } %>
+      </form>
+    <% }) %>
+  </section>
+
+  <% branches.forEach(function (b) { %>
+    <section class="wk-card">
+      <h2><%= b.name %></h2>
+      <div class="ac-table-wrap">
+      <table class="ac-table">
+        <thead><tr><th>Name</th><th>XP</th><th>Modules done</th>
+          <% modules.forEach(function (m) { %><th><%= m.code %> quiz</th><% }) %></tr></thead>
+        <tbody>
+          <% people.filter(function (p) { return p.branch_id === b.id; }).forEach(function (p) { %>
+            <tr><th><%= p.display_name %></th><td><%= p.xp %></td><td><%= p.done %> of <%= modules.length %></td>
+              <% p.per.forEach(function (x) { %><td><%= x.s.quizBest ? x.s.quizBest.score + '/' + x.s.quizBest.total : '–' %></td><% }) %></tr>
+          <% }) %>
+        </tbody>
+      </table>
+      </div>
+    </section>
+  <% }) %>
+</main>
+</body>
+</html>

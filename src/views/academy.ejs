@@ -1,0 +1,32 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'academy' }) %>
+<main class="page narrow">
+  <h1>Pharmacy4U Academy</h1>
+  <p class="muted">5 minutes a day to learn, take a quick quiz, and practise at the counter.</p>
+
+  <div class="wk-card ac-xp">
+    <span class="muted">Your XP</span>
+    <strong class="ac-xp-num"><%= xp %></strong>
+  </div>
+
+  <% rows.forEach(function (r) { %>
+    <a class="wk-card ac-mod" href="/academy/m/<%= encodeURIComponent(r.m.code) %>">
+      <span class="ac-mod-title"><%= r.m.title %></span>
+      <span class="muted"><%= r.m.track %> · about <%= r.m.minutes %> min · up to 80 XP</span>
+      <span class="ac-steps">
+        <span class="ac-step<%= r.s.cards ? ' is-done' : '' %>">Cards</span>
+        <span class="ac-step<%= r.s.quizPassed ? ' is-done' : '' %>">Quiz</span>
+        <span class="ac-step<%= r.s.roleplay ? ' is-done' : '' %>">Role-play</span>
+        <span class="ac-step<%= r.s.challenges.some(function (c) { return c.verified; }) ? ' is-done' : '' %>">Challenge</span>
+      </span>
+      <% if (r.done) { %><strong class="ac-done">Module done ✔</strong><% } %>
+    </a>
+  <% }) %>
+  <% if (!rows.length) { %><p class="muted">No modules are open yet.</p><% } %>
+
+  <% if (showManager) { %><p><a class="button secondary" href="/academy/manager">Manager page: who has finished</a></p><% } %>
+  <p class="muted">Learning aid only. When unsure, ask the pharmacist.</p>
+</main>
+</body>
+</html>

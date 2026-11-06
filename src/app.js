@@ -20,6 +20,7 @@ const { requestRoutes, agentApi } = require('./requests/routes');
 const { policyRoutes } = require('./policies/routes');
 const { reviewRoutes } = require('./review/routes');
 const { monthRoutes } = require('./month/routes');
+const { academyRoutes } = require('./academy/routes');
 const { branchMeasureRoutes } = require('./branchmeasures/routes');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
@@ -182,6 +183,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   app.use(policyRoutes());
   app.use(reviewRoutes(db, { now, trackerStart }));
   app.use(monthRoutes(db, { now, trackerStart }));
+  app.use(academyRoutes(db, { now }));
   app.use(branchMeasureRoutes(db, { now }));
   app.use(adminRoutes(db, { now, salesSheet }));
 

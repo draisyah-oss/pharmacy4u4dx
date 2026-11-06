@@ -1,0 +1,43 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'academy' }) %>
+<main class="page narrow">
+  <p><a href="/academy/m/<%= encodeURIComponent(mod.code) %>">‹ <%= mod.title %></a></p>
+  <h1>Role-play: <%= mod.title %></h1>
+  <p class="muted"><%= mod.roleplay.customer %></p>
+  <% if (result) { %>
+    <% result.forEach(function (x, i) { %>
+      <section class="wk-card">
+        <h2>Round <%= i + 1 %></h2>
+        <p><%= x.rd.prompt %></p>
+        <p><strong>You chose:</strong> <%= x.chosen.text %></p>
+        <% if (x.chosen.best) { %>
+          <p class="alert alert-good">Syabas! Best response.<% if (x.chosen.feedback) { %> <%= x.chosen.feedback %><% } %></p>
+        <% } else { %>
+          <p class="alert alert-bad">Not quite.<% if (x.chosen.feedback) { %> <%= x.chosen.feedback %><% } %></p>
+          <p><strong>Best response:</strong> <%= x.best.text %></p>
+        <% } %>
+      </section>
+    <% }) %>
+    <% if (mod.roleplay.ending) { %><p class="alert alert-info"><%= mod.roleplay.ending %></p><% } %>
+    <p class="muted">Role-play done. +10 XP the first time.</p>
+    <p><a class="button" href="/academy/m/<%= encodeURIComponent(mod.code) %>">Back to the module</a></p>
+  <% } else { %>
+    <% if (missing) { %><p class="alert alert-bad">Choose an answer for every round.</p><% } %>
+    <form method="post" action="/academy/m/<%= encodeURIComponent(mod.code) %>/roleplay">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <% mod.roleplay.rounds.forEach(function (rd, i) { %>
+        <fieldset class="wk-card ac-q">
+          <legend>Round <%= i + 1 %>: <%= rd.prompt %></legend>
+          <% rd.options.forEach(function (o, n) { %>
+            <label class="ac-opt"><input type="radio" name="r<%= i %>" value="<%= n %>"> <span><%= o.text %></span></label>
+          <% }) %>
+        </fieldset>
+      <% }) %>
+      <button class="button wide" type="submit">See feedback</button>
+    </form>
+  <% } %>
+  <p class="muted">Learning aid only. When unsure, ask the pharmacist.</p>
+</main>
+</body>
+</html>

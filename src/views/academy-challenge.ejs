@@ -1,0 +1,46 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'academy' }) %>
+<main class="page narrow">
+  <p><a href="/academy/m/<%= encodeURIComponent(mod.code) %>">‹ <%= mod.title %></a></p>
+  <h1>Counter Challenge</h1>
+  <p><%= mod.challenge.intro %></p>
+  <% if (saved) { %><p class="alert alert-good">Logged. Your manager will verify it for +50 XP.</p><% } %>
+  <% if (Object.keys(errors).length) { %><p class="alert alert-bad">Please fix the boxes marked below.</p><% } %>
+  <form method="post" action="/academy/m/<%= encodeURIComponent(mod.code) %>/challenge" class="wk-card" novalidate>
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <% mod.challenge.fields.forEach(function (f) {
+         const v = typed[f.key] !== undefined ? typed[f.key] : (f.type === 'date' ? today : ''); %>
+      <label class="ac-field">
+        <span><%= f.label %></span>
+        <% if (f.type === 'select') { %>
+          <select name="<%= f.key %>">
+            <option value="">Choose…</option>
+            <% f.options.forEach(function (o) { %><option value="<%= o %>"<%= v === o ? ' selected' : '' %>><%= o %></option><% }) %>
+          </select>
+        <% } else if (f.type === 'number') { %>
+          <input type="text" inputmode="numeric" name="<%= f.key %>" value="<%= v %>">
+        <% } else if (f.type === 'date') { %>
+          <input type="date" name="<%= f.key %>" value="<%= v %>" max="<%= today %>">
+        <% } else { %>
+          <input type="text" name="<%= f.key %>" value="<%= v %>" maxlength="80">
+        <% } %>
+        <% if (errors[f.key]) { %><span class="s-off_track"><%= errors[f.key] %></span><% } %>
+      </label>
+    <% }) %>
+    <button class="button wide" type="submit">Log it</button>
+  </form>
+
+  <% if (s.challenges.length) { %>
+    <h2>Your log</h2>
+    <% s.challenges.slice().reverse().forEach(function (c) { %>
+      <div class="wk-card">
+        <% mod.challenge.fields.forEach(function (f) { %><div><span class="muted"><%= f.label %>:</span> <%= c.entry[f.key] %></div><% }) %>
+        <strong><%= c.verified === true ? 'Verified ✔' : c.verified === false ? 'Not verified' : 'Waiting for your manager' %></strong>
+      </div>
+    <% }) %>
+  <% } %>
+  <p class="muted">Learning aid only. When unsure, ask the pharmacist.</p>
+</main>
+</body>
+</html>
