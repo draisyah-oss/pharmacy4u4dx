@@ -9,10 +9,12 @@
     "test": "node --test test/*.test.js test/*/*.test.js",
     "users": "node scripts/list-users.js",
     "set-password": "node scripts/set-password.js",
-    "db:reset-local": "node scripts/reset-local-db.js"
+    "db:reset-local": "node scripts/reset-local-db.js",
+    "import:meetings": "node scripts/import-meetings.js"
   },
   "license": "UNLICENSED",
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.6.0",
     "@electric-sql/pglite": "^0.5.9",
     "bcryptjs": "^3.0.3",
     "dotenv": "^18.0.7",
