@@ -1,0 +1,22 @@
+{
+  "council": {
+    "people": [{"id": "aisyah", "data": {"name": "Dr Aisyah"}}, {"id": "alia", "data": {"name": "Alia Example"}}, {"id": "hannin", "data": {"name": "Hannin Example"}}, {"id": "ghost", "data": {"name": "Nobody Here"}}],
+    "actions": [
+      {"id": "a01", "data": {"title": "Example supplier payment plan", "owner": "alia", "due": "2026-11-10", "area": "fin", "branch": "HQ", "status": "bl", "priority": "High", "needsCEO": true, "raisedCount": 4, "firstRaised": "2026-08-10", "lastUpdate": "2026-09-28T03:00:00Z", "source": "Example deck", "updates": [{"at": "2026-09-28T03:00:00Z", "by": "alia", "text": "Example update"}]}},
+      {"id": "a02", "data": {"title": "Example roster", "owner": "hannin", "due": "2026-11-20", "area": "hr", "branch": "AMP", "status": "ip"}},
+      {"id": "a03", "data": {"title": "Owner unknown", "owner": "ghost", "area": "nonsense", "branch": "XX", "status": "zz"}},
+      {"id": "a04", "data": {"title": "Kira gaji bulan ini", "owner": "alia"}}
+    ],
+    "decisions": [{"id": "d01", "data": {"text": "Example decision", "context": "Example context", "date": "2026-06-15", "area": "fin", "branch": "ALL", "decidedBy": "aisyah"}}],
+    "meetings": [
+      {"id": "x1", "data": {"date": "2026-11-09", "time": "11:00", "title": "Management Council", "status": "planned", "attendees": []}},
+      {"id": "m-2026-11-09", "data": {"date": "2026-11-09", "time": "11:00", "title": "Management Council", "status": "planned", "attendees": ["aisyah", "alia", "hannin"]}}
+    ],
+    "agenda": [], "updates": []
+  },
+  "bm": {
+    "people": [{"id": "hafizah", "data": {"name": "Hafizah"}}],
+    "actions": [{"id": "b01", "data": {"title": "Example signboard", "owner": "hafizah", "due": "2026-10-15", "area": "sales", "branch": "WM", "status": "ns"}}],
+    "decisions": [], "meetings": []
+  }
+}

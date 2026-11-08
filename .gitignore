@@ -3,3 +3,6 @@ data/
 .env
 .DS_Store
 google-service-account*.json
+
+# 8 Nov: Meetings prototype exports hold business data – never commit them (public repo).
+meetings-export*.json
