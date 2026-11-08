@@ -116,3 +116,19 @@ test('5 Nov (CEO): Ampang activities – PWP 3, In-house 2, Beecrobes 2, Loose 2
     WHERE b.code = 'Ampang' AND f.active AND f.key IN ('pwp','p1','p2','p5','p6','p7','p8','p9') ORDER BY f.sort_order`)).rows.map((r) => r.key);
   assert.deepEqual(boxes, ['pwp', 'p8', 'p5', 'p6', 'p7', 'p9']);
 });
+
+test('8 Nov (CEO): Hafiz – BN lead measures off, one box for BN pieces sold (no target); RM boxes kept', async () => {
+  const q = async (sql) => (await db.query(sql)).rows;
+  const ms = await q(`SELECT m.code, m.active, m.label, m.owner_name FROM measures m JOIN branches b ON b.id = m.branch_id
+    WHERE b.code = 'Bangi' AND m.code IN ('H0','H2','H3','H4','H5','H6','H7') ORDER BY m.code`);
+  const act = Object.fromEntries(ms.map((m) => [m.code, m.active]));
+  assert.deepEqual(act, { H0: true, H2: true, H3: true, H4: false, H5: false, H6: true, H7: true });
+  const h7 = ms.find((m) => m.code === 'H7');
+  assert.equal(h7.label, 'BN products sold (pieces)'); assert.equal(h7.owner_name, 'Hafiz');
+  const t = await q(`SELECT t.target FROM measure_targets t JOIN measures m ON m.id = t.measure_id JOIN branches b ON b.id = m.branch_id
+    WHERE b.code = 'Bangi' AND m.code = 'H7' AND t.month = '2026-11'`);
+  assert.ok(!t.length || t[0].target == null, 'track only');
+  const f = await q(`SELECT f.key, f.active, p.name FROM daily_fields f JOIN branches b ON b.id = f.branch_id LEFT JOIN people p ON p.id = f.person_id
+    WHERE b.code = 'Bangi' AND f.key IN ('biop','bnchk','bnpcs')`);
+  assert.deepEqual(Object.fromEntries(f.map((r) => [r.key, [r.active, r.name]])), { biop: [false, 'Hafiz'], bnchk: [false, 'Hafiz'], bnpcs: [true, 'Hafiz'] });
+});

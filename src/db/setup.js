@@ -43,6 +43,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await brNov3Once(db, readSeed(), log);
     // 5 Nov: change request #2 (CEO approved).
     await ampangNov5Once(db, log);
+    await hafizNov8Once(db, log);
     await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
     // 3 Nov: zakat claims tracker for BR, WM, JH (replaces the old zakat lead measures).
     await require('../zakat/data').setupOnce(db, log);
@@ -62,6 +63,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   await addAdminLoginsOnce(db, seed, log);
   await require('../zakat/data').setupOnce(db, log);
   await ampangNov5Once(db, log);
+  await hafizNov8Once(db, log);
   await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
   log(
     `Loaded seed.json: ${summary.branches} branches, ${summary.people} people, ` +
@@ -576,6 +578,42 @@ async function ampangNov5Once(db, log) {
   });
 }
 
+// 8 Nov (CEO): Hafiz (Bangi) – BN lead measures off (H4 branches checked for BN stock, H5 Biopropolis units –
+// boxes bnchk, biop; history kept); instead one box "BN products sold (pieces)" (bnpcs, measure H7, track only).
+// His BN RM boxes (counter, other branches, e-commerce, B2B) stay. Self-contained, runs on old and fresh databases.
+const HAFIZ_NOV8 = {
+  branches: [{ code: 'Bangi', daily_fields: [
+    { key: 'bnpcs', label: 'BN products sold (pieces)', owner: 'Hafiz', type: 'count' },
+  ], measures: [
+    { id: 'H7', owner: 'Hafiz', label: 'BN products sold (pieces)', kind: 'Routine', unit: 'pieces', target_per: 'day', calc: 'sum',
+      targets: { '2026-10': null, '2026-11': null, '2026-12': null }, numerator_field: 'bnpcs', denominator_field: null,
+      note: '8 Nov (CEO): replaces Hafiz\'s BN lead measures – just the number of BN pieces sold, no target.' },
+  ] }],
+};
+async function hafizNov8Once(db, log) {
+  const flag = 'bangi_hafiz_nov8_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const b = (await tx.query("SELECT id FROM branches WHERE code = 'Bangi'")).rows[0];
+    if (b) {
+      const old = (await tx.query("SELECT sort_order FROM daily_fields WHERE branch_id = $1 AND key = 'biop'", [b.id])).rows[0];
+      const oldM = (await tx.query("SELECT sort_order FROM measures WHERE branch_id = $1 AND code = 'H5'", [b.id])).rows[0];
+      await tx.query('UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = ANY($2)', [b.id, ['biop', 'bnchk']]);
+      await tx.query('UPDATE measures SET active = false WHERE branch_id = $1 AND code = ANY($2)', [b.id, ['H4', 'H5']]);
+      await addSeedItems(tx, HAFIZ_NOV8, 'Bangi', { fields: ['bnpcs'], measures: ['H7'] });
+      // The new box goes where his main-focus box was (first on his card).
+      if (old) await tx.query("UPDATE daily_fields SET sort_order = $2 WHERE branch_id = $1 AND key = 'bnpcs'", [b.id, old.sort_order]);
+      if (oldM) await tx.query("UPDATE measures SET sort_order = $2 WHERE branch_id = $1 AND code = 'H7'", [b.id, oldM.sort_order]);
+      // Owner = Hafiz's person record, like his other boxes.
+      await tx.query(`UPDATE measures m SET person_id = o.person_id FROM measures o
+        WHERE m.branch_id = $1 AND m.code = 'H7' AND o.branch_id = $1 AND o.code = 'H0'`, [b.id]);
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Bangi Hafiz (CEO, 8 Nov): BN lead measures H4 + H5 off; new box BN products sold (pieces), no target', NULL)");
+      log('Bangi Hafiz 8 Nov change applied.');
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+}
+
 // Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
 async function retireBranchItemsOnce(db, code, { fields = [], measures = [] }, flag, note, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -895,4 +933,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { ampangNov5Once, brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { ampangNov5Once, hafizNov8Once, brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
