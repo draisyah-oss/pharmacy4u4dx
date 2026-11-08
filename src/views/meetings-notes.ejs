@@ -1,0 +1,36 @@
+<%- include('partials/mt-top', { navKey: 'meetingsnotes' }) %>
+<section class="oo-card">
+  <h1>My notes</h1>
+  <p class="muted">Your private inbox – <b>only you can read these</b>. Put one on a meeting’s agenda when you’re ready; take it back if you change your mind.</p>
+  <form method="post" action="/meetings/notes" class="mt-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <label class="oo-label">Note<textarea name="text" rows="3" maxlength="1000" required></textarea></label>
+    <div class="mt-grid">
+      <label class="oo-label">What you need<select name="need"><option value="decision">Decision</option><option value="update">Update</option><option value="discuss" selected>Discuss</option></select></label>
+      <label class="oo-label">For a meeting (optional)<select name="meeting"><option value="">–</option><% meetings.forEach(function (m) { %><option value="<%= m.id %>"><%= m.group_name %> · <%= fmtDate(m.held_on) %></option><% }) %></select></label>
+    </div>
+    <button class="button wide" type="submit">Save note</button>
+  </form>
+</section>
+<% if (!notes.length) { %><p class="muted">No notes yet.</p><% } %>
+<div class="mt-list">
+  <% notes.forEach(function (n) { const onAgenda = n.agenda_item_id && !n.item_removed; %>
+    <article class="mt-note<%= n.done_at ? ' is-done' : '' %>">
+      <p><%= n.text %></p>
+      <div class="mt-meta"><span class="mt-chip"><%= A.NEEDS[n.need] %></span><% if (n.meeting_id) { %><span><%= n.group_name %> · <%= fmtDate(n.held_on) %></span><% } %>
+        <% if (onAgenda) { %><span class="mt-chip info">On the agenda<%= n.item_outcome ? ' · ' + n.item_outcome : '' %></span><% } %><% if (n.done_at) { %><span class="mt-chip ok">Done</span><% } %></div>
+      <form method="post" action="/meetings/notes/<%= n.id %>" class="mt-row">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <% if (!onAgenda && !n.done_at && meetings.length) { %>
+          <label class="sr-only" for="nm-<%= n.id %>">Meeting</label>
+          <select id="nm-<%= n.id %>" name="meeting"><% meetings.forEach(function (m) { %><option value="<%= m.id %>"<%= n.meeting_id === m.id ? ' selected' : '' %>><%= m.group_name %> · <%= fmtDate(m.held_on) %></option><% }) %></select>
+          <button class="button small" name="action" value="agenda" type="submit">Add to agenda</button>
+        <% } %>
+        <% if (onAgenda && !n.item_outcome) { %><button class="button small secondary" name="action" value="takeback" type="submit">Take back</button><% } %>
+        <% if (!n.done_at) { %><button class="link-button" name="action" value="done" type="submit">Mark done</button><% } else { %><button class="link-button" name="action" value="undone" type="submit">Not done</button><% } %>
+        <button class="link-button mt-danger" name="action" value="delete" type="submit">Delete</button>
+      </form>
+    </article>
+  <% }) %>
+</div>
+<%- include('partials/mt-end') %>

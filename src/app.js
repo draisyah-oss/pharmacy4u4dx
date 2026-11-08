@@ -24,6 +24,8 @@ const { monthRoutes } = require('./month/routes');
 const { academyRoutes } = require('./academy/routes');
 const { branchMeasureRoutes } = require('./branchmeasures/routes');
 const { invoiceRoutes } = require('./invoices/routes');
+const { meetingRoutes } = require('./meetings/routes');
+const meetingAccess = require('./meetings/access');
 const { buildNeeds } = require('./lib/needs');
 const oosData = require('./oos/data');
 const calc = require('./calc');
@@ -43,6 +45,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   app.use('/oos/products', express.urlencoded({ extended: true, limit: '15mb' })); // 3 Nov: Dynamod masterlist upload
   app.use('/oos', express.urlencoded({ extended: true, limit: '3mb' }));
   app.use('/invoices', express.urlencoded({ extended: true, limit: '25mb' })); // 6 Nov: invoice scan – up to 10 page photos
+  app.use('/meetings/m', express.urlencoded({ extended: true, limit: '4mb' })); // 8 Nov: minutes – long notes + an optional photo
   app.use(express.urlencoded({ extended: true, limit: '100kb' }));
   app.use((req, res, next) => {
     res.setHeader('X-Frame-Options', 'DENY');
@@ -128,6 +131,10 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
         res.locals.stepMenu = await require('./hq/team').stepMenu(db, req.user);
       }
     } catch (err) { console.error('Menu steps:', err.message); }
+    // 8 Nov: Meetings section in the side menu – people in at least one meeting group, and the CEO.
+    try {
+      if (req.method === 'GET') res.locals.meetingsMenu = await meetingAccess.hasMeetings(db, req.user);
+    } catch (err) { console.error('Meetings menu:', err.message); }
     try {
       if (req.method === 'GET' && oosData.canAnswer(req.user)) {
         res.locals.oosCount = await oosData.countToAnswer(db);
@@ -202,6 +209,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   app.use(academyRoutes(db, { now }));
   app.use(branchMeasureRoutes(db, { now }));
   app.use(invoiceRoutes(db, { now, drive: invoiceDrive }));
+  app.use(meetingRoutes(db, { now }));
   app.use(adminRoutes(db, { now, salesSheet }));
 
   // Setup status page (admin).

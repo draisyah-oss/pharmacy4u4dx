@@ -1,0 +1,23 @@
+<%# Action filters (GET form). Input: f, action, groups (optional), members (optional), hiddenTab %>
+<form method="get" action="<%= action %>" class="mt-filters">
+  <% if (typeof hiddenTab !== 'undefined' && hiddenTab) { %><input type="hidden" name="tab" value="<%= hiddenTab %>"><% } %>
+  <label class="sr-only" for="fq">Search</label><input id="fq" type="search" name="q" value="<%= f.q %>" placeholder="Search actions and updates">
+  <label class="sr-only" for="fs">Status</label>
+  <select id="fs" name="status">
+    <% [['open', 'All open'], ['overdue', 'Overdue'], ['ceo', 'Needs CEO decision'], ['bl', 'Blocked'], ['stale', 'No update 7+ days'], ['soon', 'Due next 7 days'], ['ns', 'Not started'], ['ip', 'In progress'], ['dn', 'Done'], ['all', 'Everything']].forEach(function (o) { %>
+      <option value="<%= o[0] %>"<%= f.status === o[0] ? ' selected' : '' %>><%= o[1] %></option><% }) %>
+  </select>
+  <% if (typeof groups !== 'undefined' && groups) { %>
+  <label class="sr-only" for="fg">Group</label>
+  <select id="fg" name="group"><option value="">All groups</option><% groups.forEach(function (g) { %><option value="<%= g.code %>"<%= f.group === g.code ? ' selected' : '' %>><%= g.name %></option><% }) %></select>
+  <% } %>
+  <label class="sr-only" for="fa">Area</label>
+  <select id="fa" name="area"><option value="">All areas</option><% Object.entries(A.AREAS).forEach(function (o) { %><option value="<%= o[0] %>"<%= f.area === o[0] ? ' selected' : '' %>><%= o[1] %></option><% }) %></select>
+  <label class="sr-only" for="fb">Branch</label>
+  <select id="fb" name="branch"><option value="">All branches</option><% Object.entries(A.BRANCHES).forEach(function (o) { %><option value="<%= o[0] %>"<%= f.branch === o[0] ? ' selected' : '' %>><%= o[1] %></option><% }) %></select>
+  <% if (typeof members !== 'undefined' && members) { %>
+  <label class="sr-only" for="fo">Owner</label>
+  <select id="fo" name="owner"><option value="">Everyone</option><% members.forEach(function (m) { %><option value="<%= m.id %>"<%= f.owner === String(m.id) ? ' selected' : '' %>><%= m.name %></option><% }) %></select>
+  <% } %>
+  <button class="button small" type="submit">Filter</button>
+</form>

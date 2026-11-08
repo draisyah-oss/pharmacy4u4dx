@@ -1,0 +1,37 @@
+<%- include('partials/mt-top', { navKey: 'meetings' }) %>
+<section class="oo-card">
+  <h1>Meetings</h1>
+  <p class="muted">Agenda, updates, minutes, actions and decisions for every meeting you are in. <%= ceo ? 'You see every group.' : 'You only see your own groups.' %></p>
+  <% if (mine.length) { const late = mine.filter(function (a) { return a.overdue || a.stale; }).length; %>
+    <p><a class="button small" href="/meetings/mine">My actions: <%= mine.length %> open<%= late ? ' · ' + late + ' need your update' : '' %></a></p>
+  <% } %>
+</section>
+
+<section aria-labelledby="up-h">
+  <h2 id="up-h">Coming up</h2>
+  <% if (!upcoming.length) { %><p class="muted">No meetings planned. Open a group to create one.</p><% } %>
+  <div class="mt-list">
+    <% upcoming.forEach(function (m) { %><%- include('partials/mt-meeting', { m: m }) %><% }) %>
+  </div>
+</section>
+
+<section aria-labelledby="gr-h">
+  <h2 id="gr-h">Your groups</h2>
+  <div class="mt-groups">
+    <% groups.forEach(function (g) { const c = g.counts; %>
+      <a class="mt-group" href="/meetings/g/<%= g.code %>">
+        <b><%= g.name %></b>
+        <span class="muted small"><%= g.kind === 'one_to_one' ? 'CEO 1:1' : g.members + ' members' %><%= g.default_day ? ' · ' + g.default_day + (g.default_time ? ' ' + g.default_time : '') : '' %></span>
+        <span class="mt-meta"><span><%= c.open %> open</span><% if (c.overdue) { %><span class="mt-chip crit"><%= c.overdue %> overdue</span><% } %><% if (c.ceo) { %><span class="mt-chip info"><%= c.ceo %> need CEO</span><% } %><% if (c.blocked) { %><span class="mt-chip warn"><%= c.blocked %> blocked</span><% } %></span>
+      </a>
+    <% }) %>
+  </div>
+</section>
+
+<% if (recent.length) { %>
+<section aria-labelledby="re-h">
+  <h2 id="re-h">Recent</h2>
+  <div class="mt-list"><% recent.forEach(function (m) { %><%- include('partials/mt-meeting', { m: m }) %><% }) %></div>
+</section>
+<% } %>
+<%- include('partials/mt-end') %>

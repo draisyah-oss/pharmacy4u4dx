@@ -1,0 +1,101 @@
+<%- include('partials/mt-top', { navKey: 'meetings' }) %>
+<% const gq = '/meetings/g/' + g.code; const today2 = today; %>
+<section class="oo-card">
+  <h1><%= g.name %></h1>
+  <p class="muted small"><%= g.kind === 'one_to_one' ? 'CEO 1:1 · only you and Dr Aisyah see this' : 'Team meeting' %><%= g.default_day ? ' · ' + g.default_day + (g.default_time ? ' ' + g.default_time : '') : '' %>
+    · <%= members.map(function (m) { return m.name; }).join(', ') %></p>
+  <% if (next) { %><p><a class="button small" href="/meetings/m/<%= next.id %>">Next meeting: <%= fmtDate(next.held_on) %><%= next.start_time ? ' ' + next.start_time : '' %> →</a></p><% } %>
+  <nav class="mt-subtabs" aria-label="<%= g.name %>">
+    <% [['overview', 'Overview'], ['actions', 'Actions'], ['meetings', 'Meetings'], ['decisions', 'Decisions']].forEach(function (t) { %>
+      <a href="<%= gq %>?tab=<%= t[0] %>" class="mt-subtab<%= tab === t[0] ? ' is-current' : '' %>"<%- tab === t[0] ? ' aria-current="page"' : '' %>><%= t[1] %></a>
+    <% }) %>
+  </nav>
+</section>
+
+<% if (tab === 'overview') { %>
+  <div class="mt-stats">
+    <a class="mt-stat crit" href="<%= gq %>?tab=actions&status=overdue"><b><%= counts.overdue %></b><span>Overdue</span></a>
+    <a class="mt-stat info" href="<%= gq %>?tab=actions&status=ceo"><b><%= counts.ceo %></b><span>Waiting for CEO decision</span></a>
+    <a class="mt-stat warn" href="<%= gq %>?tab=actions&status=bl"><b><%= counts.blocked %></b><span>Blocked</span></a>
+    <a class="mt-stat" href="<%= gq %>?tab=actions&status=stale"><b><%= counts.stale %></b><span>No update 7+ days</span></a>
+    <a class="mt-stat" href="<%= gq %>?tab=actions&status=soon"><b><%= counts.soon %></b><span>Due next 7 days</span></a>
+  </div>
+  <section class="oo-card" id="items" aria-labelledby="it-h">
+    <h2 id="it-h">Items to discuss at the next meeting (<%= items.length %>)</h2>
+    <%- include('partials/mt-items', { items: items, removable: true }) %>
+    <%- include('partials/mt-item-form', { action: gq + '/items' }) %>
+  </section>
+  <section aria-labelledby="fo-h">
+    <h2 id="fo-h">Escalations &amp; stuck items</h2>
+    <p class="muted small">Needs a CEO decision, 14+ days overdue, or raised 3+ times.</p>
+    <% if (!focus.length) { %><p class="muted">Nothing is waiting for a decision.</p><% } %>
+    <div class="mt-list"><% focus.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: gq, noGroup: true }) %><% }) %></div>
+  </section>
+  <section class="oo-card mt-two">
+    <div><h3>Open by area</h3><ul class="mt-rows"><% perArea.forEach(function (r) { %><li><a href="<%= gq %>?tab=actions&area=<%= r.k %>"><%= A.AREAS[r.k] %></a><span class="mt-code"><%= r.n %><% if (r.late) { %> · <span class="mt-bad"><%= r.late %> late</span><% } %></span></li><% }) %></ul></div>
+    <div><h3>Open by branch</h3><ul class="mt-rows"><% perBranch.forEach(function (r) { %><li><a href="<%= gq %>?tab=actions&branch=<%= r.b %>"><%= A.BRANCHES[r.b] %></a><span class="mt-code"><%= r.n %><% if (r.late) { %> · <span class="mt-bad"><%= r.late %> late</span><% } %></span></li><% }) %></ul></div>
+  </section>
+  <section class="oo-card"><h3>Reminders</h3>
+    <p class="muted small">One message for the WhatsApp group: overdue, due this week and no update, grouped by person.</p>
+    <p><a class="button small" href="<%= gq %>/remind">WhatsApp reminder</a> <a class="button small secondary" href="<%= gq %>/remind?me=1">Just my list</a></p>
+  </section>
+<% } else if (tab === 'actions') { %>
+  <section class="oo-card"><%- include('partials/mt-filters', { f: f, action: gq, members: members, hiddenTab: 'actions' }) %></section>
+  <p class="muted small"><%= list.length %> action<%= list.length === 1 ? '' : 's' %></p>
+  <div class="mt-list"><% list.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: gq + '?tab=actions', noGroup: true }) %><% }) %></div>
+  <details class="oo-card mt-new"><summary>New action</summary>
+    <form method="post" action="<%= gq %>/actions" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">What needs to be done<input name="title" required maxlength="300"></label>
+      <div class="mt-grid">
+        <label class="oo-label">Owner<select name="owner"><% members.forEach(function (m) { %><option value="<%= m.id %>"<%= m.id === user.id ? ' selected' : '' %>><%= m.name %></option><% }) %></select></label>
+        <label class="oo-label">Due<input type="date" name="due"></label>
+        <label class="oo-label">Area<select name="area"><% Object.entries(A.AREAS).forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select></label>
+        <label class="oo-label">Branch<select name="branch"><% Object.entries(A.BRANCHES).forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select></label>
+        <label class="oo-label">Priority<select name="priority"><% A.PRIORITY.forEach(function (p) { %><option<%= p === 'Normal' ? ' selected' : '' %>><%= p %></option><% }) %></select></label>
+      </div>
+      <label class="mt-check"><input type="checkbox" name="needs_ceo" value="1"> Needs a CEO decision / escalate to management</label>
+      <label class="oo-label">Note (optional)<input name="note" maxlength="500"></label>
+      <button class="button wide" type="submit">Add action</button>
+    </form>
+  </details>
+<% } else if (tab === 'meetings') { %>
+  <details class="oo-card mt-new"<%= meetings.length ? '' : ' open' %>><summary>New meeting</summary>
+    <form method="post" action="<%= gq %>/meetings" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="mt-grid">
+        <label class="oo-label">Date<input type="date" name="date" value="<%= today2 %>" required></label>
+        <label class="oo-label">Time<input name="time" value="<%= g.default_time || '' %>" placeholder="16:00"></label>
+      </div>
+      <label class="oo-label">Title (optional)<input name="title" maxlength="120" placeholder="<%= g.name %>"></label>
+      <fieldset class="mt-fieldset"><legend>Attendees</legend>
+        <% members.forEach(function (m) { %><label class="mt-check"><input type="checkbox" name="att" value="<%= m.id %>" checked> <%= m.name %></label><% }) %>
+      </fieldset>
+      <button class="button wide" type="submit">Create meeting</button>
+    </form>
+  </details>
+  <% if (!meetings.length) { %><p class="muted">No meetings yet.</p><% } %>
+  <div class="mt-list"><% meetings.forEach(function (m) { %><%- include('partials/mt-meeting', { m: m }) %><% }) %></div>
+<% } else { %>
+  <section class="oo-card">
+    <form method="get" action="<%= gq %>" class="mt-filters"><input type="hidden" name="tab" value="decisions">
+      <label class="sr-only" for="dq">Search</label><input id="dq" type="search" name="q" value="<%= f.q %>" placeholder="Search decisions"><button class="button small" type="submit">Search</button></form>
+  </section>
+  <div class="mt-list"><% decisions.forEach(function (d) { %><%- include('partials/mt-decision', { d: Object.assign({}, d, { group_name: null }) }) %><% }) %></div>
+  <% if (!decisions.length) { %><p class="muted">No decisions yet.</p><% } %>
+  <details class="oo-card mt-new"><summary>Record a decision</summary>
+    <form method="post" action="<%= gq %>/decisions" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">Decision<input name="text" required maxlength="500"></label>
+      <label class="oo-label">Context (optional)<input name="context" maxlength="500"></label>
+      <div class="mt-grid">
+        <label class="oo-label">Date<input type="date" name="date" value="<%= today2 %>"></label>
+        <label class="oo-label">Area<select name="area"><% Object.entries(A.AREAS).forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select></label>
+        <label class="oo-label">Branch<select name="branch"><% Object.entries(A.BRANCHES).forEach(function (s) { %><option value="<%= s[0] %>"<%= s[0] === 'ALL' ? ' selected' : '' %>><%= s[1] %></option><% }) %></select></label>
+        <label class="oo-label">Decided by<select name="decided_by"><option value="">–</option><% members.forEach(function (m) { %><option value="<%= m.id %>"><%= m.name %></option><% }) %></select></label>
+      </div>
+      <button class="button wide" type="submit">Record decision</button>
+    </form>
+  </details>
+<% } %>
+<%- include('partials/mt-end') %>

@@ -1,0 +1,6 @@
+<article class="mt-dec">
+  <div class="mt-meta"><span class="mt-code"><%= fmtDate(d.decided_on) %></span> · <span><%= A.AREAS[d.area] %></span><% if (d.branch !== 'ALL') { %> · <span class="mt-code"><%= d.branch %></span><% } %><% if (d.group_name) { %> · <span><%= d.group_name %></span><% } %><% if (d.decided_by_name) { %> · <span><%= d.decided_by_name %></span><% } %></div>
+  <p><%= d.text %></p>
+  <% if (d.context) { %><p class="muted small"><%= d.context %></p><% } %>
+  <% if (d.meeting_id) { %><a class="small" href="/meetings/m/<%= d.meeting_id %>?tab=minutes">From the meeting of <%= fmtDate(d.meeting_date) %></a><% } %>
+</article>

@@ -1,0 +1,28 @@
+<%# One action row: title (opens the action), owner · area · branch, flags, last update, quick status. Input: a, back, noOwner, noGroup %>
+<% const cls = !a.open ? 'is-done' : a.overdue ? 'is-late' : a.status === 'bl' ? 'is-blocked' : a.needs_ceo ? 'is-ceo' : ''; %>
+<article class="mt-act <%= cls %>">
+  <div class="mt-act-main">
+    <a class="mt-act-title" href="/meetings/actions/<%= a.id %>?back=<%= encodeURIComponent(back || '') %>"><%= a.title %></a>
+    <div class="mt-meta">
+      <% if (!(typeof noOwner !== 'undefined' && noOwner)) { %><span><%= a.owner_name || 'No owner' %></span> ·<% } %>
+      <span><%= A.AREAS[a.area] %></span> · <span class="mt-code"><%= a.branch %></span>
+      <% if (!(typeof noGroup !== 'undefined' && noGroup)) { %> · <span><%= a.group_name %></span><% } %>
+      <% if (a.priority === 'High') { %><span class="mt-chip acc">High</span><% } %>
+      <% if (a.overdue) { %><span class="mt-chip crit">Overdue <%= a.overdue %>d</span><% } else if (a.due && a.open) { %><span class="mt-chip<%= a.due_soon ? ' warn' : '' %>">Due <%= fmtDate(a.due) %></span><% } %>
+      <% if (a.open && a.status === 'bl') { %><span class="mt-chip warn">Blocked</span><% } %>
+      <% if (a.open && a.needs_ceo) { %><span class="mt-chip info">Needs CEO decision</span><% } %>
+      <% if (a.open && (a.raised_count || 1) >= 2) { %><span class="mt-chip <%= a.raised_count >= 3 ? 'crit' : 'warn' %>">Raised <%= a.raised_count %>×</span><% } %>
+      <% if (a.open && a.stale) { %><span class="mt-chip">No update <%= a.stale_days %>d</span><% } %>
+    </div>
+    <% if (a.last_text) { %><div class="mt-last"><%= a.last_text %></div><% } %>
+  </div>
+  <form method="post" action="/meetings/actions/<%= a.id %>" class="mt-quick">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="quick" value="1">
+    <input type="hidden" name="back" value="<%= back || '' %>">
+    <label class="sr-only" for="st-<%= a.id %>">Status</label>
+    <select id="st-<%= a.id %>" name="status" class="mt-st" data-autosubmit>
+      <% Object.entries(A.STATUS).forEach(function (s) { %><option value="<%= s[0] %>"<%= a.status === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %>
+    </select>
+    <noscript><button class="button small secondary" type="submit">Set</button></noscript>
+  </form>
+</article>

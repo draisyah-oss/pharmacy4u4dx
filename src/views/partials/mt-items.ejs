@@ -1,0 +1,15 @@
+<%# Items to discuss. Input: items, removable, red (ids shown in red), outcomes (optional) %>
+<% const redIds = typeof red !== 'undefined' && red ? red : []; %>
+<% if (!items.length) { %><p class="muted">No items yet.</p><% } %>
+<ul class="mt-items">
+  <% items.forEach(function (i) { const mineOrCeo = i.raised_by === user.id || (user.is_super && user.role === 'admin'); %>
+    <li class="mt-item<%= redIds.includes(i.id) ? ' is-red' : '' %>">
+      <span class="mt-chip <%= i.need === 'decision' ? 'info' : i.need === 'update' ? '' : 'acc' %>"><%= A.NEEDS[i.need] %></span>
+      <span class="mt-item-text"><%= i.text %> <span class="muted small">– <%= i.raised_by_name || '–' %><%= i.source === 'update' ? ' (help needed)' : i.source === 'note' ? ' (from notes)' : '' %></span>
+        <% if (i.outcome) { %><span class="mt-chip ok"><%= i.outcome === 'parked' ? 'Parked' : i.outcome === 'decision' ? 'Decision' : 'Action' %></span><% } %></span>
+      <% if (removable && mineOrCeo && !i.outcome && i.source !== 'update') { %>
+        <form method="post" action="/meetings/items/<%= i.id %>/remove" class="mt-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="<%= typeof herePath !== 'undefined' ? herePath : '/meetings' %>"><button class="link-button" type="submit" aria-label="Remove: <%= i.text %>">Remove</button></form>
+      <% } %>
+    </li>
+  <% }) %>
+</ul>

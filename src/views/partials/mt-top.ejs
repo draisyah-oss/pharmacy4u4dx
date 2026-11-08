@@ -1,0 +1,14 @@
+<%# Meetings module: page start (head, top bar, side menu) + flash messages + the module's own tabs. Input: navKey %>
+<%- include('head') %>
+<%- include('topbar') %>
+<%- include('nav', { navActive: typeof navKey !== 'undefined' ? navKey : 'meetings' }) %>
+<main class="page mt-page">
+  <nav class="mt-tabs" aria-label="Meetings">
+    <% [['meetings', '/meetings', 'Meetings'], ['meetingsmine', '/meetings/mine', 'My actions'], ['meetingsall', '/meetings/actions', 'All actions'],
+        ['meetingsdecisions', '/meetings/decisions', 'Decisions'], ['meetingsnotes', '/meetings/notes', 'My notes']]
+        .concat(user.is_super && user.role === 'admin' ? [['meetingsceo', '/meetings/ceo', 'CEO overview']] : []).forEach(function (t) { %>
+      <a href="<%= t[1] %>" class="mt-tab<%= (typeof navKey !== 'undefined' ? navKey : 'meetings') === t[0] ? ' is-current' : '' %>"<%- (typeof navKey !== 'undefined' ? navKey : 'meetings') === t[0] ? ' aria-current="page"' : '' %>><%= t[2] %></a>
+    <% }) %>
+  </nav>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>

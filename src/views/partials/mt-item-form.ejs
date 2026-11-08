@@ -1,0 +1,8 @@
+<form method="post" action="<%= action %>" class="mt-form mt-additem">
+  <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+  <label class="oo-label">Add an item to discuss<input name="text" required maxlength="500" placeholder="e.g. Zuellig payment plan – need approval"></label>
+  <div class="mt-row">
+    <label class="oo-label">What you need<select name="need"><option value="decision">Decision</option><option value="update">Update</option><option value="discuss" selected>Discuss</option></select></label>
+    <button class="button" type="submit">Add</button>
+  </div>
+</form>

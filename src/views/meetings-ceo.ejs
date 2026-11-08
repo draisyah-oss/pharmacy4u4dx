@@ -1,0 +1,47 @@
+<%- include('partials/mt-top', { navKey: 'meetingsceo' }) %>
+<section class="oo-card">
+  <h1>CEO overview</h1>
+  <p class="muted">Every meeting group. Tap a number to see the actions behind it.</p>
+  <div class="mt-stats">
+    <a class="mt-stat crit" href="/meetings/ceo?show=overdue#list"><b><%= total.overdue %></b><span>Overdue</span></a>
+    <a class="mt-stat info" href="/meetings/ceo?show=ceo#list"><b><%= total.ceo %></b><span>Waiting for your decision</span></a>
+    <a class="mt-stat warn" href="/meetings/ceo?show=blocked#list"><b><%= total.blocked %></b><span>Blocked</span></a>
+    <a class="mt-stat" href="/meetings/ceo?show=soon#list"><b><%= total.soon %></b><span>Due this week</span></a>
+  </div>
+</section>
+<% if (waiting.length) { %>
+<section class="oo-card"><h2>Minutes waiting for your approval</h2>
+  <div class="mt-list"><% waiting.forEach(function (m) { %><%- include('partials/mt-meeting', { m: m }) %><% }) %></div>
+</section>
+<% } %>
+<section class="oo-card"><h2>Per group</h2>
+  <div class="table-wrap"><table class="mt-table">
+    <thead><tr><th scope="col">Group</th><th scope="col">Open</th><th scope="col">Overdue</th><th scope="col">Waiting for decision</th><th scope="col">Blocked</th><th scope="col">Due this week</th></tr></thead>
+    <tbody><% perGroup.forEach(function (r) { const q = '/meetings/actions?group=' + r.g.code + '&status='; %>
+      <tr><th scope="row"><a href="/meetings/g/<%= r.g.code %>"><%= r.g.name %></a></th>
+        <td><a href="<%= q %>open"><%= r.c.open %></a></td><td class="<%= r.c.overdue ? 'mt-bad' : '' %>"><a href="<%= q %>overdue"><%= r.c.overdue %></a></td>
+        <td><a href="<%= q %>ceo"><%= r.c.ceo %></a></td><td><a href="<%= q %>bl"><%= r.c.blocked %></a></td><td><a href="<%= q %>soon"><%= r.c.soon %></a></td></tr>
+    <% }) %></tbody>
+  </table></div>
+</section>
+<section class="oo-card"><h2>Per branch</h2>
+  <div class="table-wrap"><table class="mt-table">
+    <thead><tr><th scope="col">Branch</th><th scope="col">Open</th><th scope="col">Overdue</th><th scope="col">Waiting for decision</th><th scope="col">Blocked</th><th scope="col">Due this week</th></tr></thead>
+    <tbody><% perBranch.forEach(function (r) { const q = '/meetings/actions?branch=' + r.b + '&status='; %>
+      <tr><th scope="row"><%= A.BRANCHES[r.b] %></th><td><a href="<%= q %>open"><%= r.c.open %></a></td><td class="<%= r.c.overdue ? 'mt-bad' : '' %>"><a href="<%= q %>overdue"><%= r.c.overdue %></a></td>
+        <td><a href="<%= q %>ceo"><%= r.c.ceo %></a></td><td><a href="<%= q %>bl"><%= r.c.blocked %></a></td><td><a href="<%= q %>soon"><%= r.c.soon %></a></td></tr>
+    <% }) %></tbody>
+  </table></div>
+</section>
+<section id="list" aria-labelledby="l-h">
+  <% if (view) { %>
+    <h2 id="l-h"><%= { overdue: 'Overdue', ceo: 'Waiting for your decision', blocked: 'Blocked', soon: 'Due this week' }[view] %> (<%= shown.length %>)</h2>
+    <div class="mt-list"><% shown.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: '/meetings/ceo?show=' + view }) %><% }) %></div>
+  <% } else { %>
+    <h2 id="l-h">For your attention (<%= focus.length %>)</h2>
+    <p class="muted small">Needs your decision, 14+ days overdue, or raised 3+ times.</p>
+    <% if (!focus.length) { %><p class="muted">Nothing is waiting for you.</p><% } %>
+    <div class="mt-list"><% focus.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: '/meetings/ceo' }) %><% }) %></div>
+  <% } %>
+</section>
+<%- include('partials/mt-end') %>

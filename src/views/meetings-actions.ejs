@@ -1,0 +1,9 @@
+<%- include('partials/mt-top', { navKey: 'meetingsall' }) %>
+<section class="oo-card"><h1>All actions</h1><p class="muted">Every action in your meeting groups.</p>
+  <%- include('partials/mt-filters', { f: f, action: '/meetings/actions', groups: groups }) %>
+</section>
+<p class="muted small"><%= list.length %> action<%= list.length === 1 ? '' : 's' %></p>
+<% if (!list.length) { %><p class="muted">No actions match these filters.</p><% } %>
+<% const here = '/meetings/actions?' + new URLSearchParams(f).toString(); %>
+<div class="mt-list"><% list.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: here }) %><% }) %></div>
+<%- include('partials/mt-end') %>

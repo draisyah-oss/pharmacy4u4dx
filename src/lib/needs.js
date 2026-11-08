@@ -182,6 +182,26 @@ function fmtDay(date) {
   return new Date(`${date}T00:00:00Z`).toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' });
 }
 
+// 8 Nov: Meetings module. Lines only for people in a meeting group (or the CEO).
+async function forMeetings(db, user, today, add) {
+  const F = require('../meetings/flags');
+  const mine = (await db.query(`SELECT a.id, a.status, a.due, a.last_update_at, a.created_at, a.raised_count, a.needs_ceo FROM actions a
+    JOIN meeting_groups g ON g.id = a.group_id WHERE g.active AND a.owner_user_id = $1 AND a.status <> 'dn'`, [user.id])).rows;
+  const late = mine.filter((a) => F.overdueDays(a, today) > 0).length;
+  const quiet = mine.filter((a) => !(F.overdueDays(a, today) > 0) && F.isStale(a, today)).length;
+  if (late) add('late', late, 'My meeting actions overdue', 'give each a status and an update', '/meetings/mine');
+  if (quiet) add('todo', quiet, 'My meeting actions need an update', 'no update for 7+ days', '/meetings/mine');
+  const todayMtgs = (await db.query(`SELECT m.id, g.name FROM meetings m JOIN meeting_groups g ON g.id = m.group_id
+    JOIN meeting_attendees x ON x.meeting_id = m.id AND x.user_id = $1
+    WHERE g.active AND m.held_on = $2 AND m.status = 'planned'
+      AND NOT EXISTS (SELECT 1 FROM meeting_updates u WHERE u.meeting_id = m.id AND u.user_id = $1)`, [user.id, today])).rows;
+  if (todayMtgs.length) add('today', todayMtgs.length, 'Meeting update to send', todayMtgs.map((m) => m.name).join(' · '), `/meetings/m/${todayMtgs[0].id}?tab=updates`);
+  if (user.role === 'admin' && user.is_super) {
+    const n = await one(db, "SELECT count(*) AS n FROM meetings WHERE status = 'draft'", []);
+    if (n) add('today', n, 'Minutes to approve', 'saved by the meeting, waiting for you', '/meetings/ceo');
+  }
+}
+
 async function buildNeeds(db, user, { at }) {
   const today = calc.todayInMalaysia(at);
   const items = [];
@@ -196,6 +216,8 @@ async function buildNeeds(db, user, { at }) {
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);
   if ((user.role === 'branch_manager' || user.role === 'branch_staff') && user.branch_id) await forBranch(db, user, today, at, add);
   try { await forReview(db, user, today, add); } catch (err) { console.error('Needs you – review:', err.message); }
+  // 8 Nov: Meetings module – my actions overdue / no update, my update for today's meeting, minutes to approve (CEO).
+  try { await forMeetings(db, user, today, add); } catch (err) { console.error('Needs you – meetings:', err.message); }
   // 5 Nov: change requests – the CEO approves new ones; the asker answers Mr 4DX's questions.
   const cr = await db.query(`SELECT count(*) FILTER (WHERE status = 'New')::int AS fresh,
       count(*) FILTER (WHERE status = 'Need more info' AND created_by = $1)::int AS asked FROM change_requests`, [user.id]);

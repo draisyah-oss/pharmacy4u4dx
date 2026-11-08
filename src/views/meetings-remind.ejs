@@ -1,0 +1,10 @@
+<%- include('partials/mt-top', { navKey: 'meetings' }) %>
+<section class="oo-card">
+  <p><a href="/meetings/g/<%= g.code %>">← <%= g.name %></a></p>
+  <h1>WhatsApp reminder</h1>
+  <p class="muted">Overdue, due in the next 7 days and no update for 7+ days – grouped by person. Copy it into the WhatsApp group.</p>
+  <label class="sr-only" for="remind-text">Reminder text</label>
+  <textarea id="remind-text" class="mt-copytext" rows="16" readonly><%= text %></textarea>
+  <button type="button" class="button wide" data-copy="#remind-text">Copy</button>
+</section>
+<%- include('partials/mt-end') %>

@@ -1,0 +1,26 @@
+<%- include('partials/mt-top', { navKey: 'meetingsall' }) %>
+<section class="oo-card">
+  <p><a href="<%= backTo %>">← Back</a></p>
+  <h1>Update action</h1>
+  <p class="muted small"><%= a.group_name %><%= a.first_raised ? ' · first raised ' + fmtDate(a.first_raised) : '' %><%= a.raised_count > 1 ? ' · discussed ' + a.raised_count + ' times' : '' %><%= a.source ? ' · ' + a.source : '' %></p>
+  <form method="post" action="/meetings/actions/<%= a.id %>" class="mt-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="back" value="/meetings/actions/<%= a.id %>?back=<%= encodeURIComponent(backTo) %>">
+    <label class="oo-label">What needs to be done<input name="title" required maxlength="300" value="<%= a.title %>"></label>
+    <div class="mt-grid">
+      <label class="oo-label">Owner<select name="owner"><option value="">–</option><% members.forEach(function (m) { %><option value="<%= m.id %>"<%= a.owner_user_id === m.id ? ' selected' : '' %>><%= m.name %></option><% }) %></select></label>
+      <label class="oo-label">Due<input type="date" name="due" value="<%= a.due || '' %>"></label>
+      <label class="oo-label">Status<select name="status"><% Object.entries(A.STATUS).forEach(function (s) { %><option value="<%= s[0] %>"<%= a.status === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select></label>
+      <label class="oo-label">Area<select name="area"><% Object.entries(A.AREAS).forEach(function (s) { %><option value="<%= s[0] %>"<%= a.area === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select></label>
+      <label class="oo-label">Branch<select name="branch"><% Object.entries(A.BRANCHES).forEach(function (s) { %><option value="<%= s[0] %>"<%= a.branch === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select></label>
+      <label class="oo-label">Priority<select name="priority"><% A.PRIORITY.forEach(function (p) { %><option<%= a.priority === p ? ' selected' : '' %>><%= p %></option><% }) %></select></label>
+    </div>
+    <label class="mt-check"><input type="checkbox" name="needs_ceo" value="1"<%= a.needs_ceo ? ' checked' : '' %>> Needs a CEO decision / escalate to management</label>
+    <label class="oo-label">This week’s update<input name="note" maxlength="500" placeholder="e.g. Quotation received, waiting for approval"></label>
+    <button class="button wide" type="submit">Save</button>
+  </form>
+  <% if (a.updates.length) { %>
+    <h2>History</h2>
+    <ul class="mt-hist"><% a.updates.forEach(function (u) { %><li><span class="mt-code"><%= fmtDate(dayOf(u.at)) %></span> · <%= u.by_name || '–' %>: <%= u.text %></li><% }) %></ul>
+  <% } %>
+</section>
+<%- include('partials/mt-end') %>

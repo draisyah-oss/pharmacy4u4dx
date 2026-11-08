@@ -1,0 +1,20 @@
+<%- include('partials/mt-top', { navKey: 'meetingsdecisions' }) %>
+<section class="oo-card">
+  <h1>Decision log</h1>
+  <p class="muted">Before discussing an issue again, search here. If a decision exists, follow it – or change it on purpose.</p>
+  <form method="get" action="/meetings/decisions" class="mt-filters">
+    <label class="sr-only" for="dq">Search</label><input id="dq" type="search" name="q" value="<%= f.q %>" placeholder="Search decisions">
+    <label class="sr-only" for="dg">Group</label><select id="dg" name="group"><option value="">All groups</option><% groups.forEach(function (g) { %><option value="<%= g.code %>"<%= f.group === g.code ? ' selected' : '' %>><%= g.name %></option><% }) %></select>
+    <label class="sr-only" for="da">Area</label><select id="da" name="area"><option value="">All areas</option><% Object.entries(A.AREAS).forEach(function (o) { %><option value="<%= o[0] %>"<%= f.area === o[0] ? ' selected' : '' %>><%= o[1] %></option><% }) %></select>
+    <label class="sr-only" for="db">Branch</label><select id="db" name="branch"><option value="">All branches</option><% Object.entries(A.BRANCHES).forEach(function (o) { %><option value="<%= o[0] %>"<%= f.branch === o[0] ? ' selected' : '' %>><%= o[1] %></option><% }) %></select>
+    <label class="mt-inline">From <input type="date" name="from" value="<%= f.from %>"></label>
+    <label class="mt-inline">To <input type="date" name="to" value="<%= f.to %>"></label>
+    <button class="button small" type="submit">Search</button>
+  </form>
+</section>
+<p class="muted small"><%= list.length %> decision<%= list.length === 1 ? '' : 's' %></p>
+<div class="mt-list">
+  <% list.forEach(function (d) { %><%- include('partials/mt-decision', { d: d }) %><% }) %>
+</div>
+<% if (!list.length) { %><p class="muted">No decisions match.</p><% } %>
+<%- include('partials/mt-end') %>

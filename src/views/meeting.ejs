@@ -1,0 +1,218 @@
+<%- include('partials/mt-top', { navKey: 'meetings' }) %>
+<% const mq = '/meetings/m/' + m.id; const lockedNow = m.status === 'approved'; %>
+<section class="oo-card">
+  <p><a href="/meetings/g/<%= m.group_code %>?tab=meetings">← <%= m.group_name %></a></p>
+  <h1><%= m.title || m.group_name %></h1>
+  <p class="muted small"><%= fmtDate(m.held_on) %><%= m.start_time ? ' · ' + m.start_time : '' %> · <%= m.attendee_list.map(function (a) { return a.name; }).join(', ') %></p>
+  <p><span class="mt-chip <%= m.status === 'approved' ? 'ok' : m.status === 'draft' ? 'warn' : '' %>"><%= A.MEETING_STATUS[m.status] %></span>
+    <% if (lockedNow) { %><span class="muted small">Locked – approved by Dr Aisyah.</span><% } %></p>
+  <nav class="mt-subtabs" aria-label="This meeting">
+    <% [['agenda', 'Agenda'], ['updates', 'Updates (' + updates.length + '/' + m.attendee_list.length + ')'], ['minutes', 'Minutes']].forEach(function (t) { %>
+      <a href="<%= mq %>?tab=<%= t[0] %>" class="mt-subtab<%= tab === t[0] ? ' is-current' : '' %>"<%- tab === t[0] ? ' aria-current="page"' : '' %>><%= t[1] %></a>
+    <% }) %>
+  </nav>
+</section>
+
+<% if (tab === 'agenda') { %>
+  <section class="oo-card" id="items" aria-labelledby="it-h">
+    <h2 id="it-h">Items to discuss (<%= items.length %>)</h2>
+    <%- include('partials/mt-items', { items: items, removable: !lockedNow }) %>
+    <% if (!lockedNow) { %><%- include('partials/mt-item-form', { action: mq + '/items' }) %><% } %>
+  </section>
+  <section class="oo-card" aria-labelledby="ag-h">
+    <h2 id="ag-h">Agenda</h2>
+    <p class="muted small">Built from open actions: overdue, blocked, waiting for a CEO decision, raised 3+ times.</p>
+    <ol class="mt-agenda">
+      <% agenda.forEach(function (s) { %>
+        <li class="mt-ag">
+          <div class="mt-ag-head"><b><% if (s.link) { %><a href="<%= s.link %>"><%= s.title %></a><% } else { %><%= s.title %><% } %></b><% if (s.count !== null && s.count !== undefined) { %><span class="mt-code"><%= s.count %> open</span><% } %></div>
+          <% if (s.sub) { %><p class="muted small"><%= s.sub %></p><% } %>
+          <% if (s.list.length) { %><ul><% s.list.forEach(function (a) { %><li><a href="/meetings/actions/<%= a.id %>?back=<%= encodeURIComponent(mq) %>"><%= a.title %></a> <span class="muted small">– <%= a.owner_name || '–' %><%= a.overdue ? ', ' + a.overdue + 'd late' : '' %><%= a.status === 'bl' ? ', blocked' : '' %><%= a.needs_ceo ? ', needs CEO' : '' %><%= a.raised_count >= 3 ? ', raised ' + a.raised_count + '×' : '' %></span></li><% }) %></ul><% } %>
+          <% if (s.hqActions && s.hqActions.length) { %>
+            <p class="muted small">From the managers’ weekly updates (Weekly Branch Manager Meeting):</p>
+            <ul><% s.hqActions.forEach(function (h) { %><li><%= h.code || 'HQ' %> – <%= h.issue %> <span class="muted small">– <%= h.owner %><%= h.due_date ? ', due ' + fmtDate(h.due_date) : '' %></span></li><% }) %></ul>
+          <% } %>
+        </li>
+      <% }) %>
+    </ol>
+  </section>
+
+<% } else if (tab === 'updates') { %>
+  <% if ((attendee || ceo) && !lockedNow) { %>
+  <section class="oo-card" aria-labelledby="my-h">
+    <h2 id="my-h">My update</h2>
+    <p class="muted small">Before or during the meeting. “Help needed” goes on the agenda as an item to discuss.</p>
+    <form method="post" action="<%= mq %>/update" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">1 win<textarea name="win" rows="2" maxlength="500"><%= mine ? mine.win || '' : '' %></textarea></label>
+      <label class="oo-label">Issue 1<textarea name="issue1" rows="2" maxlength="500"><%= mine ? mine.issue1 || '' : '' %></textarea></label>
+      <label class="oo-label">Issue 2<textarea name="issue2" rows="2" maxlength="500"><%= mine ? mine.issue2 || '' : '' %></textarea></label>
+      <label class="oo-label">Help needed<textarea name="help_needed" rows="2" maxlength="500"><%= mine ? mine.help_needed || '' : '' %></textarea></label>
+      <button class="button wide" type="submit"><%= mine ? 'Save my update' : 'Send my update' %></button>
+    </form>
+  </section>
+  <% } %>
+  <% if (missing.length) { %><p class="alert alert-info">Not sent yet: <%= missing.map(function (a) { return a.name; }).join(', ') %></p><% } %>
+  <div class="mt-list">
+    <% updates.forEach(function (u) { %>
+      <article class="mt-upd">
+        <h3><%= u.name %> <span class="muted small"><%= fmtDate(dayOf(u.updated_at)) %></span></h3>
+        <dl>
+          <% [['win', '1 win'], ['issue1', 'Issue 1'], ['issue2', 'Issue 2'], ['help_needed', 'Help needed']].forEach(function (k) { if (u[k[0]]) { %><dt><%= k[1] %></dt><dd><%= u[k[0]] %></dd><% } }) %>
+        </dl>
+        <% if (!lockedNow && (u.user_id === user.id || ceo)) { %>
+          <form method="post" action="<%= mq %>/update/delete" class="mt-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="user" value="<%= u.user_id %>"><button class="link-button" type="submit">Delete<%= u.user_id === user.id ? ' my update' : '' %></button></form>
+        <% } %>
+      </article>
+    <% }) %>
+  </div>
+
+<% } else { %>
+  <% if (m.status === 'planned' && !review) { %>
+  <section class="oo-card" aria-labelledby="no-h">
+    <h2 id="no-h">Meeting notes</h2>
+    <p class="muted small">Paste rough notes, a Google Meet transcript or a voice-note transcript (BM or English)<%= claudeOn ? ', or add a photo of handwritten notes. Claude drafts decisions, actions with owners and dates, and follow-ups on existing actions, using the items to discuss and everyone’s updates. You check everything before it is saved.' : '. Claude drafting is not switched on yet, so you write the minutes in the form.' %></p>
+    <form method="post" action="<%= mq %>/minutes" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">Notes<textarea name="notes" rows="10" maxlength="60000" placeholder="cth: Zuellig – Alia & Azwani propose payment plan, Dr A setuju bayar 20k minggu ni…"><%= m.raw_notes || '' %></textarea></label>
+      <% if (claudeOn) { %><%- include('partials/photo-input', { id: 'ph-min', label: 'Add a photo of the notes (optional)' }) %><% } %>
+      <div class="mt-row">
+        <% if (claudeOn) { %><button class="button" name="op" value="claude" type="submit">Draft minutes with Claude</button><% } %>
+        <button class="button secondary" name="op" value="manual" type="submit">Write minutes myself</button>
+      </div>
+    </form>
+  </section>
+  <% } else if (review) { const d = review.draft; const red = review.unresolved.concat(unresolvedFlash); %>
+  <section class="oo-card" id="review" aria-labelledby="rv-h">
+    <h2 id="rv-h">Review the minutes</h2>
+    <p class="muted small"><%= d.source === 'claude' ? 'Drafted by Claude. ' : '' %>Untick anything wrong. Every item raised must end as a decision, an action or parked. Nothing is saved until you press Save minutes.</p>
+    <form method="post" action="<%= mq %>/minutes" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">Summary<textarea name="summary" rows="3" maxlength="2000"><%= d.summary %></textarea></label>
+
+      <h3>Decisions (<%= Object.keys(d.dec).length %>)</h3>
+      <% Object.keys(d.dec).forEach(function (k) { const r = d.dec[k]; %>
+        <div class="mt-draft">
+          <label class="mt-keep"><input type="checkbox" name="dec[<%= k %>][keep]" value="1"<%= r.keep ? ' checked' : '' %>><span class="sr-only">Keep</span></label>
+          <div class="mt-draft-body">
+            <label class="sr-only" for="dt-<%= k %>">Decision</label><input id="dt-<%= k %>" name="dec[<%= k %>][text]" value="<%= r.text %>" maxlength="500" placeholder="What was decided">
+            <div class="mt-grid">
+              <select name="dec[<%= k %>][area]" aria-label="Area"><% Object.entries(A.AREAS).forEach(function (s) { %><option value="<%= s[0] %>"<%= r.area === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select>
+              <select name="dec[<%= k %>][branch]" aria-label="Branch"><% Object.entries(A.BRANCHES).forEach(function (s) { %><option value="<%= s[0] %>"<%= r.branch === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select>
+            </div>
+          </div>
+        </div>
+      <% }) %>
+      <button class="link-button" name="op" value="add_dec" type="submit">+ Decision</button>
+
+      <h3>New actions (<%= Object.keys(d.act).length %>)</h3>
+      <% Object.keys(d.act).forEach(function (k) { const r = d.act[k]; %>
+        <div class="mt-draft">
+          <label class="mt-keep"><input type="checkbox" name="act[<%= k %>][keep]" value="1"<%= r.keep ? ' checked' : '' %>><span class="sr-only">Keep</span></label>
+          <div class="mt-draft-body">
+            <label class="sr-only" for="at-<%= k %>">Action</label><input id="at-<%= k %>" name="act[<%= k %>][title]" value="<%= r.title %>" maxlength="300" placeholder="What needs to be done">
+            <div class="mt-grid">
+              <select name="act[<%= k %>][owner]" aria-label="Owner"><option value="">Owner…</option><% review.ctx.members.forEach(function (p) { %><option value="<%= p.id %>"<%= r.owner === p.id ? ' selected' : '' %>><%= p.name %></option><% }) %></select>
+              <input type="date" name="act[<%= k %>][due]" value="<%= r.due %>" aria-label="Due">
+              <select name="act[<%= k %>][area]" aria-label="Area"><% Object.entries(A.AREAS).forEach(function (s) { %><option value="<%= s[0] %>"<%= r.area === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select>
+              <select name="act[<%= k %>][branch]" aria-label="Branch"><% Object.entries(A.BRANCHES).forEach(function (s) { %><option value="<%= s[0] %>"<%= r.branch === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select>
+              <select name="act[<%= k %>][priority]" aria-label="Priority"><% A.PRIORITY.forEach(function (p) { %><option<%= r.priority === p ? ' selected' : '' %>><%= p %></option><% }) %></select>
+            </div>
+            <label class="mt-check"><input type="checkbox" name="act[<%= k %>][needs_ceo]" value="1"<%= r.needs_ceo ? ' checked' : '' %>> Needs CEO decision</label>
+          </div>
+        </div>
+      <% }) %>
+      <button class="link-button" name="op" value="add_act" type="submit">+ Action</button>
+
+      <h3>Follow-ups on existing actions (<%= Object.keys(d.upd).length %>)</h3>
+      <p class="muted small">Discussed again – saving counts them as raised once more. No duplicates are created.</p>
+      <% Object.keys(d.upd).forEach(function (k) { const r = d.upd[k]; const a = review.ctx.openActions.find(function (x) { return x.id === r.action_id; }); if (!a) return; %>
+        <div class="mt-draft">
+          <label class="mt-keep"><input type="checkbox" name="upd[<%= k %>][keep]" value="1"<%= r.keep ? ' checked' : '' %>><span class="sr-only">Keep</span></label>
+          <div class="mt-draft-body">
+            <input type="hidden" name="upd[<%= k %>][action_id]" value="<%= r.action_id %>">
+            <b><%= a.title %></b> <span class="muted small">– <%= a.owner_name || '–' %></span>
+            <div class="mt-grid">
+              <select name="upd[<%= k %>][status]" aria-label="Status"><% Object.entries(A.STATUS).forEach(function (s) { %><option value="<%= s[0] %>"<%= r.status === s[0] ? ' selected' : '' %>><%= s[1] %></option><% }) %></select>
+              <input name="upd[<%= k %>][note]" value="<%= r.note %>" maxlength="500" placeholder="Update" aria-label="Update">
+            </div>
+          </div>
+        </div>
+      <% }) %>
+      <% if (review.ctx.openActions.length) { %>
+        <div class="mt-row"><label class="sr-only" for="newupd">Existing action</label>
+          <select id="newupd" name="new_upd"><option value="">Choose an open action…</option><% review.ctx.openActions.forEach(function (a) { %><option value="<%= a.id %>"><%= a.title %></option><% }) %></select>
+          <button class="link-button" name="op" value="add_upd" type="submit">+ Follow-up</button></div>
+      <% } %>
+
+      <h3>Items raised – outcome</h3>
+      <% if (!review.ctx.items.length) { %><p class="muted small">No items were raised for this meeting.</p><% } %>
+      <ul class="mt-items">
+        <% review.ctx.items.forEach(function (it) { const v = d.out['i' + it.id] || ''; %>
+          <li class="mt-item<%= red.includes(it.id) ? ' is-red' : '' %>">
+            <span class="mt-item-text"><%= it.text %> <span class="muted small">– <%= it.raised_by_name || '–' %></span></span>
+            <label class="sr-only" for="out-<%= it.id %>">Outcome</label>
+            <select id="out-<%= it.id %>" name="out[i<%= it.id %>]">
+              <option value="">Outcome…</option>
+              <% Object.keys(d.dec).forEach(function (k) { %><option value="dec:<%= k %>"<%= v === 'dec:' + k ? ' selected' : '' %>>Decision: <%= (d.dec[k].text || '(empty)').slice(0, 60) %></option><% }) %>
+              <% Object.keys(d.act).forEach(function (k) { %><option value="act:<%= k %>"<%= v === 'act:' + k ? ' selected' : '' %>>Action: <%= (d.act[k].title || '(empty)').slice(0, 60) %></option><% }) %>
+              <% Object.keys(d.upd).forEach(function (k) { const a = review.ctx.openActions.find(function (x) { return x.id === d.upd[k].action_id; }); if (a) { %><option value="upd:<%= k %>"<%= v === 'upd:' + k ? ' selected' : '' %>>Follow-up: <%= a.title.slice(0, 60) %></option><% } }) %>
+              <option value="parked"<%= v === 'parked' ? ' selected' : '' %>>Parked</option>
+            </select>
+          </li>
+        <% }) %>
+      </ul>
+
+      <label class="oo-label">Parked items (one per line)<textarea name="parked" rows="3"><%= d.parked.join('\n') %></textarea></label>
+      <label class="oo-label">Next meeting<input name="next" value="<%= d.next %>" maxlength="200"></label>
+      <div class="mt-row">
+        <button class="button" name="op" value="save" type="submit">Save minutes</button>
+        <button class="button secondary" name="op" value="save_draft" type="submit">Keep draft</button>
+        <button class="link-button" name="op" value="discard" type="submit">Discard draft</button>
+      </div>
+    </form>
+  </section>
+  <% } else { %>
+  <section class="oo-card" aria-labelledby="mn-h">
+    <h2 id="mn-h">Minutes</h2>
+    <p><span class="mt-chip <%= lockedNow ? 'ok' : 'warn' %>"><%= lockedNow ? 'Approved' : 'Draft – waiting for Dr Aisyah’s approval' %></span></p>
+    <% if (m.summary) { %><p><%= m.summary %></p><% } %>
+    <h3>Decisions</h3>
+    <% if (!saved.decisions.length) { %><p class="muted small">None recorded.</p><% } %>
+    <ul><% saved.decisions.forEach(function (x) { %><li><%= x.text %> <span class="muted small">(<%= A.AREAS[x.area] %><%= x.branch !== 'ALL' ? ', ' + x.branch : '' %>)</span></li><% }) %></ul>
+    <h3>Actions</h3>
+    <% if (!saved.actions.length) { %><p class="muted small">None.</p><% } %>
+    <div class="mt-list"><% saved.actions.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: mq + '?tab=minutes', noGroup: true }) %><% }) %></div>
+    <% if ((m.minutes_updates || []).length) { %><h3>Follow-ups on existing actions</h3>
+      <ul><% m.minutes_updates.forEach(function (u) { %><li><a href="/meetings/actions/<%= u.action_id %>"><%= u.title %></a> – <%= A.STATUS[u.status] %><%= u.note ? ': ' + u.note : '' %></li><% }) %></ul><% } %>
+    <% if ((m.parked || []).length) { %><h3>Parked</h3><ul><% m.parked.forEach(function (p) { %><li><%= p %></li><% }) %></ul><% } %>
+    <% if (m.next_meeting) { %><p><b>Next meeting:</b> <%= m.next_meeting %></p><% } %>
+    <div class="mt-row">
+      <% if (ceo && m.status === 'draft') { %><form method="post" action="<%= mq %>/approve" class="mt-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button" type="submit">Approve minutes</button></form><% } %>
+      <% if (ceo && lockedNow) { %><form method="post" action="<%= mq %>/unlock" class="mt-inline-form"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button secondary" type="submit">Unlock</button></form><% } %>
+    </div>
+    <% const wa = ['*' + (m.title || m.group_name) + '* – ' + fmtDate(m.held_on)].concat(m.summary ? ['', m.summary] : [])
+         .concat(saved.decisions.length ? ['', '*Keputusan*'].concat(saved.decisions.map(function (x) { return '- ' + x.text; })) : [])
+         .concat(saved.actions.length ? ['', '*Tindakan*'].concat(saved.actions.map(function (a) { return '- ' + a.title + ' (' + (a.owner_name || '–') + (a.due ? ', ' + fmtDate(a.due) : '') + ')'; })) : [])
+         .concat((m.parked || []).length ? ['', '*Ditangguhkan*'].concat(m.parked.map(function (p) { return '- ' + p; })) : [])
+         .concat(m.next_meeting ? ['', 'Mesyuarat seterusnya: ' + m.next_meeting] : []).join('\n'); %>
+    <details><summary>Copy minutes for WhatsApp</summary>
+      <textarea id="wa-min" class="mt-copytext" rows="10" readonly><%= wa %></textarea>
+      <button type="button" class="button small" data-copy="#wa-min">Copy</button>
+    </details>
+    <% if (m.status === 'draft') { %>
+    <details><summary>Correct the summary, parked items or next meeting</summary>
+      <form method="post" action="<%= mq %>/text" class="mt-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <label class="oo-label">Summary<textarea name="summary" rows="3" maxlength="2000"><%= m.summary || '' %></textarea></label>
+        <label class="oo-label">Parked (one per line)<textarea name="parked" rows="3"><%= (m.parked || []).join('\n') %></textarea></label>
+        <label class="oo-label">Next meeting<input name="next" value="<%= m.next_meeting || '' %>" maxlength="200"></label>
+        <button class="button" type="submit">Save</button>
+      </form>
+    </details>
+    <% } %>
+  </section>
+  <% } %>
+<% } %>
+<% if (tab === 'minutes' && m.status === 'planned' && !review && claudeOn) { %><script src="/js/photo.js?v=1" defer></script><% } %>
+<%- include('partials/mt-end') %>

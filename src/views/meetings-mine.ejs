@@ -1,0 +1,22 @@
+<%- include('partials/mt-top', { navKey: 'meetingsmine' }) %>
+<section class="oo-card">
+  <h1>My actions</h1>
+  <p class="muted">Before each meeting, give every open action a status and a one-line update. Tap an action to write the update.</p>
+</section>
+<section aria-labelledby="need-h">
+  <h2 id="need-h">Needs your update (<%= need.length %>)</h2>
+  <% if (!need.length) { %><p class="muted">All your actions are up to date.</p><% } %>
+  <div class="mt-list"><% need.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: '/meetings/mine', noOwner: true }) %><% }) %></div>
+</section>
+<section aria-labelledby="ok-h">
+  <h2 id="ok-h">On track (<%= rest.length %>)</h2>
+  <% if (!rest.length) { %><p class="muted">Nothing else open.</p><% } %>
+  <div class="mt-list"><% rest.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: '/meetings/mine', noOwner: true }) %><% }) %></div>
+</section>
+<% if (done.length) { %>
+<section aria-labelledby="dn-h">
+  <h2 id="dn-h">Recently done</h2>
+  <div class="mt-list"><% done.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: '/meetings/mine', noOwner: true }) %><% }) %></div>
+</section>
+<% } %>
+<%- include('partials/mt-end') %>
