@@ -390,9 +390,9 @@ test('group Excel export includes the Monday screens', async () => {
 
 test('HQ team: Syarafana, Fariz, Azwani and Iman have logins; the CEO has measures but logs in as admin', async () => {
   const users = (await db.query("SELECT username, role, enters_all_hq FROM users WHERE role IN ('hq', 'hq_staff') ORDER BY username")).rows;
-  assert.deepEqual(users.map((u) => u.username), ['alia', 'azwani', 'fariz', 'hanin', 'iman', 'syarafana']);
+  assert.deepEqual(users.map((u) => u.username), ['alia', 'arinah', 'azwani', 'fariz', 'hanin', 'iman', 'syarafana']);
   assert.deepEqual(users.filter((u) => u.role === 'hq').map((u) => u.username), ['alia', 'hanin', 'iman'], 'full HQ access');
-  assert.deepEqual(users.filter((u) => u.role === 'hq_staff').map((u) => u.username), ['azwani', 'fariz', 'syarafana']);
+  assert.deepEqual(users.filter((u) => u.role === 'hq_staff').map((u) => u.username), ['arinah', 'azwani', 'fariz', 'syarafana']); // 8 Nov: Arinah (Marketing) for the Meetings module
   assert.deepEqual(users.filter((u) => u.enters_all_hq).map((u) => u.username), ['iman']);
   assert.equal((await db.query("SELECT count(*)::int AS n FROM users WHERE display_name = 'Dr Aisyah'")).rows[0].n, 0);
   const owners = (await db.query('SELECT DISTINCT owner_name FROM hq_measures')).rows.map((r) => r.owner_name).sort();

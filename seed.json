@@ -453,7 +453,8 @@
       { "name": "Leadership", "people": ["Dr Aisyah"] },
       { "name": "Inventory, products & B2B", "people": ["Alia", "Syarafana", "Fariz"] },
       { "name": "Accounts", "people": ["Azwani"] },
-      { "name": "Operations, HR & admin", "people": ["Hanin", "Iman"] }
+      { "name": "Operations, HR & admin", "people": ["Hanin", "Iman"] },
+      { "name": "Marketing", "people": ["Arinah"] }
     ],
     "owners": [
       {"name": "Dr Aisyah", "role": "CEO", "login": false},
@@ -462,7 +463,8 @@
       {"name": "Fariz", "role": "Warehouse intern", "access": "staff"},
       {"name": "Azwani", "role": "Accounts", "access": "staff"},
       {"name": "Hanin", "role": "Operations Manager", "access": "hq"},
-      {"name": "Iman", "role": "HR & Admin Executive", "enters_all": true, "access": "hq"}
+      {"name": "Iman", "role": "HR & Admin Executive", "enters_all": true, "access": "hq"},
+      {"name": "Arinah", "role": "Marketing", "access": "staff"}
     ],
     "measures": [
       {
@@ -905,6 +907,20 @@
       {"project": "BR walk-in", "milestone": "New signboard up at BR", "owner": "Amira", "due": "2026-10-31"},
       {"project": "Ampang Shopee IMAN Wellness", "milestone": "Join the 11.11 campaign with a store voucher", "owner": "Ampang supervisor", "due": "2026-11-11"},
       {"project": "Ampang Shopee IMAN Wellness", "milestone": "Join the 12.12 campaign with a store voucher", "owner": "Ampang supervisor", "due": "2026-12-12"}
+    ]
+  },
+  "meetings": {
+    "_note": "8 Nov 2026 (CEO): meeting groups. Members by name (HQ people or branch people). The CEO (super admin) sees every group. Loaded once; edit in Admin → Meeting groups.",
+    "groups": [
+      {"code": "council", "name": "Management Council", "kind": "team", "day": "Mon", "time": "11:00", "agenda": "council", "members": ["Alia", "Hanin"]},
+      {"code": "bm", "name": "Branch Managers", "kind": "team", "day": "Mon", "time": "16:00", "agenda": "branch", "members": ["Hafizah", "Amirah", "Afifah", "Aimi", "Mazlina", "Alia", "Hanin"]},
+      {"code": "finance", "name": "Finance (CEO 1:1)", "kind": "one_to_one", "agenda": "simple", "members": ["Azwani"]},
+      {"code": "hrops-1on1", "name": "HR & Ops 1:1", "kind": "one_to_one", "agenda": "simple", "members": ["Hanin"]},
+      {"code": "inventory-1on1", "name": "Inventory 1:1", "kind": "one_to_one", "agenda": "simple", "members": ["Alia"]},
+      {"code": "marketing-1on1", "name": "Marketing 1:1", "kind": "one_to_one", "agenda": "simple", "members": ["Arinah"]},
+      {"code": "hq-inventory", "name": "HQ Inventory team", "kind": "team", "agenda": "simple", "members": ["Alia", "Syarafana"]},
+      {"code": "hrops-team", "name": "HR & Ops team", "kind": "team", "agenda": "simple", "members": ["Hanin", "Iman"]},
+      {"code": "bn", "name": "BN team", "kind": "team", "agenda": "simple", "members": ["Alia", "Hafiz", "Iman"]}
     ]
   }
 }
