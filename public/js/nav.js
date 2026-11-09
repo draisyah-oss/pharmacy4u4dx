@@ -24,8 +24,23 @@
   });
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && check.checked) { check.checked = false; }
-    var btn = e.target.closest && e.target.closest('.menu-btn');
+    var btn = e.target.closest && e.target.closest('.menu-btn, .tabbar label[for="nav-open"]');
     if (btn && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); check.checked = !check.checked; check.dispatchEvent(new Event('change')); }
+  });
+
+  // 9 Nov: groups stay folded except the current page's; each person's own opens / folds are remembered.
+  var GKEY = 'p4u-nav-groups';
+  var saved = {};
+  try { saved = JSON.parse(localStorage.getItem(GKEY) || '{}') || {}; } catch (e) { saved = {}; }
+  var searching = false;
+  side.querySelectorAll('.sn-group[data-group]').forEach(function (g) {
+    var name = g.getAttribute('data-group');
+    if (!g.hasAttribute('data-current') && Object.prototype.hasOwnProperty.call(saved, name)) g.open = !!saved[name];
+    g.addEventListener('toggle', function () {
+      if (searching) return;
+      saved[name] = g.open;
+      try { localStorage.setItem(GKEY, JSON.stringify(saved)); } catch (e) { /* private mode */ }
+    });
   });
 
   // Search: filter the links by name or keyword.
@@ -33,6 +48,7 @@
   var none = side.querySelector('.sn-none');
   search.hidden = false;
   search.addEventListener('input', function () {
+    searching = true; setTimeout(function () { searching = false; }, 0);
     var q = search.value.trim().toLowerCase();
     var any = false;
     side.querySelectorAll('.sn-group').forEach(function (g) {

@@ -39,3 +39,27 @@ test('switch to Desktop view and back; remembered by a cookie; the back link sta
   assert.equal(back.headers.get('location'), '/');
   assert.match(back.headers.get('set-cookie'), /p4u_view=;.*Max-Age=0/);
 });
+
+test('9 Nov: News page (with November’s achievers) and the phone tab bar render', async () => {
+  const login = await fetch(base + '/login/pin', { method: 'POST', redirect: 'manual', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'username=hazera&pin=1111' });
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  const news = await fetch(base + '/news', { headers: { cookie } });
+  assert.equal(news.status, 200);
+  const html = await news.text();
+  assert.match(html, /Monthly achievers/);
+  assert.match(html, /class="tabbar"[\s\S]*href="\/daily"[\s\S]*Log today[\s\S]*for="nav-open"/);
+  const home = await (await fetch(base + '/', { headers: { cookie } })).text();
+  assert.match(home, /class="tab is-current" aria-current="page"><svg[^]*?<span>Home<\/span>/);
+});
+
+test('9 Nov: "needed per day" is worked out on a Monday before today’s numbers are in', () => {
+  const { fillNeedPerDay } = require('../../src/home/highlights');
+  const c = { rows: [
+    { code: 'WM', asOf: '2026-11-08', sales: { month: '2026-11', mtd: 13134, monthTarget: 73000, perDay: null } },
+    { code: 'X', asOf: '2026-10-31', sales: { month: '2026-11', mtd: 0, monthTarget: 1000, perDay: null } }, // last month's day: left alone
+  ] };
+  fillNeedPerDay(c);
+  assert.equal(Math.round(c.rows[0].sales.perDay), 2721);
+  assert.equal(c.rows[0].sales.daysLeft, 22);
+  assert.equal(c.rows[1].sales.perDay, null);
+});

@@ -98,6 +98,11 @@
      const count = (n, what) => '<span class="sn-badge" aria-label="' + n + ' ' + what + '">' + n + '</span>';
      const badge = (key) => (key === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount ? count(oosCount, 'to answer')
        : '');
+     // 9 Nov (CEO: "the menu seems messy"): the current page is found by navActive or by its path, and only
+     // its group opens – the others stay folded (each person's own opens/folds are remembered by nav.js).
+     const curPath = (typeof herePath !== 'undefined' && herePath ? String(herePath) : '').split('?')[0].split('#')[0];
+     const isCur = (l) => here === l[0] || (curPath && curPath !== '/' && l[1].split('?')[0] === curPath);
+     const shortMenu = role === 'branch_staff';
      const sub = role === 'admin' ? (user.is_super ? 'Super admin' : 'Admin') : role === 'hq' || role === 'hq_staff' ? 'HQ' : (user.branch_name || user.branch_code || '');
 %>
 <input type="checkbox" id="nav-open" class="nav-check" aria-hidden="true" tabindex="-1">
@@ -112,32 +117,26 @@
   <section class="sn-needs" aria-label="Needs you">
     <p class="sn-needs-h">Needs you</p>
     <% if (!nd.items.length) { %><p class="sn-clear">✔ All clear – nothing waiting for you</p><% } %>
-    <% nd.items.forEach(function (it) { %>
+    <% nd.items.slice(0, 3).forEach(function (it) { %>
       <a class="sn-need lv-<%= it.level %>" href="<%= it.href %>"><span class="sn-n"><%= it.count %></span><span><b><%= it.title %></b><small><%= it.sub %></small></span></a>
     <% }) %>
-    <% if (nd.more) { %><p class="sn-more muted small">+ <%= nd.more %> more in the menu</p><% } %>
+    <% const ndMore = Math.max(0, nd.items.length - 3) + (nd.more || 0); if (ndMore) { %><a class="sn-more small" href="/">+ <%= ndMore %> more – see Home</a><% } %>
   </section>
   <% } %>
-  <%# Fixed for everyone (19 Oct): Daily entry and own branch scoreboard (branch logins), Group scoreboard (all). %>
-  <div class="sn-quick">
-    <% if (role === 'branch_staff' || role === 'branch_manager') { %>
-      <a href="/daily" class="sn-tile<%= here === 'daily' ? ' is-current' : '' %>">Daily entry</a>
-      <a href="/scoreboard" class="sn-tile<%= here === 'scoreboard' ? ' is-current' : '' %>"><%= user.branch_code || 'Branch' %> scoreboard</a>
-    <% } %>
-    <a href="/group" class="sn-tile sn-wide<%= here === 'group' ? ' is-current' : '' %>">Group scoreboard</a>
-  </div>
   <input type="search" class="sn-search" data-nav-search placeholder="Search… e.g. sales, OOS" aria-label="Search the menu" hidden>
   <nav>
+    <a href="/" class="sn-link sn-home<%= here === 'home' || curPath === '/' ? ' is-current' : '' %>" data-words="home highlights start"<%- here === 'home' || curPath === '/' ? ' aria-current="page"' : '' %>>Home</a>
     <% groups.forEach(function (g) { %>
-      <details class="sn-group" open>
-        <summary><%= g[0] %></summary>
+      <% const gOpen = shortMenu || g[1].some(isCur); %><details class="sn-group" data-group="<%= g[0] %>"<%= gOpen ? ' open' : '' %><%- g[1].some(isCur) ? ' data-current' : '' %>>
+        <summary><span><%= g[0] %></span><% if (!g[1].some(isCur)) { %><small class="sn-gcount"><%= g[1].length %></small><% } %></summary>
         <% g[1].forEach(function (l) { %>
-          <a href="<%= l[1] %>" class="sn-link<%= l[4] === 'sub' ? ' sn-sub' : '' %><%= here === l[0] ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- here === l[0] ? ' aria-current="page"' : '' %>><%= l[2] %><%- badge(l[0]) %><% if (l[5]) { %><span class="sn-count" aria-label="<%= l[5].replace('/', ' of ') %> steps done"><%= l[5] %></span><% } %></a>
+          <a href="<%= l[1] %>" class="sn-link<%= l[4] === 'sub' ? ' sn-sub' : '' %><%= isCur(l) ? ' is-current' : '' %>" data-words="<%= (l[2] + ' ' + (l[3] || '')).toLowerCase() %>"<%- isCur(l) ? ' aria-current="page"' : '' %>><%= l[2] %><%- badge(l[0]) %><% if (l[5]) { %><span class="sn-count" aria-label="<%= l[5].replace('/', ' of ') %> steps done"><%= l[5] %></span><% } %></a>
         <% }) %>
       </details>
     <% }) %>
     <p class="sn-none muted" hidden>Nothing matches.</p>
   </nav>
 </aside>
-<script src="/js/nav.js?v=1" defer></script>
+<%- include('tabbar', { here: here, isCur: isCur, role: role, inv: inv }) %>
+<script src="/js/nav.js?v=2" defer></script>
 <% } %>

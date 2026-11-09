@@ -91,7 +91,7 @@ test('the whole flow: report → inbox badge → transfer answer → Fariz sends
   assert.equal((await hn.get('/oos/inbox')).status, 403);
   assert.equal((await hn.get('/oos/transfers')).status, 403);
   assert.doesNotMatch((await hn.get('/hq/today')).html, /Out-of-stock inbox/);
-  assert.match(inbox, /Inventory<\/summary>/);
+  assert.match(inbox, /<summary><span>Inventory<\/span>/); // 9 Nov menu markup
   assert.equal((await staff.post(`/oos/${item.id}/answer`, { answer: 'order', qty: '5', expected_back: '2026-10-20' })).status, 403);
   // Answer: transfer 6 from JH
   clock = new Date('2026-10-16T10:05:00+08:00');

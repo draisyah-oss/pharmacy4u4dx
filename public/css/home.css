@@ -46,7 +46,7 @@
 .hd-table { width: 100%; border-collapse: collapse; font-size: 0.92rem; }
 .hd-table th, .hd-table td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #edf1f7; vertical-align: middle; }
 .hd-table thead th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--ink-soft); font-weight: 700; }
-.hd-table .num { text-align: right; white-space: nowrap; }
+.hd-table .hd-num { text-align: right; white-space: nowrap; }
 .hd-branches { min-width: 560px; }
 .hd-branches tbody th { font-weight: 700; }
 .hd-today { display: block; font-weight: 400; }
@@ -84,3 +84,13 @@
 }
 @media (max-width: 899px) { .hd-row-wide { grid-template-columns: 1fr; } }
 body.view-phone .hd-row { grid-template-columns: 1fr; }
+/* 9 Nov (2): the home page's own "Needs you" replaces the side menu's; phones use the tab bar for the second button. */
+body:has(.hd-needs) .sn-needs { display: none; }
+.hd-table td, .hd-table th { border-left: 0; border-right: 0; }
+.hd-table tbody td { font-size: 0.92rem; font-weight: 400; }
+@media (max-width: 959px) {
+  .hd-actions .button.secondary { display: none; }
+  .hd-actions { width: 100%; }
+  .hd-extra { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}
+body.view-phone .hd-actions .button.secondary { display: none; }

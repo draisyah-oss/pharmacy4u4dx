@@ -3,7 +3,7 @@
 <%- include('partials/nav', { navActive: 'news' }) %>
 <%# 9 Nov redesign: everything to celebrate and read lives here, off the home page – Dr Aisyah's push,
     the monthly achievers, HQ's posts, today's reminder and tip, last week's stars, sales lost to out of stock. %>
-<link rel="stylesheet" href="/css/home.css?v=1">
+<link rel="stylesheet" href="/css/home.css?v=2">
 <% const H = hl; const W = H.wins; %>
 <main class="page hd-page hd-newspage">
   <% if (typeof ok !== 'undefined' && ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
@@ -15,8 +15,8 @@
     <div class="hd-col">
       <section class="mh-card" aria-labelledby="hl-news">
   <h2 id="hl-news">📣 News</h2>
-  <% if (H.rally) { %><%- include('rally', { R: H.rally, myCode: H.myCode }) %><% } %>
-  <% if (H.achievers) { %><%- include('achievers', { A: H.achievers }) %><% } %>
+  <% if (H.rally) { %><%- include('partials/rally', { R: H.rally, myCode: H.myCode }) %><% } %>
+  <% if (H.achievers) { %><%- include('partials/achievers', { A: H.achievers }) %><% } %>
   <% if (!H.news.length && !H.achievers && !H.rally) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
   <ul class="hl-news">
     <% H.news.forEach(function (n) { %>

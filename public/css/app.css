@@ -1635,3 +1635,48 @@ html body.view-phone .sn-collapse { display: none !important; }
 .mt-fu.is-private { border-left: 3px solid var(--info-tint); padding-left: 10px; }
 .mt-upd-list li { align-items: flex-start; gap: 10px; }
 .mt-upd-list li span:first-child { flex: 0 0 auto; color: var(--ink-soft); font-weight: 700; }
+
+/* ─── 9 Nov (CEO): calmer side menu + bottom tab bar on phones ─── */
+.sidenav { padding-top: 14px; }
+.sn-head { padding-bottom: 10px; margin-bottom: 10px; }
+.sn-needs { gap: 4px; margin-bottom: 10px; }
+.sn-need { padding: 6px 8px; border-radius: 10px; }
+.sn-need b { font-size: 0.85rem; }
+.sn-need small { font-size: 0.74rem; }
+.sn-n { min-width: 24px; height: 24px; font-size: 0.78rem; }
+.sn-more { color: var(--brand); text-decoration: none; padding: 2px 4px; }
+.sn-search { height: 40px; border-width: 1px; border-radius: 10px; margin-bottom: 6px; }
+.sn-group { margin: 0; border-top: 1px solid #e3e8f1; }
+.sn-group summary { padding: 11px 8px; font-size: 0.74rem; letter-spacing: 0.1em; border-radius: 8px; }
+.sn-group summary:hover { background: #e8eef8; color: var(--ink); }
+.sn-group summary span { flex: 1; }
+.sn-group summary::after { margin-left: 8px; }
+.sn-gcount { font-size: 0.7rem; font-weight: 700; color: var(--ink-soft); background: #e3e8f1; border-radius: 999px; padding: 1px 7px; letter-spacing: 0; }
+.sn-group[open] { padding-bottom: 6px; }
+.sn-link { padding: 8px 12px; margin: 1px 0; font-size: 0.95rem; border-left-width: 3px; }
+.sn-link.sn-sub { padding-left: 28px; font-size: 0.88rem; color: var(--ink-soft); }
+.sn-link.sn-sub::before { content: ""; }
+.sn-link.sn-sub.is-current { color: var(--ink); }
+.sn-home { font-weight: 700; margin-bottom: 6px; }
+
+.tabbar { display: none; }
+@media (max-width: 959px) {
+  .tabbar {
+    display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+    background: var(--card); border-top: 1px solid var(--line);
+    padding: 4px 4px calc(4px + var(--safe-bottom)); box-shadow: 0 -2px 12px rgba(19, 32, 58, 0.06);
+  }
+  body:has(.tabbar) { padding-bottom: calc(68px + var(--safe-bottom)); }
+}
+body.view-phone .tabbar { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); position: fixed; left: 50%; transform: translateX(-50%); width: 100%; max-width: 480px; bottom: 0; z-index: 40; background: var(--card); border-top: 1px solid var(--line); padding: 4px 4px calc(4px + var(--safe-bottom)); }
+body.view-phone:has(.tabbar) { padding-bottom: calc(68px + var(--safe-bottom)); }
+body.view-desktop .tabbar { display: none !important; }
+/* Pages with their own save bar at the bottom (Daily entry, week sheet) keep it; the tab bar steps aside. */
+body:has(.savebar) .tabbar { display: none !important; }
+.tab { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-height: 52px; padding: 4px 2px; border-radius: 10px; color: var(--ink-soft); text-decoration: none; font-size: 0.72rem; font-weight: 700; cursor: pointer; user-select: none; }
+.tab span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.tab.is-current { color: var(--brand); background: var(--brand-tint); }
+.tab:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
+.tab-badge { position: absolute; top: 2px; left: 54%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--short); color: #fff; font-size: 0.66rem; display: inline-flex; align-items: center; justify-content: center; }

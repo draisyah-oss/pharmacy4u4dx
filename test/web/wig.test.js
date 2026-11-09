@@ -263,18 +263,18 @@ test('19 Oct: HQ WIG takes up to 2 focuses and 2 commitments; the CEO can commit
 
 test('19 Oct: Inventory menu only for Alia, Syarafana, Fariz (and admin); Projects menu for HQ; Anis at Ampang', async () => {
   const a = (await (await alia()).get('/hq/today')).html;
-  assert.match(a, /<summary>Inventory<\/summary>/);
-  assert.match(a, /<summary>Projects<\/summary>[\s\S]*sn-sub[^>]*>Wiki checklist/);
+  assert.match(a, /<summary><span>Inventory<\/span>/);
+  assert.match(a, /<summary><span>Projects<\/span>[\s\S]*sn-sub[^>]*>Wiki checklist/);
   const h = (await (await hanin()).get('/hq/today')).html;
   // 4 Nov: every HQ login gets Inventory → Ordering & payments, but only the inventory team the OOS pages.
-  assert.match(h, /<summary>Inventory<\/summary>/);
+  assert.match(h, /<summary><span>Inventory<\/span>/);
   assert.match(h, /href="\/inventory"/);
   assert.doesNotMatch(h, /href="\/oos\/inbox"|href="\/oos\/transfers"/);
-  assert.match(h, /<summary>Projects<\/summary>/);
+  assert.match(h, /<summary><span>Projects<\/span>/);
   assert.equal((await (await hanin()).get('/oos/transfers')).status, 403);
   const f = (await (await fariz()).get('/hq/today')).html;
-  assert.match(f, /<summary>Inventory<\/summary>/);
-  assert.doesNotMatch((await (await manager()).get('/daily')).html, /<summary>Projects<\/summary>|<summary>Inventory<\/summary>/);
+  assert.match(f, /<summary><span>Inventory<\/span>/);
+  assert.doesNotMatch((await (await manager()).get('/daily')).html, /<summary><span>Projects<\/span>|<summary><span>Inventory<\/span>/);
   const anis = (await db.query("SELECT p.role, u.username, u.role AS login FROM people p JOIN branches b ON b.id = p.branch_id JOIN users u ON u.person_id = p.id WHERE b.code = 'Ampang' AND p.name = 'Anis'")).rows[0];
   assert.deepEqual(anis, { role: 'Intern', username: 'anis', login: 'branch_staff' });
 });
@@ -295,7 +295,7 @@ test('19 Oct: "Needs you" at the top of the menu – counts per person, fixed ti
   assert.equal(JSON.parse((await db.query("SELECT value FROM app_settings WHERE key = 'oos_needs_off'")).rows[0].value)[0], 'Alia');
   const st = (await (await staff()).get('/daily')).html;
   assert.match(st, />Daily entry</);
-  assert.match(st, />WM scoreboard</);
+  assert.match(st, />Scoreboard</); // 9 Nov: tiles replaced by the menu's Branch group and the phone tab bar
   assert.match(st, />Group scoreboard</);
 });
 

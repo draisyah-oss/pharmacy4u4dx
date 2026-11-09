@@ -1,0 +1,28 @@
+<%# 9 Nov (CEO: "my phone doesn't have the bottom menu"): a bottom tab bar on phones – four places each role
+    uses most, plus Menu (opens the side menu; works without JavaScript). Hidden on wide screens and on pages
+    with their own save bar at the bottom (Daily entry). Inputs from nav.ejs: here, isCur, role, inv. %>
+<%
+  const ic = {
+    home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    log: '<circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/>',
+    score: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
+    week: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    wig: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+    box: '<path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/>',
+    people: '<circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0M16 4a3 3 0 0 1 0 6M21 20a6 6 0 0 0-4-5.6"/>',
+    menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
+  };
+  let tabs;
+  if (role === 'branch_staff') tabs = [['home', '/', 'Home', 'home'], ['daily', '/daily', 'Log today', 'log'], ['scoreboard', '/scoreboard', 'Scoreboard', 'score'], ['myweek', '/my-week', 'My week', 'week']];
+  else if (role === 'branch_manager') tabs = [['home', '/', 'Home', 'home'], ['daily', '/daily', 'Daily entry', 'log'], ['scoreboard', '/scoreboard', 'Scoreboard', 'score'], ['commitments', '/commitments', 'WIG session', 'wig']];
+  else if (role === 'hq_staff') tabs = [['home', '/', 'Home', 'home'], ['hqtoday', '/hq/today', 'My week', 'week'], ['hqcommit', '/hq', 'HQ WIG', 'wig'], ['group', '/group', 'Group', 'score']];
+  else tabs = [['home', '/', 'Home', 'home'], ['group', '/group', 'Group', 'score'], inv ? ['oosinbox', '/oos/inbox', 'Out of stock', 'box'] : ['hqcommit', '/hq', 'HQ WIG', 'wig'],
+    (typeof meetingsMenu !== 'undefined' && meetingsMenu) ? ['meetings', '/meetings', 'Meetings', 'people'] : ['hqtoday', '/hq/today', 'My week', 'week']];
+  const on = function (t) { return t[0] === 'home' ? (here === 'home' || (typeof herePath !== 'undefined' && String(herePath).split('?')[0] === '/')) : isCur(t); };
+%>
+<nav class="tabbar" aria-label="Main">
+  <% tabs.forEach(function (t) { %>
+    <a href="<%= t[1] %>" class="tab<%= on(t) ? ' is-current' : '' %>"<%- on(t) ? ' aria-current="page"' : '' %>><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- ic[t[3]] %></svg><span><%= t[2] %></span><% if (t[0] === 'oosinbox' && typeof oosCount !== 'undefined' && oosCount) { %><b class="tab-badge" aria-label="<%= oosCount %> to answer"><%= oosCount > 99 ? '99+' : oosCount %></b><% } %></a>
+  <% }) %>
+  <label for="nav-open" class="tab" role="button" tabindex="0"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><%- ic.menu %></svg><span>Menu</span><% const nd2 = typeof needs !== 'undefined' && needs ? needs : null; if (nd2 && nd2.items && nd2.items.length) { %><b class="tab-badge tab-dot" aria-label="<%= nd2.items.length %> things need you"><%= nd2.items.length %></b><% } %></label>
+</nav>

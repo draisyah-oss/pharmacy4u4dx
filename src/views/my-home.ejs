@@ -3,7 +3,7 @@
 <%- include('partials/nav', { navActive: 'home' }) %>
 <%# 9 Nov redesign (CEO: "remove distraction – staff want to look at their WIG and lead measures"):
     WIG first, then my lead measures this week, my commitment; managers add their team. Celebrations live on /news. %>
-<link rel="stylesheet" href="/css/home.css?v=1">
+<link rel="stylesheet" href="/css/home.css?v=2">
 <%
   const H = hl;
   const statusText = { off_track: 'Behind', watch: 'Nearly', on_track: 'On track' };
@@ -26,8 +26,6 @@
     </nav>
   </header>
 
-  <%- include('partials/hd-needs') %>
-
   <div class="hd-row">
     <% if (s) { %>
       <%- include('partials/hd-wig', { k: (isManager ? 'Branch WIG' : 'Our WIG') + ' · ' + new Date(s.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' }) + ' sales',
@@ -46,6 +44,8 @@
       <% } %>
     </section>
   </div>
+
+  <%- include('partials/hd-needs') %>
 
   <section class="hd-card" aria-labelledby="hd-lead-h">
     <div class="hd-head">
@@ -76,10 +76,10 @@
     <h2 id="hd-team-h" class="hd-k">Team lead measures · this week</h2>
     <div class="hd-scroll">
       <table class="hd-table">
-        <thead><tr><th scope="col">Staff</th><th scope="col">Furthest behind</th><th scope="col" class="num">On track</th></tr></thead>
+        <thead><tr><th scope="col">Staff</th><th scope="col">Furthest behind</th><th scope="col" class="hd-num">On track</th></tr></thead>
         <tbody>
           <% team.forEach(function (p) { %>
-            <tr><th scope="row"><%= p.name %></th><td><%= p.low ? p.low.label : '–' %></td><td class="num <%= p.on / p.of >= 0.5 ? 'hd-good' : 'hd-bad' %>"><%= p.on %> / <%= p.of %></td></tr>
+            <tr><th scope="row"><%= p.name %></th><td><%= p.low ? p.low.label : '–' %></td><td class="hd-num <%= p.on / p.of >= 0.5 ? 'hd-good' : 'hd-bad' %>"><%= p.on %> / <%= p.of %></td></tr>
           <% }) %>
         </tbody>
       </table>

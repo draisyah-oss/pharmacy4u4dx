@@ -95,6 +95,11 @@ async function buildMyPage(db, { user, branch, now, trackerStart }) {
     if (kept) wins.push({ kind: 'commit', title: 'You kept last week’s commitment', sub: kept.commitment, href: '/my-week' });
   }
   const s = boardThis.sales;
+  // 9 Nov: Monday before today's numbers are in – "needed per day" from the last day with numbers.
+  if (s && s.monthTarget && (s.perDay === null || s.perDay === undefined) && boardThis.asOf && boardThis.asOf.slice(0, 7) === s.month) {
+    const need = calc.requiredPerDay({ monthTarget: s.monthTarget, mtdActual: s.mtd || 0, asOf: boardThis.asOf });
+    s.perDay = need.perDay; s.daysLeft = need.daysLeft;
+  }
   if (s && s.status === 'on_track' && s.monthTarget) {
     wins.push({ kind: 'branch', title: `${branch.code} is ahead of pace this month`, sub: `${fmt.money(s.mtd)} so far – ${fmt.pct(s.pct)} of ${fmt.money(s.monthTarget)}`, href: '/scoreboard' });
   }

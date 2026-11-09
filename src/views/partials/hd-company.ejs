@@ -17,17 +17,17 @@
       <h2 id="hd-br-h" class="hd-k">Branches · <%= monthName %> sales so far</h2>
       <div class="hd-scroll">
         <table class="hd-table hd-branches">
-          <thead><tr><th scope="col">Branch</th><th scope="col" class="num">Sales</th><th scope="col">vs target</th><th scope="col" class="num">Needed per day</th><th scope="col" class="num">Lead targets hit last week</th></tr></thead>
+          <thead><tr><th scope="col">Branch</th><th scope="col" class="hd-num">Sales</th><th scope="col">vs target</th><th scope="col" class="hd-num">Needed per day</th><th scope="col" class="hd-num">Lead targets hit last week</th></tr></thead>
           <tbody>
             <% C.rows.forEach(function (r) { const s = r.sales || {}; const fill = s.monthTarget ? Math.min(100, (s.mtd || 0) / s.monthTarget * 100) : 0; const pace = s.monthTarget && s.paceTarget ? Math.min(100, s.paceTarget / s.monthTarget * 100) : null; const t = leads[r.code];
                  const b = typeof branches !== 'undefined' && branches ? branches.find(function (x) { return x.code === r.code; }) : null; %>
               <tr>
                 <th scope="row"><% if (links) { %><a href="/scoreboard?branch=<%= encodeURIComponent(r.code) %>"><%= r.name %></a><% } else { %><%= r.name %><% } %>
                   <% if (b) { %><small class="muted hd-today"><%= b.today_entries ? b.today_entries + ' of ' + b.fields + ' in today' : 'nothing in today' %></small><% } %></th>
-                <td class="num"><% if (links && r.started) { %><a href="/scoreboard/trace?type=sales&from=<%= s.month %>-01&to=<%= r.asOf %>&branch=<%= encodeURIComponent(r.code) %>"><%= fmt.money(s.mtd) %></a><% } else { %><%= fmt.money(s.mtd) %><% } %></td>
+                <td class="hd-num"><% if (links && r.started) { %><a href="/scoreboard/trace?type=sales&from=<%= s.month %>-01&to=<%= r.asOf %>&branch=<%= encodeURIComponent(r.code) %>"><%= fmt.money(s.mtd) %></a><% } else { %><%= fmt.money(s.mtd) %><% } %></td>
                 <td><span class="hd-cellbar"><span class="hd-mbar is-<%= s.status %>" aria-hidden="true"><span style="width: <%= fill.toFixed(1) %>%"></span><% if (pace !== null) { %><i style="left: <%= pace.toFixed(1) %>%"></i><% } %></span><span class="small"><%= s.monthTarget ? fmt.pct(s.pct) : '–' %></span></span></td>
-                <td class="num"><%= s.perDay === null || s.perDay === undefined ? '–' : s.perDay === 0 ? 'reached' : fmt.money(s.perDay) %></td>
-                <td class="num <%= t && t.of ? (t.on / t.of >= 0.5 ? 'hd-good' : 'hd-bad') : '' %>"><%= t && t.of ? t.on + ' / ' + t.of : '–' %></td>
+                <td class="hd-num"><%= s.perDay === null || s.perDay === undefined ? '–' : s.perDay === 0 ? 'reached' : fmt.money(s.perDay) %></td>
+                <td class="hd-num <%= t && t.of ? (t.on / t.of >= 0.5 ? 'hd-good' : 'hd-bad') : '' %>"><%= t && t.of ? t.on + ' / ' + t.of : '–' %></td>
               </tr>
             <% }) %>
           </tbody>

@@ -92,11 +92,25 @@ async function removeNews(db, user, id, { now }) {
   return { ok: 'Taken down.' };
 }
 
+// 9 Nov (CEO: "why is needed per day empty?"): on a Monday before anyone has entered today's numbers the
+// new week hasn't started, so the scoreboard leaves "needed per day" out. Work it out from the last day
+// that has numbers (same rule: month target − sales so far, ÷ days left after that day), within the month.
+function fillNeedPerDay(company) {
+  for (const r of (company && company.rows) || []) {
+    const s = r.sales;
+    if (!s || !s.monthTarget || (s.perDay !== null && s.perDay !== undefined) || !r.asOf || r.asOf.slice(0, 7) !== s.month) continue;
+    const need = calc.requiredPerDay({ monthTarget: s.monthTarget, mtdActual: s.mtd || 0, asOf: r.asOf });
+    s.perDay = need.perDay; s.daysLeft = need.daysLeft;
+  }
+  return company;
+}
+
 // ── Wins (all branches, last week) ──
 async function wins(db, { today, trackerStart }) {
   const week = calc.weekStart(today);
   const last = calc.addDays(week, -7);
   const company = await companySalesForWeek(db, { week, today, trackerStart });
+  fillNeedPerDay(company);
   if (last < calc.weekStart(trackerStart)) return { company, people: [], teams: [], ahead: [], streaks: [], words: [], week: last };
   const branches = (await db.query('SELECT * FROM branches WHERE active ORDER BY sort_order')).rows;
   const people = []; const teamHits = []; const streaks = [];
@@ -206,4 +220,4 @@ async function buildHighlights(db, { user, now, trackerStart }) {
 }
 const clearCache = () => cache.clear();
 
-module.exports = { branchTargets, buildHighlights, goalProgress, saveGoalStatus, postNews, removeNews, loadNews, canPost, oosOver3, clearCache };
+module.exports = { fillNeedPerDay, branchTargets, buildHighlights, goalProgress, saveGoalStatus, postNews, removeNews, loadNews, canPost, oosOver3, clearCache };
