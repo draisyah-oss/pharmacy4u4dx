@@ -1,0 +1,8 @@
+<%# One group card on the Meetings page. Input: g (with counts; Branch 1:1s also bm, last1on1, lastFollowup) %>
+<% const c = g.counts; %>
+<a class="mt-group" href="/meetings/g/<%= g.code %>">
+  <b><%= g.name %></b>
+  <span class="muted small"><%= g.kind === 'one_to_one' ? 'CEO 1:1' : g.kind === 'branch_1on1' ? 'Branch 1:1' + (g.bm ? ' with ' + g.bm : '') : g.members + ' members' %><%= g.default_day ? ' · ' + g.default_day + (g.default_time ? ' ' + g.default_time : '') : '' %></span>
+  <span class="mt-meta"><span><%= c.open %> open</span><% if (c.overdue) { %><span class="mt-chip crit"><%= c.overdue %> overdue</span><% } %><% if (c.ceo) { %><span class="mt-chip info"><%= c.ceo %> need CEO</span><% } %><% if (c.blocked) { %><span class="mt-chip warn"><%= c.blocked %> blocked</span><% } %></span>
+  <% if (g.kind === 'branch_1on1') { %><span class="muted small"><%= g.last1on1 ? 'Last 1:1 ' + fmtDate(g.last1on1.held_on) + (g.last1on1.led_by_name ? ' · ' + g.last1on1.led_by_name : '') : 'No 1:1 yet' %><%= g.lastFollowup ? ' · last follow-up ' + fmtDate(g.lastFollowup) : '' %></span><% } %>
+</a>

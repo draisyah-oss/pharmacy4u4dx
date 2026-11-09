@@ -49,6 +49,8 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await require('../zakat/data').setupOnce(db, log);
     // 8 Nov: Meetings module – the meeting groups (Arinah's login comes from backfillHqTeam above).
     await require('../meetings/setup').setupOnce(db, log);
+    // 9 Nov: Branch 1:1s (branch manager + Hanin) for databases set up before them.
+    await require('../meetings/setup').branchOneOnOnesOnce(db, log);
     // 3 Nov: November's agreed goals 1 and 2 are worked out by the app (sales, out of stock).
     await relabelOnce(db, 'goal_metrics_v1', [
       ["UPDATE month_goals SET metric = 'company_sales' WHERE month = '2026-11' AND title LIKE 'Hit the November target%' AND metric IS NULL"],
@@ -65,6 +67,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   await addAdminLoginsOnce(db, seed, log);
   await require('../zakat/data').setupOnce(db, log);
   await require('../meetings/setup').setupOnce(db, log);
+  await require('../meetings/setup').branchOneOnOnesOnce(db, log);
   await ampangNov5Once(db, log);
   await hafizNov8Once(db, log);
   await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);

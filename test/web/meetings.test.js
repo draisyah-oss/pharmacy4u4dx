@@ -61,9 +61,10 @@ async function login(username) {
 }
 const one = async (sql, args) => (await db.query(sql, args)).rows[0];
 
-test('setup: 9 groups from seed.json, members matched to their own logins; Arinah has an HQ staff login', async () => {
+test('setup: 9 groups + 5 Branch 1:1s from seed.json, members matched to their own logins; Arinah has an HQ staff login', async () => {
   const groups = (await db.query('SELECT code, name, kind FROM meeting_groups ORDER BY sort_order')).rows;
-  assert.equal(groups.length, 9);
+  assert.equal(groups.length, 14);
+  assert.equal(groups.filter((g) => g.kind === 'branch_1on1').length, 5);
   const members = async (code) => (await db.query(`SELECT u.username FROM meeting_group_members m JOIN users u ON u.id = m.user_id
     WHERE m.group_id = $1 ORDER BY u.username`, [gid[code]])).rows.map((r) => r.username);
   assert.deepEqual(await members('council'), ['alia', 'hanin']);

@@ -11,6 +11,7 @@
 
 const A = require('./access');
 const D = require('./data');
+const E = require('./events');
 const calc = require('../calc');
 const { isRealDate } = require('../lib/dates');
 
@@ -141,7 +142,7 @@ async function save(db, user, meeting, body, { now }) {
         if (!kept(r)) continue;
         const a = await D.loadAction(tx, user, r.action_id, { now });
         if (!a) continue;
-        const out = await D.updateAction(tx, user, a, { status: r.status, note: r.note || `Discussed at ${label}` }, { now, tx, raised: true });
+        const out = await D.updateAction(tx, user, a, { status: r.status, note: r.note || `Discussed at ${label}` }, { now, tx, raised: true, quiet: true });
         if (out.error) throw new Error(out.error);
         made.upd[k] = a.id;
         applied.push({ action_id: a.id, title: a.title, status: r.status, note: r.note });
@@ -160,6 +161,8 @@ async function save(db, user, meeting, body, { now }) {
       await tx.query(`UPDATE meetings SET summary = $2, next_meeting = $3, parked = $4, minutes_updates = $5, status = 'draft', draft = NULL,
         updated_at = now() WHERE id = $1`, [meeting.id, draft.summary || null, draft.next || null, JSON.stringify(parked), JSON.stringify(applied)]);
       await D.audit(tx, user, 'minutes', 'meetings', meeting.id, null, { decisions: Object.values(made.dec), actions: Object.values(made.act), followups: Object.values(made.upd), parked: parked.length, day: t });
+      const n = (k, word) => { const c = Object.keys(made[k]).length; return c ? `${c} ${word}${c === 1 ? '' : 's'}` : null; };
+      await E.meetingEvent(tx, user, meeting, 'minutes', [n('dec', 'decision'), n('act', 'new action'), n('upd', 'follow-up')].filter(Boolean).join(', '));
     });
   } catch (err) {
     if (/salary|pay/i.test(err.message) || /p4u_mentions_salary|check constraint/i.test(err.message)) return { error: 'Salaries and pay can’t be stored in this app (privacy rule).', draft };
@@ -173,6 +176,7 @@ async function approve(db, user, meeting) {
   if (meeting.status !== 'draft') return { error: 'Save the minutes first.' };
   await db.query("UPDATE meetings SET status = 'approved', approved_by = $2, approved_at = now(), updated_at = now() WHERE id = $1", [meeting.id, user.id]);
   await D.audit(db, user, 'approve', 'meetings', meeting.id, { status: 'draft' }, { status: 'approved' });
+  await E.meetingEvent(db, user, meeting, 'approved');
   return { ok: true };
 }
 

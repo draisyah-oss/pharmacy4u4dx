@@ -3,14 +3,15 @@
   <h1>Meeting groups</h1>
   <p class="muted">Who is in each group decides who sees its meetings, agenda, updates, actions and decisions. You (super admin) see every group. Other admin logins only see groups they are in.</p>
 </section>
-<% groups.concat([{ id: 0, name: '', kind: 'team', default_day: '', default_time: '', agenda_template: 'simple', active: true, member_ids: [] }]).forEach(function (g) { %>
+<% groups.concat([{ id: 0, name: '', kind: 'team', branch: null, default_day: '', default_time: '', agenda_template: 'simple', active: true, member_ids: [] }]).forEach(function (g) { %>
   <details class="oo-card mt-new"<%= g.id ? '' : '' %>>
     <summary><%= g.id ? g.name + (g.active ? '' : ' (off)') + ' · ' + g.member_ids.length + ' members' : '+ New group' %></summary>
     <form method="post" action="/meetings/admin/groups" class="mt-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="id" value="<%= g.id %>">
       <label class="oo-label">Name<input name="name" required maxlength="80" value="<%= g.name %>"></label>
       <div class="mt-grid">
-        <label class="oo-label">Kind<select name="kind"><option value="team"<%= g.kind === 'team' ? ' selected' : '' %>>Team meeting</option><option value="one_to_one"<%= g.kind === 'one_to_one' ? ' selected' : '' %>>CEO 1:1</option></select></label>
+        <label class="oo-label">Kind<select name="kind"><option value="team"<%= g.kind === 'team' ? ' selected' : '' %>>Team meeting</option><option value="one_to_one"<%= g.kind === 'one_to_one' ? ' selected' : '' %>>CEO 1:1</option><option value="branch_1on1"<%= g.kind === 'branch_1on1' ? ' selected' : '' %>>Branch 1:1</option></select></label>
+        <label class="oo-label">Branch (Branch 1:1)<select name="branch"><option value="">–</option><% A.BRANCH_LIST.forEach(function (b) { %><option value="<%= b %>"<%= g.branch === b ? ' selected' : '' %>><%= A.BRANCHES[b] %></option><% }) %></select></label>
         <label class="oo-label">Day<select name="default_day"><option value="">–</option><% A.DAYS.forEach(function (d) { %><option<%= g.default_day === d ? ' selected' : '' %>><%= d %></option><% }) %></select></label>
         <label class="oo-label">Time<input name="default_time" value="<%= g.default_time || '' %>" placeholder="16:00"></label>
         <label class="oo-label">Agenda<select name="agenda_template"><option value="council"<%= g.agenda_template === 'council' ? ' selected' : '' %>>Council order</option><option value="branch"<%= g.agenda_template === 'branch' ? ' selected' : '' %>>Branch managers order</option><option value="simple"<%= g.agenda_template === 'simple' ? ' selected' : '' %>>Simple</option></select></label>

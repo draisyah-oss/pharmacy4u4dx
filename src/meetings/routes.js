@@ -7,6 +7,8 @@ const D = require('./data');
 const F = require('./flags');
 const M = require('./minutes');
 const C = require('./claude');
+const E = require('./events');
+const FU = require('./followups');
 const { reminderText } = require('./remind');
 
 function meetingRoutes(db, { now }) {
@@ -23,6 +25,12 @@ function meetingRoutes(db, { now }) {
     return [code ? code[0] : m.branch_code, m.name];
   }));
 
+  // 9 Nov: count badge on the CEO overview tab ("What's new" since she last marked it seen).
+  router.use('/meetings', wrap(async (req, res, next) => {
+    if (req.method === 'GET' && req.user && A.isCeo(req.user)) res.locals.whatsNewCount = await E.count(db, req.user, { now });
+    next();
+  }));
+
   // ── Home: my groups, upcoming meetings, my actions ──
   router.get('/meetings', wrap(async (req, res) => {
     const groups = await D.groupsFor(db, req.user);
@@ -33,6 +41,15 @@ function meetingRoutes(db, { now }) {
     for (const g of groups) g.counts = F.counts(all.filter((a) => a.group_id === g.id), t);
     const upcoming = (await D.listMeetings(db, req.user, { from: t })).reverse().slice(0, 8);
     const recent = (await D.listMeetings(db, req.user, {})).filter((m) => m.held_on < t).slice(0, 5);
+    // Branch 1:1 cards: who it's with, last 1:1 held (and who led it), last follow-up.
+    const held = (await D.listMeetings(db, req.user, {})).filter((m) => m.kind === 'branch_1on1' && m.held_on <= t);
+    for (const g of groups.filter((x) => x.kind === 'branch_1on1')) {
+      const bm = await E.branchManagerOf(db, g.id);
+      g.bm = bm ? bm.name : null;
+      g.last1on1 = held.find((m) => m.group_id === g.id) || null;
+      const fu = await FU.list(db, req.user, { groupId: g.id, limit: 1 });
+      g.lastFollowup = fu.length ? fu[0].done_on : null;
+    }
     res.render('meetings-home', base(req, { title: 'Meetings', groups, mine, upcoming, recent, ceo: A.isCeo(req.user) }));
   }));
 
@@ -80,7 +97,46 @@ function meetingRoutes(db, { now }) {
     const waiting = (await D.listMeetings(db, req.user, {})).filter((m) => m.status === 'draft');
     const view = ['overdue', 'ceo', 'blocked', 'soon'].includes(req.query.show) ? req.query.show : null;
     const shown = view ? all.filter((a) => (view === 'overdue' ? a.overdue : view === 'ceo' ? a.needs_ceo : view === 'blocked' ? a.status === 'bl' : a.due_soon)) : null;
-    res.render('meetings-ceo', base(req, { title: 'CEO overview', perGroup, perBranch, total, focus, waiting, view, shown }));
+    // What's new since the last "Mark all as seen", with filters by branch, person and group.
+    const nf = { branch: A.BRANCHES[req.query.nb] ? String(req.query.nb) : '', person: String(Number(req.query.np) || ''), group: groups.some((g) => g.code === req.query.ng) ? String(req.query.ng) : '' };
+    const news = await E.feed(db, req.user, { now, ...nf });
+    const ids = [...new Set(news.all.flatMap((i) => i.people))];
+    const people = ids.length ? (await db.query(`SELECT u.id, COALESCE(p.name, u.display_name) AS name, u.is_super FROM users u LEFT JOIN people p ON p.id = u.person_id
+      WHERE u.id = ANY($1::int[]) ORDER BY 2`, [ids])).rows.map((r) => ({ id: r.id, name: r.is_super && r.name === 'Admin' ? 'Dr Aisyah' : r.name })) : [];
+    res.render('meetings-ceo', base(req, { title: 'CEO overview', perGroup, perBranch, total, focus, waiting, view, shown, news, nf, people, groups }));
+  }));
+
+  router.post('/meetings/ceo/seen', wrap(async (req, res) => {
+    if (!A.isCeo(req.user)) return notFound(res);
+    await E.markSeen(db, req.user, req.body.upto);
+    back(res, '/meetings/ceo', 'All marked as seen.');
+  }));
+
+  // ── A branch: open actions, last 1:1, recent follow-ups, the branch manager's latest update ──
+  // Branch logins only open their own branch; everyone else needs a Meetings group (the CEO all).
+  // Each part only shows what comes from groups this login is in.
+  router.get('/meetings/branch/:b', wrap(async (req, res) => {
+    const b = String(req.params.b).toUpperCase();
+    if (!A.BRANCH_LIST.includes(b)) return notFound(res);
+    if (['branch_manager', 'branch_staff'].includes(req.user.role) && req.user.branch_code !== A.APP_BRANCH[b]) return notFound(res);
+    if (!(await A.hasMeetings(db, req.user))) return notFound(res);
+    const t = D.today(now);
+    const actions = (await D.listActions(db, req.user, { open: true, now })).filter((a) => a.branch === b);
+    const meetings = (await D.listMeetings(db, req.user, {})).filter((m) => m.kind === 'branch_1on1' && m.group_branch === b);
+    const last1on1 = meetings.find((m) => m.held_on <= t) || null;
+    const next1on1 = meetings.filter((m) => m.held_on > t).pop() || null;
+    const followups = await FU.list(db, req.user, { branch: b, limit: 15 });
+    const groups = (await D.groupsFor(db, req.user)).filter((g) => g.kind === 'branch_1on1' && g.branch === b);
+    const [where, args] = await A.groupFilter(db, req.user, 'm.group_id', [A.APP_BRANCH[b]]);
+    const bmUpdate = (await db.query(
+      `SELECT x.*, m.held_on, m.title, g.name AS group_name, COALESCE(p.name, u.display_name) AS name
+       FROM meeting_updates x JOIN meetings m ON m.id = x.meeting_id JOIN meeting_groups g ON g.id = m.group_id
+       JOIN users u ON u.id = x.user_id LEFT JOIN people p ON p.id = u.person_id LEFT JOIN branches br ON br.id = u.branch_id
+       WHERE u.role = 'branch_manager' AND br.code = $1 AND g.active AND ${where}
+       ORDER BY x.updated_at DESC LIMIT 1`, args)).rows[0] || null;
+    res.render('meetings-branch', base(req, {
+      title: `${A.BRANCHES[b]} – meetings`, b, FU, actions, last1on1, next1on1, followups, groups, bmUpdate, counts: F.counts(actions, t),
+    }));
   }));
 
   // ── A group: overview, actions, meetings, decisions ──
@@ -100,13 +156,25 @@ function meetingRoutes(db, { now }) {
     const decisions = tab === 'decisions' ? await D.listDecisions(db, req.user, { groupId: g.id, q: req.query.q || '' }) : [];
     const items = await D.openItemsForGroup(db, g.id);
     const f = { status: String(req.query.status || 'open'), area: String(req.query.area || ''), branch: String(req.query.branch || ''), owner: String(req.query.owner || ''), q: String(req.query.q || '').slice(0, 80) };
+    const followups = tab === 'overview' ? await FU.list(db, req.user, { groupId: g.id, limit: 30 }) : [];
+    const linkable = tab === 'overview' ? await FU.linkableActions(db, req.user, g, { now }) : [];
+    const leaders = g.kind === 'branch_1on1' ? D.leaders(members) : [];
     res.render('meetings-group', base(req, {
-      title: g.name, g, tab, members, meetings, decisions, items, f,
+      title: g.name, g, tab, members, meetings, decisions, items, f, followups, linkable, leaders, FU,
+      ledDefault: leaders.length ? D.defaultLeader(leaders, req.user) : null,
+      bm: members.find((m) => m.role === 'branch_manager') || null,
       counts: F.counts(actions, t), focus: actions.filter((a) => a.to_ceo),
       list: filterActions(actions, f), next: await D.nextMeeting(db, g.id, { now }),
       perBranch: A.BRANCH_LIST.map((b) => ({ b, n: actions.filter((a) => a.open && a.branch === b).length, late: actions.filter((a) => a.open && a.branch === b && a.overdue).length })),
       perArea: F.AREA_ORDER.map((k) => ({ k, n: actions.filter((a) => a.open && a.area === k).length, late: actions.filter((a) => a.open && a.area === k && a.overdue).length })),
     }));
+  }));
+
+  router.post('/meetings/g/:code/followups', wrap(async (req, res) => {
+    const g = await groupOr404(req, res); if (!g) return;
+    const r = await FU.create(db, req.user, g, req.body, { now });
+    const msg = r.error || `Follow-up logged${r.closed ? ' – the action is closed' : ''}${r.newActionId ? ' – new action added' : ''}.`;
+    back(res, `/meetings/g/${g.code}`, msg, r.error ? 'err' : 'ok');
   }));
 
   router.get('/meetings/g/:code/remind', wrap(async (req, res) => {
@@ -204,7 +272,7 @@ function meetingRoutes(db, { now }) {
 
   router.post('/meetings/m/:id/items', wrap(async (req, res) => {
     const m = await meetingOr404(req, res); if (!m) return;
-    const r = await D.addItem(db, req.user, { id: m.group_id, code: m.group_code }, req.body, { meeting: m });
+    const r = await D.addItem(db, req.user, { id: m.group_id, code: m.group_code, name: m.group_name, branch: m.group_branch }, req.body, { meeting: m });
     back(res, `/meetings/m/${m.id}#items`, r.error || 'Added to the agenda.', r.error ? 'err' : 'ok');
   }));
 

@@ -7,6 +7,7 @@ const { isRealDate } = require('../lib/dates');
 const { mentionsSalary, SALARY_MESSAGE } = require('../privacy');
 const A = require('./access');
 const F = require('./flags');
+const E = require('./events');
 
 const today = (now) => calc.todayInMalaysia(now());
 
@@ -55,11 +56,13 @@ async function saveGroup(db, user, body) {
   if (name.error) return { error: name.error };
   const fields = {
     name: name.value,
-    kind: oneOf(body.kind, ['team', 'one_to_one'], 'team'),
+    kind: oneOf(body.kind, ['team', 'one_to_one', 'branch_1on1'], 'team'),
     default_day: oneOf(body.default_day, A.DAYS, null),
     default_time: /^\d{1,2}:\d{2}$/.test(String(body.default_time || '')) ? String(body.default_time) : null,
     agenda_template: oneOf(body.agenda_template, ['council', 'branch', 'simple'], 'simple'),
   };
+  fields.branch = fields.kind === 'branch_1on1' ? oneOf(body.branch, A.BRANCH_LIST, null) : null;
+  if (fields.kind === 'branch_1on1' && !fields.branch) return { error: 'A Branch 1:1 needs its branch.' };
   const ids = [].concat(body.members || []).map(Number).filter(Boolean);
   return db.transaction(async (tx) => {
     let id = Number(body.id) || 0;
@@ -67,15 +70,15 @@ async function saveGroup(db, user, body) {
       const old = (await tx.query('SELECT * FROM meeting_groups WHERE id = $1', [id])).rows[0];
       if (!old) return { error: 'That group doesn’t exist.' };
       await tx.query(`UPDATE meeting_groups SET name = $2, kind = $3, default_day = $4, default_time = $5, agenda_template = $6,
-        active = $7 WHERE id = $1`, [id, fields.name, fields.kind, fields.default_day, fields.default_time, fields.agenda_template, body.active !== 'no']);
+        active = $7, branch = $8 WHERE id = $1`, [id, fields.name, fields.kind, fields.default_day, fields.default_time, fields.agenda_template, body.active !== 'no', fields.branch]);
       await audit(tx, user, 'update', 'meeting_groups', old.code, old, { ...fields, active: body.active !== 'no' });
     } else {
       const base = fields.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'group';
       let code = base; let n = 1;
       while ((await tx.query('SELECT 1 FROM meeting_groups WHERE code = $1', [code])).rows.length) code = `${base}-${++n}`;
       const max = (await tx.query('SELECT COALESCE(max(sort_order), 0) + 1 AS n FROM meeting_groups')).rows[0].n;
-      id = (await tx.query(`INSERT INTO meeting_groups (code, name, kind, default_day, default_time, agenda_template, sort_order)
-        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`, [code, fields.name, fields.kind, fields.default_day, fields.default_time, fields.agenda_template, max])).rows[0].id;
+      id = (await tx.query(`INSERT INTO meeting_groups (code, name, kind, default_day, default_time, agenda_template, sort_order, branch)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`, [code, fields.name, fields.kind, fields.default_day, fields.default_time, fields.agenda_template, max, fields.branch])).rows[0].id;
       await audit(tx, user, 'insert', 'meeting_groups', code, null, fields);
     }
     const valid = (await tx.query("SELECT id FROM users WHERE active AND NOT (role = 'admin' AND is_super) AND id = ANY($1::int[])", [ids])).rows.map((r) => r.id);
@@ -173,7 +176,8 @@ async function createAction(db, user, group, body, { now, meetingId = null, sour
 }
 
 // Change an action and/or add this week's update. Any member of the group may (as the prototypes).
-async function updateAction(db, user, action, body, { now, tx: q = null, raised = false } = {}) {
+// quiet: no "What's new" line (minutes and follow-ups write their own).
+async function updateAction(db, user, action, body, { now, tx: q = null, raised = false, quiet = false } = {}) {
   const ids = (await members(q || db, action.group_id)).map((m) => m.id);
   const merged = { title: action.title, owner: action.owner_user_id, due: action.due, area: action.area, branch: action.branch,
     status: action.status, priority: action.priority, needs_ceo: action.needs_ceo, ...body };
@@ -192,6 +196,14 @@ async function updateAction(db, user, action, body, { now, tx: q = null, raised 
     const text = note.value || (changed.includes('status') ? `Status → ${A.STATUS[f.status]}` : null);
     if (text) await tx.query('INSERT INTO action_updates (action_id, by_user, text) VALUES ($1, $2, $3)', [action.id, user.id, text]);
     await audit(tx, user, 'update', 'actions', action.id, Object.fromEntries(changed.map((k) => [k, action[k]])), { ...Object.fromEntries(changed.map((k) => [k, f[k]])), note: note.value, raised });
+    if (!quiet && (note.value || changed.includes('status'))) {
+      const who = await E.nameOf(tx, user.id);
+      const st = changed.includes('status');
+      const kind = st && f.status === 'dn' ? 'action_done' : st ? 'action_status' : 'action_update';
+      const head = kind === 'action_done' ? `${who} closed “${f.title}”` : st ? `${who} set “${f.title}” → ${A.STATUS[f.status]}` : `${who} updated “${f.title}”`;
+      await E.log(tx, { kind, actor: user.id, subject: f.owner_user_id, groupId: action.group_id, branch: f.branch, refType: 'action', refId: action.id,
+        text: note.value ? `${head}: ${note.value}` : head });
+    }
     return { ok: true };
   };
   return q ? run(q) : db.transaction(run);
@@ -247,17 +259,20 @@ async function listMeetings(db, user, { groupId = null, from = null } = {}) {
   if (groupId) { args.push(Number(groupId)); cond.push(`m.group_id = $${args.length}`); }
   if (from) { args.push(from); cond.push(`m.held_on >= $${args.length}`); }
   return (await db.query(
-    `SELECT m.id, m.group_id, m.title, m.held_on, m.start_time, m.status, g.name AS group_name, g.code AS group_code, g.kind,
+    `SELECT m.id, m.group_id, m.title, m.held_on, m.start_time, m.status, g.name AS group_name, g.code AS group_code, g.kind, g.branch AS group_branch,
+       m.led_by, (SELECT COALESCE(p.name, u.display_name) FROM users u LEFT JOIN people p ON p.id = u.person_id WHERE u.id = m.led_by) AS led_by_name,
        (SELECT count(*)::int FROM meeting_attendees x WHERE x.meeting_id = m.id) AS attendees
      FROM meetings m JOIN meeting_groups g ON g.id = m.group_id WHERE ${cond.join(' AND ')}
-     ORDER BY m.held_on DESC, m.id DESC LIMIT 200`, args)).rows;
+     ORDER BY m.held_on DESC, m.id DESC LIMIT 200`, args)).rows.map((m) => ({ ...m, led_by_name: m.led_by_name === 'Admin' ? 'Dr Aisyah' : m.led_by_name }));
 }
 
 async function loadMeeting(db, user, id) {
   const m = (await db.query(
-    `SELECT m.*, g.name AS group_name, g.code AS group_code, g.kind, g.agenda_template, g.default_time
+    `SELECT m.*, g.name AS group_name, g.code AS group_code, g.kind, g.branch AS group_branch, g.agenda_template, g.default_time,
+       (SELECT COALESCE(p.name, u.display_name) FROM users u LEFT JOIN people p ON p.id = u.person_id WHERE u.id = m.led_by) AS led_by_name
      FROM meetings m JOIN meeting_groups g ON g.id = m.group_id WHERE m.id = $1 AND g.active`, [Number(id) || 0])).rows[0];
   if (!m || !(await A.canSeeGroup(db, user, m.group_id))) return null;
+  if (m.led_by_name === 'Admin') m.led_by_name = 'Dr Aisyah';
   m.attendee_list = (await db.query(
     `SELECT u.id, COALESCE(p.name, u.display_name) AS name, u.is_super, x.present FROM meeting_attendees x JOIN users u ON u.id = x.user_id
      LEFT JOIN people p ON p.id = u.person_id WHERE x.meeting_id = $1 ORDER BY u.is_super DESC, p.sort_order NULLS LAST, u.display_name`, [m.id])).rows
@@ -275,13 +290,30 @@ async function createMeeting(db, user, group, body, { now }) {
   const mem = await members(db, group.id);
   const chosen = [].concat(body.att || []).map(Number).filter((id) => mem.some((m) => m.id === id));
   const att = chosen.length ? chosen : mem.map((m) => m.id);
+  // 9 Nov: Branch 1:1s say who led them – the CEO or Hanin (any member who isn't the branch manager).
+  let ledBy = null;
+  if (group.kind === 'branch_1on1') {
+    const can = leaders(mem);
+    ledBy = can.some((l) => l.id === Number(body.led_by)) ? Number(body.led_by) : defaultLeader(can, user);
+  }
   return db.transaction(async (tx) => {
-    const id = (await tx.query(`INSERT INTO meetings (group_id, title, held_on, start_time, created_by) VALUES ($1,$2,$3,$4,$5) RETURNING id`,
-      [group.id, title.value, held, time, user.id])).rows[0].id;
+    const id = (await tx.query(`INSERT INTO meetings (group_id, title, held_on, start_time, created_by, led_by) VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
+      [group.id, title.value, held, time, user.id, ledBy])).rows[0].id;
     for (const uid of att) await tx.query('INSERT INTO meeting_attendees (meeting_id, user_id) VALUES ($1, $2)', [id, uid]);
-    await audit(tx, user, 'insert', 'meetings', id, null, { group: group.code, held_on: held, time, attendees: att });
+    await audit(tx, user, 'insert', 'meetings', id, null, { group: group.code, held_on: held, time, attendees: att, led_by: ledBy });
     return { ok: true, id };
   });
+}
+
+// Who can lead a Branch 1:1: the CEO and members who aren't branch managers (Hanin). Default: the person
+// creating it when they can lead, else the first non-CEO leader (a branch manager creating it → Hanin).
+function leaders(mem) {
+  return mem.filter((m) => m.role !== 'branch_manager' && m.role !== 'branch_staff');
+}
+function defaultLeader(can, user) {
+  if (can.some((l) => l.id === user.id)) return user.id;
+  const notCeo = can.find((l) => !l.is_super);
+  return (notCeo || can[0] || { id: null }).id;
 }
 
 // Next meeting of a group (the soonest from today, else the latest not approved).
@@ -319,6 +351,9 @@ async function addItem(db, user, group, body, { meeting = null, source = 'manual
     const id = (await tx.query(`INSERT INTO agenda_items (group_id, meeting_id, text, need, raised_by, source, source_id)
       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`, [group.id, meeting ? meeting.id : null, text.value, need, user.id, source, sourceId])).rows[0].id;
     await audit(tx, user, 'insert', 'agenda_items', id, null, { group: group.code, meeting: meeting && meeting.id, text: text.value, need, source });
+    const gname = group.name || (await tx.query('SELECT name FROM meeting_groups WHERE id = $1', [group.id])).rows[0].name;
+    await E.log(tx, { kind: 'item', actor: user.id, groupId: group.id, branch: group.branch || null, refType: 'item', refId: id, linkId: meeting ? meeting.id : null,
+      text: `${await E.nameOf(tx, user.id)} added an item to discuss (${gname}, ${A.NEEDS[need].toLowerCase()}): ${text.value}` });
     return { ok: true, id };
   };
   return q ? run(q) : db.transaction(run);
@@ -376,8 +411,10 @@ async function syncHelpItem(tx, actor, meeting, ownerId, help) {
     [meeting.id, ownerId])).rows[0];
   if (help && item) { if (item.text !== help) await tx.query('UPDATE agenda_items SET text = $2 WHERE id = $1', [item.id, help]); }
   else if (help) {
-    await tx.query(`INSERT INTO agenda_items (group_id, meeting_id, text, need, raised_by, source, source_id) VALUES ($1,$2,$3,'decision',$4,'update',$5)`,
-      [meeting.group_id, meeting.id, help, ownerId, meeting.id]);
+    const id = (await tx.query(`INSERT INTO agenda_items (group_id, meeting_id, text, need, raised_by, source, source_id) VALUES ($1,$2,$3,'decision',$4,'update',$5) RETURNING id`,
+      [meeting.group_id, meeting.id, help, ownerId, meeting.id])).rows[0].id;
+    await E.log(tx, { kind: 'item', actor: ownerId, groupId: meeting.group_id, branch: meeting.group_branch || null, refType: 'item', refId: id, linkId: meeting.id,
+      text: `${await E.nameOf(tx, ownerId)} needs help (${meeting.group_name}): ${help}` });
   } else if (item) await tx.query('UPDATE agenda_items SET removed_at = now() WHERE id = $1', [item.id]);
 }
 
@@ -463,7 +500,7 @@ module.exports = {
   groupsFor, members, isMember, saveGroup, allGroupsForAdmin, selectableUsers,
   listActions, loadAction, createAction, updateAction,
   listDecisions, createDecision,
-  listMeetings, loadMeeting, createMeeting, nextMeeting,
+  listMeetings, loadMeeting, createMeeting, nextMeeting, leaders, defaultLeader,
   agendaItems, openItemsForGroup, addItem, removeItem,
   updatesFor, saveUpdate, deleteUpdate,
   myNotes, addNote, noteAct,

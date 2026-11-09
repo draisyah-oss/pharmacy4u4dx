@@ -3,7 +3,7 @@
 <section class="oo-card">
   <p><a href="/meetings/g/<%= m.group_code %>?tab=meetings">← <%= m.group_name %></a></p>
   <h1><%= m.title || m.group_name %></h1>
-  <p class="muted small"><%= fmtDate(m.held_on) %><%= m.start_time ? ' · ' + m.start_time : '' %> · <%= m.attendee_list.map(function (a) { return a.name; }).join(', ') %></p>
+  <p class="muted small"><%= fmtDate(m.held_on) %><%= m.start_time ? ' · ' + m.start_time : '' %><%= m.led_by_name ? ' · Led by ' + m.led_by_name : '' %> · <%= m.attendee_list.map(function (a) { return a.name; }).join(', ') %></p>
   <p><span class="mt-chip <%= m.status === 'approved' ? 'ok' : m.status === 'draft' ? 'warn' : '' %>"><%= A.MEETING_STATUS[m.status] %></span>
     <% if (lockedNow) { %><span class="muted small">Locked – approved by Dr Aisyah.</span><% } %></p>
   <nav class="mt-subtabs" aria-label="This meeting">

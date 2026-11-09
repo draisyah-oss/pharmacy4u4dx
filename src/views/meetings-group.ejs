@@ -2,9 +2,10 @@
 <% const gq = '/meetings/g/' + g.code; const today2 = today; %>
 <section class="oo-card">
   <h1><%= g.name %></h1>
-  <p class="muted small"><%= g.kind === 'one_to_one' ? 'CEO 1:1 · only you and Dr Aisyah see this' : 'Team meeting' %><%= g.default_day ? ' · ' + g.default_day + (g.default_time ? ' ' + g.default_time : '') : '' %>
+  <p class="muted small"><%= g.kind === 'one_to_one' ? 'CEO 1:1 · only you and Dr Aisyah see this' : g.kind === 'branch_1on1' ? 'Branch 1:1 · only the people listed here see it' : 'Team meeting' %><%= g.default_day ? ' · ' + g.default_day + (g.default_time ? ' ' + g.default_time : '') : '' %>
     · <%= members.map(function (m) { return m.name; }).join(', ') %></p>
-  <% if (next) { %><p><a class="button small" href="/meetings/m/<%= next.id %>">Next meeting: <%= fmtDate(next.held_on) %><%= next.start_time ? ' ' + next.start_time : '' %> →</a></p><% } %>
+  <% if (next) { %><p><a class="button small" href="/meetings/m/<%= next.id %>">Next meeting: <%= fmtDate(next.held_on) %><%= next.start_time ? ' ' + next.start_time : '' %><%= next.led_by && leaders.length ? ' · led by ' + ((leaders.find(function (l) { return l.id === next.led_by; }) || {}).name || '') : '' %> →</a></p><% } %>
+  <% if (g.kind === 'branch_1on1' && g.branch) { %><p class="small"><a href="/meetings/branch/<%= g.branch %>"><%= A.BRANCHES[g.branch] %> branch page →</a></p><% } %>
   <nav class="mt-subtabs" aria-label="<%= g.name %>">
     <% [['overview', 'Overview'], ['actions', 'Actions'], ['meetings', 'Meetings'], ['decisions', 'Decisions']].forEach(function (t) { %>
       <a href="<%= gq %>?tab=<%= t[0] %>" class="mt-subtab<%= tab === t[0] ? ' is-current' : '' %>"<%- tab === t[0] ? ' aria-current="page"' : '' %>><%= t[1] %></a>
@@ -20,6 +21,7 @@
     <a class="mt-stat" href="<%= gq %>?tab=actions&status=stale"><b><%= counts.stale %></b><span>No update 7+ days</span></a>
     <a class="mt-stat" href="<%= gq %>?tab=actions&status=soon"><b><%= counts.soon %></b><span>Due next 7 days</span></a>
   </div>
+  <%- include('partials/mt-followups', { followups: followups, g: g, linkable: linkable, members: members, bm: bm, FU: FU, formOpen: g.kind === 'branch_1on1', showGroup: false }) %>
   <section class="oo-card" id="items" aria-labelledby="it-h">
     <h2 id="it-h">Items to discuss at the next meeting (<%= items.length %>)</h2>
     <%- include('partials/mt-items', { items: items, removable: true }) %>
@@ -66,6 +68,9 @@
       <div class="mt-grid">
         <label class="oo-label">Date<input type="date" name="date" value="<%= today2 %>" required></label>
         <label class="oo-label">Time<input name="time" value="<%= g.default_time || '' %>" placeholder="16:00"></label>
+        <% if (leaders.length) { %>
+          <label class="oo-label">Led by<select name="led_by"><% leaders.forEach(function (l) { %><option value="<%= l.id %>"<%= l.id === ledDefault ? ' selected' : '' %>><%= l.name %></option><% }) %></select></label>
+        <% } %>
       </div>
       <label class="oo-label">Title (optional)<input name="title" maxlength="120" placeholder="<%= g.name %>"></label>
       <fieldset class="mt-fieldset"><legend>Attendees</legend>

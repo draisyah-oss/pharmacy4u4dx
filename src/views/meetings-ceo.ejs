@@ -9,6 +9,34 @@
     <a class="mt-stat" href="/meetings/ceo?show=soon#list"><b><%= total.soon %></b><span>Due this week</span></a>
   </div>
 </section>
+<section class="oo-card" id="new" aria-labelledby="nw-h">
+  <div class="mt-nw-head">
+    <h2 id="nw-h">What’s new <span class="muted small">since <%= news.since.getTime() ? news.since.toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : 'the start' %></span></h2>
+    <% if (news.all.length) { %>
+      <form method="post" action="/meetings/ceo/seen" class="mt-inline-form">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="upto" value="<%= news.upto ? news.upto.toISOString() : '' %>">
+        <button class="button small secondary" type="submit">Mark all as seen</button>
+      </form>
+    <% } %>
+  </div>
+  <% if (news.all.length) { %>
+  <form method="get" action="/meetings/ceo#new" class="mt-filters">
+    <label class="sr-only" for="nb">Branch</label><select id="nb" name="nb"><option value="">All branches</option><% Object.entries(A.BRANCHES).forEach(function (x) { %><option value="<%= x[0] %>"<%= nf.branch === x[0] ? ' selected' : '' %>><%= x[1] %></option><% }) %></select>
+    <label class="sr-only" for="np">Person</label><select id="np" name="np"><option value="">Everyone</option><% people.forEach(function (p) { %><option value="<%= p.id %>"<%= nf.person === String(p.id) ? ' selected' : '' %>><%= p.name %></option><% }) %></select>
+    <label class="sr-only" for="ng">Group</label><select id="ng" name="ng"><option value="">All groups</option><% groups.forEach(function (g) { %><option value="<%= g.code %>"<%= nf.group === g.code ? ' selected' : '' %>><%= g.name %></option><% }) %></select>
+    <button class="button small" type="submit">Filter</button><% if (nf.branch || nf.person || nf.group) { %> <a class="small" href="/meetings/ceo#new">Clear</a><% } %>
+  </form>
+  <% } %>
+  <% if (!news.shown.length) { %><p class="muted"><%= news.all.length ? 'Nothing new for this filter.' : 'Nothing new since you last looked.' %></p><% } %>
+  <ul class="mt-news">
+    <% news.shown.forEach(function (i) { %>
+      <li class="mt-new-line k-<%= i.kind %>">
+        <a href="<%= i.href %>"><span class="mt-chip<%= i.kind === 'overdue' ? ' crit' : i.kind === 'action_done' ? ' ok' : i.kind === 'followup' ? ' info' : '' %>"><%= i.label %></span> <%= i.text %></a>
+        <span class="muted small"><%= i.at.toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) %><%= i.ceo_only ? ' · CEO only' : '' %></span>
+      </li>
+    <% }) %>
+  </ul>
+</section>
 <% if (waiting.length) { %>
 <section class="oo-card"><h2>Minutes waiting for your approval</h2>
   <div class="mt-list"><% waiting.forEach(function (m) { %><%- include('partials/mt-meeting', { m: m }) %><% }) %></div>
@@ -28,7 +56,7 @@
   <div class="table-wrap"><table class="mt-table">
     <thead><tr><th scope="col">Branch</th><th scope="col">Open</th><th scope="col">Overdue</th><th scope="col">Waiting for decision</th><th scope="col">Blocked</th><th scope="col">Due this week</th></tr></thead>
     <tbody><% perBranch.forEach(function (r) { const q = '/meetings/actions?branch=' + r.b + '&status='; %>
-      <tr><th scope="row"><%= A.BRANCHES[r.b] %></th><td><a href="<%= q %>open"><%= r.c.open %></a></td><td class="<%= r.c.overdue ? 'mt-bad' : '' %>"><a href="<%= q %>overdue"><%= r.c.overdue %></a></td>
+      <tr><th scope="row"><% if (A.BRANCH_LIST.includes(r.b)) { %><a href="/meetings/branch/<%= r.b %>"><%= A.BRANCHES[r.b] %></a><% } else { %><%= A.BRANCHES[r.b] %><% } %></th><td><a href="<%= q %>open"><%= r.c.open %></a></td><td class="<%= r.c.overdue ? 'mt-bad' : '' %>"><a href="<%= q %>overdue"><%= r.c.overdue %></a></td>
         <td><a href="<%= q %>ceo"><%= r.c.ceo %></a></td><td><a href="<%= q %>bl"><%= r.c.blocked %></a></td><td><a href="<%= q %>soon"><%= r.c.soon %></a></td></tr>
     <% }) %></tbody>
   </table></div>

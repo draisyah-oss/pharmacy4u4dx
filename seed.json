@@ -910,7 +910,7 @@
     ]
   },
   "meetings": {
-    "_note": "8 Nov 2026 (CEO): meeting groups. Members by name (HQ people or branch people). The CEO (super admin) sees every group. Loaded once; edit in Admin → Meeting groups.",
+    "_note": "8 Nov 2026 (CEO): meeting groups. 9 Nov: Branch 1:1s (kind branch_1on1 – branch manager + Hanin, CEO sees all; added once to older databases). Members by name (HQ people or branch people). The CEO (super admin) sees every group. Loaded once; edit in Admin → Meeting groups.",
     "groups": [
       {"code": "council", "name": "Management Council", "kind": "team", "day": "Mon", "time": "11:00", "agenda": "council", "members": ["Alia", "Hanin"]},
       {"code": "bm", "name": "Branch Managers", "kind": "team", "day": "Mon", "time": "16:00", "agenda": "branch", "members": ["Hafizah", "Amirah", "Afifah", "Aimi", "Mazlina", "Alia", "Hanin"]},
@@ -920,7 +920,12 @@
       {"code": "marketing-1on1", "name": "Marketing 1:1", "kind": "one_to_one", "agenda": "simple", "members": ["Arinah"]},
       {"code": "hq-inventory", "name": "HQ Inventory team", "kind": "team", "agenda": "simple", "members": ["Alia", "Syarafana"]},
       {"code": "hrops-team", "name": "HR & Ops team", "kind": "team", "agenda": "simple", "members": ["Hanin", "Iman"]},
-      {"code": "bn", "name": "BN team", "kind": "team", "agenda": "simple", "members": ["Alia", "Hafiz", "Iman"]}
+      {"code": "bn", "name": "BN team", "kind": "team", "agenda": "simple", "members": ["Alia", "Hafiz", "Iman"]},
+      {"code": "wm-1on1", "name": "WM 1:1", "kind": "branch_1on1", "branch": "WM", "agenda": "simple", "members": ["Hafizah", "Hanin"]},
+      {"code": "br-1on1", "name": "BR 1:1", "kind": "branch_1on1", "branch": "BR", "agenda": "simple", "members": ["Amirah", "Hanin"]},
+      {"code": "jh-1on1", "name": "JH 1:1", "kind": "branch_1on1", "branch": "JH", "agenda": "simple", "members": ["Afifah", "Hanin"]},
+      {"code": "bangi-1on1", "name": "Bangi 1:1", "kind": "branch_1on1", "branch": "BGI", "agenda": "simple", "members": ["Aimi", "Hanin"]},
+      {"code": "ampang-1on1", "name": "Ampang 1:1", "kind": "branch_1on1", "branch": "AMP", "agenda": "simple", "members": ["Mazlina", "Hanin"]}
     ]
   }
 }

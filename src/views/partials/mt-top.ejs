@@ -7,7 +7,7 @@
     <% [['meetings', '/meetings', 'Meetings'], ['meetingsmine', '/meetings/mine', 'My actions'], ['meetingsall', '/meetings/actions', 'All actions'],
         ['meetingsdecisions', '/meetings/decisions', 'Decisions'], ['meetingsnotes', '/meetings/notes', 'My notes']]
         .concat(user.is_super && user.role === 'admin' ? [['meetingsceo', '/meetings/ceo', 'CEO overview']] : []).forEach(function (t) { %>
-      <a href="<%= t[1] %>" class="mt-tab<%= (typeof navKey !== 'undefined' ? navKey : 'meetings') === t[0] ? ' is-current' : '' %>"<%- (typeof navKey !== 'undefined' ? navKey : 'meetings') === t[0] ? ' aria-current="page"' : '' %>><%= t[2] %></a>
+      <a href="<%= t[1] %>" class="mt-tab<%= (typeof navKey !== 'undefined' ? navKey : 'meetings') === t[0] ? ' is-current' : '' %>"<%- (typeof navKey !== 'undefined' ? navKey : 'meetings') === t[0] ? ' aria-current="page"' : '' %>><%= t[2] %><% if (t[0] === 'meetingsceo' && typeof whatsNewCount !== 'undefined' && whatsNewCount) { %> <span class="mt-badge" aria-label="<%= whatsNewCount %> new"><%= whatsNewCount > 99 ? '99+' : whatsNewCount %></span><% } %></a>
     <% }) %>
   </nav>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>

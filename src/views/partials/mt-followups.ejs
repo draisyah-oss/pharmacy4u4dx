@@ -1,0 +1,55 @@
+<%# Follow-up log (9 Nov): form (when g is given) + history, newest first.
+    Input: followups, g (group or null – no form), linkable, members, bm, FU, formOpen, showGroup %>
+<section class="oo-card" id="followups" aria-labelledby="fu-h">
+  <h2 id="fu-h">Follow-ups (<%= followups.length %>)</h2>
+  <% if (g) { %>
+  <details class="mt-new"<%= formOpen ? ' open' : '' %>><summary>Log a follow-up</summary>
+    <form method="post" action="/meetings/g/<%= g.code %>/followups" class="mt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="mt-grid">
+        <label class="oo-label">Date<input type="date" name="date" value="<%= today %>" max="<%= today %>" required></label>
+        <label class="oo-label">How<select name="kind" required><% Object.entries(FU.KINDS).forEach(function (k) { %><option value="<%= k[0] %>"><%= k[1] %></option><% }) %></select></label>
+        <% if (g.kind === 'branch_1on1' && g.branch) { %>
+          <p class="oo-label">Branch<b><%= A.BRANCHES[g.branch] %><%= bm ? ' (' + bm.name + ')' : '' %></b></p>
+        <% } else { %>
+          <label class="oo-label">Branch<select name="branch"><% Object.entries(A.BRANCHES).forEach(function (s) { %><option value="<%= s[0] %>"<%= s[0] === 'HQ' ? ' selected' : '' %>><%= s[1] %></option><% }) %></select></label>
+        <% } %>
+      </div>
+      <label class="oo-label">What was checked<input name="checked" required maxlength="500" placeholder="e.g. Fridge temperature log"></label>
+      <label class="oo-label">Outcome<input name="outcome" maxlength="500" placeholder="e.g. Done – signed by the contractor"></label>
+      <div class="mt-grid">
+        <label class="oo-label">Linked action (optional)<select name="action_id"><option value="">– none –</option>
+          <% linkable.forEach(function (a) { %><option value="<%= a.id %>"><%= a.title.length > 70 ? a.title.slice(0, 69) + '…' : a.title %> (<%= a.owner_name || 'no owner' %><%= a.group_id !== g.id ? ', ' + a.group_name : '' %>)</option><% }) %>
+        </select></label>
+        <label class="oo-label">Set its status<select name="status"><option value="">Leave as it is</option><% Object.entries(A.STATUS).forEach(function (s) { %><option value="<%= s[0] %>"><%= s[1] %></option><% }) %></select></label>
+      </div>
+      <label class="oo-label">Next step (optional)<input name="next_step" maxlength="300" placeholder="e.g. Send the photos of the filters by Friday"></label>
+      <fieldset class="mt-fieldset"><legend>Turn the next step into an action?</legend>
+        <label class="mt-check"><input type="checkbox" name="make_action" value="1"> Yes, create an action</label>
+        <div class="mt-grid">
+          <label class="oo-label">Owner<select name="new_owner"><% members.forEach(function (m) { %><option value="<%= m.id %>"<%= bm && m.id === bm.id ? ' selected' : '' %>><%= m.name %></option><% }) %></select></label>
+          <label class="oo-label">Due<input type="date" name="new_due"></label>
+        </div>
+      </fieldset>
+      <label class="mt-check"><input type="checkbox" name="ceo_only" value="1"> CEO only – only Dr Aisyah and I see this follow-up</label>
+      <p class="muted small">A linked action gets this follow-up in its history (a CEO-only one just records the status change).</p>
+      <button class="button wide" type="submit">Log follow-up</button>
+    </form>
+  </details>
+  <% } %>
+  <% if (!followups.length) { %><p class="muted">No follow-ups yet.</p><% } %>
+  <ul class="mt-fus">
+    <% followups.forEach(function (f) { %>
+      <li class="mt-fu<%= f.ceo_only ? ' is-private' : '' %>" id="fu-<%= f.id %>">
+        <div class="mt-meta">
+          <b><%= fmtDate(f.done_on) %></b> · <span class="mt-chip"><%= FU.KINDS[f.kind] %></span> · <span><%= f.by_name %></span> · <span class="mt-code"><%= f.branch %></span>
+          <% if (showGroup) { %> · <a href="/meetings/g/<%= f.group_code %>"><%= f.group_name %></a><% } %>
+          <% if (f.ceo_only) { %><span class="mt-chip info">CEO only</span><% } %>
+        </div>
+        <div><b>Checked:</b> <%= f.checked %><% if (f.outcome) { %> → <%= f.outcome %><% } %></div>
+        <% if (f.next_step) { %><div class="muted small">Next: <%= f.next_step %><% if (f.new_action_id) { %> · <a href="/meetings/actions/<%= f.new_action_id %>">action created</a><% } %></div><% } %>
+        <% if (f.action_id) { %><div class="small">Action: <a href="/meetings/actions/<%= f.action_id %>"><%= f.action_title %></a><% if (f.status_to) { %> · <span class="mt-chip <%= f.status_to === 'dn' ? 'ok' : '' %>"><%= A.STATUS[f.status_from] || '' %> → <%= A.STATUS[f.status_to] %></span><% } %></div><% } %>
+      </li>
+    <% }) %>
+  </ul>
+</section>

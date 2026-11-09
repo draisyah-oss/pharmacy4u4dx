@@ -1622,3 +1622,16 @@ html body.view-phone .sn-collapse { display: none !important; }
 .mt-table { width: 100%; border-collapse: collapse; }
 .mt-table th, .mt-table td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
 .mt-table td { font-variant-numeric: tabular-nums; }
+
+/* Meetings – Branch 1:1s, follow-ups, What's new (9 Nov) */
+.mt-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 6px; margin-left: 4px; border-radius: 99px; background: var(--short); color: #fff; font-size: 0.75rem; font-weight: 800; }
+.mt-nw-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.mt-nw-head h2 { margin: 0; }
+.mt-news, .mt-fus { list-style: none; margin: 10px 0 0; padding: 0; }
+.mt-new-line { display: flex; flex-direction: column; gap: 2px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.mt-new-line a { color: var(--ink); text-decoration: none; }
+.mt-new-line a:hover, .mt-new-line a:focus-visible { text-decoration: underline; }
+.mt-fu { display: grid; gap: 4px; padding: 10px 0; border-bottom: 1px solid var(--line); overflow-wrap: anywhere; }
+.mt-fu.is-private { border-left: 3px solid var(--info-tint); padding-left: 10px; }
+.mt-upd-list li { align-items: flex-start; gap: 10px; }
+.mt-upd-list li span:first-child { flex: 0 0 auto; color: var(--ink-soft); font-weight: 700; }

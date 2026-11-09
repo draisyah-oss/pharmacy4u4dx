@@ -1,0 +1,45 @@
+<%- include('partials/mt-top', { navKey: 'meetings' }) %>
+<%# A branch at a glance (9 Nov): open actions, last 1:1, recent follow-ups, the branch manager's latest meeting update.
+    Only what comes from groups this login is in. %>
+<section class="oo-card">
+  <h1><%= A.BRANCHES[b] %></h1>
+  <p class="muted small">Meetings, actions and follow-ups for this branch.
+    <% groups.forEach(function (g) { %><a href="/meetings/g/<%= g.code %>"><%= g.name %> →</a> <% }) %></p>
+  <div class="mt-stats">
+    <a class="mt-stat" href="/meetings/actions?branch=<%= b %>&status=open"><b><%= counts.open %></b><span>Open actions</span></a>
+    <a class="mt-stat crit" href="/meetings/actions?branch=<%= b %>&status=overdue"><b><%= counts.overdue %></b><span>Overdue</span></a>
+    <a class="mt-stat warn" href="/meetings/actions?branch=<%= b %>&status=bl"><b><%= counts.blocked %></b><span>Blocked</span></a>
+  </div>
+</section>
+
+<section class="oo-card mt-two">
+  <div>
+    <h2>Last 1:1</h2>
+    <% if (last1on1) { %>
+      <p><a href="/meetings/m/<%= last1on1.id %>"><b><%= fmtDate(last1on1.held_on) %></b></a> · led by <%= last1on1.led_by_name || '–' %>
+        <span class="mt-chip <%= last1on1.status === 'approved' ? 'ok' : last1on1.status === 'draft' ? 'warn' : '' %>"><%= A.MEETING_STATUS[last1on1.status] %></span></p>
+    <% } else { %><p class="muted">No 1:1 held yet.</p><% } %>
+    <% if (next1on1) { %><p class="small">Next: <a href="/meetings/m/<%= next1on1.id %>"><%= fmtDate(next1on1.held_on) %></a><%= next1on1.led_by_name ? ' · ' + next1on1.led_by_name : '' %></p><% } %>
+  </div>
+  <div>
+    <h2>Branch manager’s latest update</h2>
+    <% if (bmUpdate) { %>
+      <p class="muted small"><%= bmUpdate.name %> · <%= bmUpdate.title || bmUpdate.group_name %>, <%= fmtDate(bmUpdate.held_on) %></p>
+      <ul class="mt-rows mt-upd-list">
+        <% if (bmUpdate.win) { %><li><span>🏆 Win</span><span><%= bmUpdate.win %></span></li><% } %>
+        <% if (bmUpdate.issue1) { %><li><span>Issue 1</span><span><%= bmUpdate.issue1 %></span></li><% } %>
+        <% if (bmUpdate.issue2) { %><li><span>Issue 2</span><span><%= bmUpdate.issue2 %></span></li><% } %>
+        <% if (bmUpdate.help_needed) { %><li><span>Help needed</span><span><%= bmUpdate.help_needed %></span></li><% } %>
+      </ul>
+    <% } else { %><p class="muted">No update yet.</p><% } %>
+  </div>
+</section>
+
+<section aria-labelledby="oa-h">
+  <h2 id="oa-h">Open actions (<%= actions.length %>)</h2>
+  <% if (!actions.length) { %><p class="muted">Nothing open.</p><% } %>
+  <div class="mt-list"><% actions.forEach(function (a) { %><%- include('partials/mt-action', { a: a, back: '/meetings/branch/' + b }) %><% }) %></div>
+</section>
+
+<%- include('partials/mt-followups', { followups: followups, g: null, linkable: [], members: [], bm: null, FU: FU, formOpen: false, showGroup: true }) %>
+<%- include('partials/mt-end') %>

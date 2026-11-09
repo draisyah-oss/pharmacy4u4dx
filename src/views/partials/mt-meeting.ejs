@@ -1,6 +1,6 @@
 <%# One meeting in a list. Input: m %>
 <a class="mt-mtg" href="/meetings/m/<%= m.id %>">
   <span class="mt-date"><b><%= Number(m.held_on.slice(8)) %></b><%= new Date(m.held_on + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'short' }) %></span>
-  <span class="mt-mtg-main"><b><%= m.title || m.group_name %></b><span class="muted small"><%= m.title && m.title !== m.group_name ? m.group_name + ' · ' : '' %><%= m.start_time || '' %> · <%= m.attendees %> attendees</span></span>
+  <span class="mt-mtg-main"><b><%= m.title || m.group_name %></b><span class="muted small"><%= m.title && m.title !== m.group_name ? m.group_name + ' · ' : '' %><%= m.start_time || '' %><%= m.led_by_name ? ' · Led by ' + m.led_by_name : '' %> · <%= m.attendees %> attendees</span></span>
   <span class="mt-chip <%= m.status === 'approved' ? 'ok' : m.status === 'draft' ? 'warn' : '' %>"><%= A.MEETING_STATUS[m.status] %></span>
 </a>
