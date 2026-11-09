@@ -170,17 +170,24 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
     } catch (err) { next(err); }
   });
 
+  // 9 Nov (CEO): the News page – achievers, posts, today's reminder and tip, last week's stars – off the home page.
+  app.get('/news', async (req, res, next) => {
+    try {
+      const hl = await require('./home/highlights').buildHighlights(db, { user: req.user, now, trackerStart: await trackerStart() });
+      res.render('news', { title: 'News', hl, fmt, navActive: 'news', ok: req.query.ok || null, err: req.query.err || null });
+    } catch (err) { next(err); }
+  });
   app.post('/news', async (req, res, next) => {
     try {
       const h = require('./home/highlights');
       const r = await h.postNews(db, req.user, req.body, { now });
-      res.redirect(`/?${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}#hl-news`);
+      res.redirect(`/news?${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}#hl-news`);
     } catch (err) { next(err); }
   });
   app.post('/news/:id/remove', async (req, res, next) => {
     try {
       const r = await require('./home/highlights').removeNews(db, req.user, Number(req.params.id) || 0, { now });
-      res.redirect(`/?${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}#hl-news`);
+      res.redirect(`/news?${r.error ? 'err' : 'ok'}=${encodeURIComponent(r.error || r.ok)}#hl-news`);
     } catch (err) { next(err); }
   });
   app.post('/goals/:id/progress', async (req, res, next) => {

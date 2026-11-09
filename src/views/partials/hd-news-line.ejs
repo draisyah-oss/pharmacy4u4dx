@@ -1,0 +1,6 @@
+<%# 9 Nov: one line on the home page pointing to the News page (achievers, posts, reminder, stars). %>
+<%
+  const pin = H.news && H.news.length ? H.news[0] : null;
+  const line = H.rally ? (H.rally.title || 'Today’s push from Dr Aisyah') : H.achievers ? (H.achievers.label || 'Monthly') + ' achievers are out – see who won' : pin ? pin.title : 'Last week’s stars, today’s reminder and tip';
+%>
+<a class="hd-newsline" href="/news"><span class="hd-trophy" aria-hidden="true">🏆</span><span><b>News</b> · <%= line %></span><span aria-hidden="true" class="hd-go">›</span></a>

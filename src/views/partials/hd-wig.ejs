@@ -1,0 +1,18 @@
+<%# 9 Nov home redesign: one WIG card – month sales against target with today's pace line.
+    Inputs: k (small heading), v = { mtd, target, pct, paceTarget, perDay, daysLeft, status }, href (optional), extra (optional line). %>
+<%
+  const fillW = v.target ? Math.max(0, Math.min(100, (v.mtd || 0) / v.target * 100)) : 0;
+  const paceW = v.target && v.paceTarget ? Math.min(100, v.paceTarget / v.target * 100) : null;
+  const chip = v.status === 'on_track' ? ['s-on_track', 'Ahead of pace'] : v.status === 'watch' ? ['s-watch', 'Nearly on pace'] : v.status === 'off_track' ? ['s-off_track', 'Behind pace'] : null;
+%>
+<section class="hd-card hd-wig" aria-labelledby="hd-wig-h">
+  <div class="hd-head"><h2 id="hd-wig-h" class="hd-k"><%= k %></h2><% if (chip) { %><span class="mh-chip <%= chip[0] %>"><%= chip[1] %></span><% } %></div>
+  <p class="hd-big"><% if (typeof href !== 'undefined' && href) { %><a href="<%= href %>"><%= fmt.money(v.mtd) %></a><% } else { %><%= fmt.money(v.mtd) %><% } %>
+    <% if (v.target) { %><span class="hd-of">of <%= fmt.money(v.target) %></span><% } %></p>
+  <% if (v.target) { %>
+    <div class="hd-bar" aria-hidden="true"><span class="hd-fill" style="width: <%= fillW.toFixed(1) %>%"></span><% if (paceW !== null) { %><span class="hd-pace" style="left: <%= paceW.toFixed(1) %>%"></span><% } %></div>
+    <p class="hd-bar-sub"><span><%= fmt.pct(v.pct) %> done</span><% if (paceW !== null) { %><span>Line = where we should be today</span><% } %></p>
+    <p class="hd-need"><% if (v.status === 'on_track') { %>🎉 Ahead of pace – keep going!<% } else if (v.perDay) { %>To hit target: <b><%= fmt.money(v.perDay) %> a day</b><%= v.daysLeft ? ' for the next ' + v.daysLeft + ' days' : '' %><% } else if (v.perDay === 0) { %>Target reached – well done!<% } else { %>Month target <%= fmt.money(v.target) %><% } %></p>
+  <% } else { %><p class="muted small">No month target set.</p><% } %>
+  <% if (typeof extra !== 'undefined' && extra) { %><p class="small muted hd-extra"><%= extra %></p><% } %>
+</section>

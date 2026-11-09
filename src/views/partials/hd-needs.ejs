@@ -1,0 +1,11 @@
+<%# 9 Nov: "Needs you" on the home page – only when something is waiting for this person (same list as the side menu). %>
+<% const nd = typeof needs !== 'undefined' && needs ? needs : null; if (nd && nd.items && nd.items.length) { %>
+<section class="hd-card hd-needs" aria-labelledby="hd-needs-h">
+  <h2 id="hd-needs-h" class="hd-k hd-k-warn">Needs you · <%= nd.items.length + (nd.more || 0) %></h2>
+  <ul class="hd-needs-list">
+    <% nd.items.forEach(function (it) { %>
+      <li><a class="lv-<%= it.level %>" href="<%= it.href %>"><span class="hd-n"><%= it.count %></span><span><b><%= it.title %></b><small><%= it.sub %></small></span><span aria-hidden="true" class="hd-go">›</span></a></li>
+    <% }) %>
+  </ul>
+</section>
+<% } %>

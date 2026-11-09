@@ -88,11 +88,11 @@
      groups.push(['Invoices', [['invoices', '/invoices', 'Invoices', 'invoice scan supplier finance dynamod pdf bill receipt'],
        ['invoicenew', '/invoices/new', 'Scan an invoice', 'invoice scan photo camera supplier', 'sub']]]);
      // 30 Oct: company policies (read only) for everyone, branch staff included.
-     groups.push(['Company policies', [['policies', '/policies', 'Policies', 'policy polisi hr leave cuti annual carry forward handbook']]]);
+     groups.push(['News & policies', [['news', '/news', 'News', 'news achievers awards stars reminder tip tazkirah announcements'], ['policies', '/policies', 'Policies', 'policy polisi hr leave cuti annual carry forward handbook']]]);
      // 28 Oct: everyone can ask for a change to the app (Mr 4DX builds it, the CEO approves).
      groups.push(['Improve the app', [['requests', '/requests', 'Request a change', 'improve suggest idea bug feature change mr 4dx']]]);
      // 3 Nov (CEO): the menu groups in this order.
-     const ORDER = ['Company', 'Scoreboards', 'Branch', 'My work', 'HQ', 'Meetings', 'Academy', 'Monthly review', 'Inventory', 'Invoices', 'Company policies', 'Projects', 'Improve the app', 'Admin'];
+     const ORDER = ['Company', 'Scoreboards', 'Branch', 'My work', 'HQ', 'Meetings', 'Academy', 'Monthly review', 'Inventory', 'Invoices', 'News & policies', 'Projects', 'Improve the app', 'Admin'];
      const rank = (g) => { const i = ORDER.indexOf(g[0]); return i < 0 ? ORDER.length : i; };
      groups = groups.map(function (g, i) { return [g, i]; }).sort(function (a, b) { return rank(a[0]) - rank(b[0]) || a[1] - b[1]; }).map(function (x) { return x[0]; });
      const count = (n, what) => '<span class="sn-badge" aria-label="' + n + ' ' + what + '">' + n + '</span>';
