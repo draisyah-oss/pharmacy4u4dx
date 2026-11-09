@@ -44,6 +44,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     // 5 Nov: change request #2 (CEO approved).
     await ampangNov5Once(db, log);
     await hafizNov8Once(db, log);
+    await wmNov9Once(db, log);
     await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
     // 3 Nov: zakat claims tracker for BR, WM, JH (replaces the old zakat lead measures).
     await require('../zakat/data').setupOnce(db, log);
@@ -70,6 +71,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   await require('../meetings/setup').branchOneOnOnesOnce(db, log);
   await ampangNov5Once(db, log);
   await hafizNov8Once(db, log);
+  await wmNov9Once(db, log);
   await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
   log(
     `Loaded seed.json: ${summary.branches} branches, ${summary.people} people, ` +
@@ -620,6 +622,47 @@ async function hafizNov8Once(db, log) {
   });
 }
 
+// 9 Nov (CEO, from Hafizah's list): WM target products from November – 1 Proponeem soap (P1 relabelled, box p1),
+// 2 Beecrobes (P5), 3 Biorelief (P2), 4 Digezmune (new P6, box p6), 5 RM10 health screening promo (new P7, box p7);
+// Oat (P3) and Neem facial (P4) retired (history kept). 2 a day each (same as before); October unchanged.
+const WM_NOV9 = {
+  branches: [{ code: 'WM', daily_fields: [
+    { key: 'p6', label: 'Digezmune units sold', owner: 'Team', type: 'count' },
+    { key: 'p7', label: 'RM10 health screening promos done', owner: 'Team', type: 'count' },
+  ], measures: [
+    { id: 'P6', owner: 'Team', label: 'Target product: Digezmune', kind: 'Routine', unit: 'units', target_per: 'day', calc: 'sum',
+      targets: { '2026-10': null, '2026-11': 2, '2026-12': 2 }, numerator_field: 'p6', denominator_field: null, note: '9 Nov (CEO, Hafizah’s list): 2 a day.' },
+    { id: 'P7', owner: 'Team', label: 'Target product: RM10 health screening promo', kind: 'Routine', unit: 'screenings', target_per: 'day', calc: 'sum',
+      targets: { '2026-10': null, '2026-11': 2, '2026-12': 2 }, numerator_field: 'p7', denominator_field: null, note: '9 Nov (CEO, Hafizah’s list): 2 a day.' },
+  ] }],
+};
+async function wmNov9Once(db, log) {
+  const flag = 'wm_nov9_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const b = (await tx.query("SELECT id FROM branches WHERE code = 'WM'")).rows[0];
+    if (b) {
+      const order = async (table, col, keys) => Object.fromEntries((await tx.query(
+        `SELECT ${col} AS k, sort_order FROM ${table} WHERE branch_id = $1 AND ${col} = ANY($2)`, [b.id, keys])).rows.map((r) => [r.k, r.sort_order]));
+      const fo = await order('daily_fields', 'key', ['p1', 'p2', 'p3', 'p4', 'p5']);
+      const mo = await order('measures', 'code', ['P1', 'P2', 'P3', 'P4', 'P5']);
+      await tx.query("UPDATE daily_fields SET label = 'Proponeem soap units sold' WHERE branch_id = $1 AND key = 'p1'", [b.id]);
+      await tx.query("UPDATE measures SET label = 'Target product: Proponeem soap' WHERE branch_id = $1 AND code = 'P1'", [b.id]);
+      await tx.query('UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = ANY($2)', [b.id, ['p3', 'p4']]);
+      await tx.query('UPDATE measures SET active = false WHERE branch_id = $1 AND code = ANY($2)', [b.id, ['P3', 'P4']]);
+      await addSeedItems(tx, WM_NOV9, 'WM', { fields: ['p6', 'p7'], measures: ['P6', 'P7'] });
+      // Order as Hafizah listed: Proponeem soap, Beecrobes, Biorelief, Digezmune, health screening.
+      for (const [key, slot] of [['p1', 'p1'], ['p5', 'p2'], ['p2', 'p3'], ['p6', 'p4'], ['p7', 'p5']]) {
+        if (fo[slot] != null) await tx.query('UPDATE daily_fields SET sort_order = $3 WHERE branch_id = $1 AND key = $2', [b.id, key, fo[slot]]);
+        if (mo[slot.toUpperCase()] != null) await tx.query('UPDATE measures SET sort_order = $3 WHERE branch_id = $1 AND code = $2', [b.id, key.toUpperCase(), mo[slot.toUpperCase()]]);
+      }
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'WM target products (CEO, 9 Nov, Hafizah''s list): Proponeem soap, Beecrobes, Biorelief, Digezmune, RM10 health screening promo – 2 a day; Oat and Neem facial off', NULL)");
+      log('WM 9 Nov target products applied.');
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+}
+
 // Retire a branch's daily boxes and measures once (history kept), e.g. JH's Grab menu items (22 Oct).
 async function retireBranchItemsOnce(db, code, { fields = [], measures = [] }, flag, note, log) {
   if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
@@ -939,4 +982,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { ampangNov5Once, hafizNov8Once, brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { ampangNov5Once, hafizNov8Once, wmNov9Once, brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

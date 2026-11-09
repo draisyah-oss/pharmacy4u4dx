@@ -132,3 +132,15 @@ test('8 Nov (CEO): Hafiz – BN lead measures off, one box for BN pieces sold (n
     WHERE b.code = 'Bangi' AND f.key IN ('biop','bnchk','bnpcs')`);
   assert.deepEqual(Object.fromEntries(f.map((r) => [r.key, [r.active, r.name]])), { biop: [false, 'Hafiz'], bnchk: [false, 'Hafiz'], bnpcs: [true, 'Hafiz'] });
 });
+
+test('9 Nov (CEO, Hafizah’s list): WM target products – Proponeem soap, Beecrobes, Biorelief, Digezmune, RM10 health screening, 2 a day', async () => {
+  const rows = (await db.query(`SELECT m.code, m.label, t.target FROM measures m JOIN branches b ON b.id = m.branch_id
+      JOIN measure_targets t ON t.measure_id = m.id AND t.month = '2026-11'
+    WHERE b.code = 'WM' AND m.active AND m.code IN ('P1','P2','P3','P4','P5','P6','P7') ORDER BY m.sort_order`)).rows;
+  assert.deepEqual(rows.map((r) => [r.label, Number(r.target)]), [
+    ['Target product: Proponeem soap', 2], ['Target product: Beecrobes', 2], ['Target product: Biorelief', 2],
+    ['Target product: Digezmune', 2], ['Target product: RM10 health screening promo', 2]]);
+  const boxes = (await db.query(`SELECT f.key FROM daily_fields f JOIN branches b ON b.id = f.branch_id
+    WHERE b.code = 'WM' AND f.active AND f.key IN ('p1','p2','p3','p4','p5','p6','p7') ORDER BY f.sort_order`)).rows.map((r) => r.key);
+  assert.deepEqual(boxes, ['p1', 'p5', 'p2', 'p6', 'p7']);
+});
