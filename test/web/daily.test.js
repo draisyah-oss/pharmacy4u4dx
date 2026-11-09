@@ -413,8 +413,12 @@ test('3 Nov: front page – a branch sees its own WIG / lead targets, and one ta
   const html = (await hz.get('/')).html;
   assert.match(html, /WM – \w+ lead measures/);
   assert.doesNotMatch(html, /🏁 Walk-in sales/, 'the WIG is not repeated – leads only');
-  assert.match(html, /hl-tazkirah/);
-  assert.match(html, /Tip of the day/);
+  // 9 Nov redesign: the reminder and tip moved to the News page; the home page links to it.
+  assert.doesNotMatch(html, /hl-tazkirah/);
+  assert.match(html, /href="\/news"/);
+  const news = (await hz.get('/news')).html;
+  assert.match(news, /hl-tazkirah/);
+  assert.match(news, /Tip of the day/);
   assert.ok(tz.TIPS.length >= 30 && tz.TIPS.every((t) => t.title && t.text));
   assert.ok(tz.EFFECTIVE.length >= 30 && tz.EFFECTIVE.every((t) => t.title && t.text));
   // Alternates: one day a burnout / meaning tip, the next an effectiveness tip.

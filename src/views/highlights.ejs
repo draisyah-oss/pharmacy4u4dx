@@ -1,13 +1,24 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <%- include('partials/nav', { navActive: 'home' }) %>
-<main class="page mh-page">
-  <%- include('partials/highlights') %>
-  <nav class="mh-actions" aria-label="Quick actions">
-    <a class="button" href="/hq/today">My week</a>
-    <a class="button secondary" href="/hq">HQ WIG</a>
-    <a class="button secondary" href="/group">Group scoreboard</a>
-  </nav>
+<%# 9 Nov redesign: HQ staff home – Needs you, the company WIG, the month's goals, their own week. %>
+<link rel="stylesheet" href="/css/home.css?v=1">
+<main class="page hd-page">
+  <% if (typeof ok !== 'undefined' && ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <header class="hd-hello">
+    <div>
+      <p class="hd-date"><%= new Date(hl.today + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }) %></p>
+      <h1><%= hi.greeting %>, <%= hi.name %></h1>
+    </div>
+    <nav class="hd-actions" aria-label="Quick actions">
+      <a class="button" href="/hq/today">My week</a>
+      <a class="button secondary" href="/hq">HQ WIG</a>
+    </nav>
+  </header>
+  <%- include('partials/hd-needs') %>
+  <%- include('partials/hd-company', { H: hl, branches: null, links: false }) %>
+  <%- include('partials/hd-news-line', { H: hl }) %>
 </main>
 </body>
 </html>

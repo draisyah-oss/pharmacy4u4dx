@@ -1,88 +1,128 @@
 <%- include('partials/head') %>
 <%- include('partials/topbar') %>
 <%- include('partials/nav', { navActive: 'home' }) %>
+<%# 9 Nov redesign (CEO: "remove distraction – staff want to look at their WIG and lead measures"):
+    WIG first, then my lead measures this week, my commitment; managers add their team. Celebrations live on /news. %>
+<link rel="stylesheet" href="/css/home.css?v=1">
 <%
-  const icon = { target: '✔', streak: '🔥', best: '🏆', commit: '🤝', branch: '📈', team: '👏' };
-  const statusText = { off_track: 'Behind', watch: 'Nearly there', on_track: 'On track' };
+  const H = hl;
+  const statusText = { off_track: 'Behind', watch: 'Nearly', on_track: 'On track' };
   const s = sales;
-  const barPct = s && s.monthTarget ? Math.min(100, Math.round((s.mtd / s.monthTarget) * 100)) : 0;
-  const pacePct = s && s.monthTarget && s.paceTarget ? Math.min(100, Math.round((s.paceTarget / s.monthTarget) * 100)) : null;
+  const dateTxt = new Date(today + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' });
+  const onTrack = myMeasures.filter(function (m) { return m.status === 'on_track'; }).length;
+  const ratedN = myMeasures.filter(function (m) { return m.status !== 'track_only'; }).length;
 %>
-<main class="page mh-page">
-  <%- include('partials/highlights', { hi: { greeting: greeting, name: name } }) %>
-  <h2 class="hl-you">⭐ You this week</h2>
-  <% if (wig) { %><p class="mh-wig hl-wig"><b><%= branch.code %> WIG:</b> <%= wig %></p><% } %>
-
-  <nav class="mh-actions" aria-label="Quick actions">
-    <a class="button<%= enteredToday ? ' secondary' : '' %>" href="/daily"><%= enteredToday ? '✔ Today’s numbers are in – check them' : 'Enter today’s numbers' %></a>
-    <a class="button secondary" href="/my-week">My week</a>
-    <a class="button secondary" href="/scoreboard"><%= branch.code %> scoreboard</a>
-  </nav>
-
-  <section class="mh-card" aria-labelledby="mh-wins">
-    <h2 id="mh-wins">🎉 Wins to celebrate</h2>
-    <% if (!wins.length) { %>
-      <p class="muted">Your first win is one good day away. Enter today’s numbers, hit one target, and it shows up here tomorrow.</p>
-    <% } %>
-    <ul class="mh-list">
-      <% wins.forEach(function (w) { %>
-        <li class="mh-win is-<%= w.kind %>">
-          <span class="mh-ic" aria-hidden="true"><%= icon[w.kind] || '★' %></span>
-          <a href="<%= w.href %>"><b><%= w.title %></b><% if (w.sub) { %><span><%= w.sub %></span><% } %></a>
-        </li>
-      <% }) %>
-    </ul>
-  </section>
-
-  <% if (shoutouts.length) { %>
-  <section class="mh-card" aria-labelledby="mh-shout">
-    <h2 id="mh-shout">👏 Shout-outs from last week</h2>
-    <ul class="mh-list">
-      <% shoutouts.forEach(function (p) { %>
-        <li class="mh-shout"><span class="mh-avatar" aria-hidden="true"><%= p.name.slice(0, 1) %></span><span><b><%= p.name %></b> hit <%= p.n %> target<%= p.n === 1 ? '' : 's' %><br><small class="muted"><%= p.labels %></small></span></li>
-      <% }) %>
-    </ul>
-    <p class="muted small">Say well done at Tuesday’s WIG session.</p>
-  </section>
-  <% } %>
-
-  <section class="mh-card" aria-labelledby="mh-focus">
-    <h2 id="mh-focus">🎯 Focus this week</h2>
-    <% if (!focus.length) { %>
-      <p class="muted"><%= mineCount ? 'All your targets are on track so far this week – keep it going!' : 'No targets of your own this week – help the team hit theirs.' %></p>
-    <% } %>
-    <ul class="mh-list">
-      <% focus.forEach(function (f) { %>
-        <li class="mh-focus">
-          <a href="<%= f.href %>">
-            <span class="mh-focus-top"><b><%= f.title %></b><span class="mh-chip s-<%= f.status %>"><%= statusText[f.status] %></span></span>
-            <span class="muted small"><%= f.now %></span>
-            <% if (f.plan) { %><span class="mh-plan">→ <%= f.plan %></span><% } %>
-          </a>
-        </li>
-      <% }) %>
-    </ul>
-    <div class="mh-commit">
-      <% if (myCommit) { %>
-        <p><b>My commitment:</b> <%= myCommit.commitment %><% if (myCommit.result === 'yes') { %> <span class="mh-chip s-on_track">Done</span><% } %></p>
-        <a href="/my-week" class="small">Update it in My week ›</a>
-      <% } else { %>
-        <p><b>No commitment yet this week.</b> One thing you’ll do to move a number – write it now.</p>
-        <a href="/my-week" class="button secondary">Write my commitment</a>
-      <% } %>
+<main class="page hd-page">
+  <% if (typeof ok !== 'undefined' && ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <header class="hd-hello">
+    <div>
+      <p class="hd-date"><%= dateTxt %> · <%= branch.name %></p>
+      <h1><%= greeting %>, <%= name %></h1>
     </div>
+    <nav class="hd-actions" aria-label="Quick actions">
+      <a class="button<%= enteredToday ? ' secondary' : '' %>" href="/daily"><%= enteredToday ? '✔ Today’s numbers are in' : 'Enter today’s numbers' %></a>
+      <a class="button secondary" href="/scoreboard"><%= branch.code %> scoreboard</a>
+    </nav>
+  </header>
+
+  <%- include('partials/hd-needs') %>
+
+  <div class="hd-row">
+    <% if (s) { %>
+      <%- include('partials/hd-wig', { k: (isManager ? 'Branch WIG' : 'Our WIG') + ' · ' + new Date(s.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' }) + ' sales',
+           v: { mtd: s.mtd, target: s.monthTarget, pct: s.pct, paceTarget: s.paceTarget, perDay: s.perDay, daysLeft: s.daysLeft, status: s.status },
+           href: '/scoreboard', extra: wig ? branch.code + ' WIG: ' + wig : '' }) %>
+    <% } %>
+    <section class="hd-card hd-commit" aria-labelledby="hd-commit-h">
+      <h2 id="hd-commit-h" class="hd-k">My commitment this week</h2>
+      <% if (myCommit) { %>
+        <p class="hd-commit-text"><%= myCommit.commitment %></p>
+        <% if (myCommit.result === 'yes') { %><p><span class="mh-chip s-on_track">Done</span></p><% } %>
+        <a class="button secondary" href="/my-week"><%= myCommit.result === 'yes' ? 'See my week' : 'Mark it done in My week' %></a>
+      <% } else { %>
+        <p class="hd-commit-text muted">No commitment yet. One thing you’ll do this week to move a lead measure.</p>
+        <a class="button" href="/my-week">Write my commitment</a>
+      <% } %>
+    </section>
+  </div>
+
+  <section class="hd-card" aria-labelledby="hd-lead-h">
+    <div class="hd-head">
+      <h2 id="hd-lead-h" class="hd-k">🎯 Focus this week: my lead measures</h2>
+      <% if (ratedN) { %><span class="hd-count"><%= onTrack %> of <%= ratedN %> on track</span><% } %>
+    </div>
+    <% if (!myMeasures.length) { %>
+      <p class="muted">No measures of your own this week – help the team hit the branch lead measures below.</p>
+    <% } else { %>
+      <ul class="hd-measures">
+        <% myMeasures.forEach(function (m) { %>
+          <li class="is-<%= m.status %>">
+            <a class="hd-m-main" href="<%= m.href %>">
+              <span class="hd-m-top"><b><%= m.label %></b><span class="hd-m-val"><%= m.actual %><%= m.target ? ' / ' + m.target : '' %></span></span>
+              <% if (m.fill !== null) { %><span class="hd-mbar" aria-hidden="true"><span style="width: <%= m.fill %>%"></span></span><% } %>
+              <span class="small muted"><%= m.status === 'track_only' ? 'Track only' : statusText[m.status] + (m.lead ? ' · lead measure' : '') %></span>
+            </a>
+            <a class="hd-log" href="<%= m.logHref %>" aria-label="Log today: <%= m.label %>">+ Log</a>
+          </li>
+        <% }) %>
+      </ul>
+      <% if (focus.length && focus[0].plan) { %><p class="hd-tip">Catch up: <b><%= focus[0].title %></b> – <%= focus[0].plan %></p><% } %>
+    <% } %>
   </section>
 
-  <% if (isManager && teamFocus.length) { %>
-  <section class="mh-card" aria-labelledby="mh-team">
-    <h2 id="mh-team">🧭 Team focus – where to coach</h2>
-    <ul class="mh-list">
-      <% teamFocus.forEach(function (f) { %>
-        <li class="mh-focus"><a href="<%= f.href %>"><span class="mh-focus-top"><b><%= f.title %></b><span class="mh-chip s-<%= f.status %>"><%= statusText[f.status] %></span></span><span class="muted small"><%= f.owner %> · <%= f.now %></span></a></li>
+  <% if (isManager && team.length) { %>
+  <section class="hd-card" aria-labelledby="hd-team-h">
+    <h2 id="hd-team-h" class="hd-k">Team lead measures · this week</h2>
+    <div class="hd-scroll">
+      <table class="hd-table">
+        <thead><tr><th scope="col">Staff</th><th scope="col">Furthest behind</th><th scope="col" class="num">On track</th></tr></thead>
+        <tbody>
+          <% team.forEach(function (p) { %>
+            <tr><th scope="row"><%= p.name %></th><td><%= p.low ? p.low.label : '–' %></td><td class="num <%= p.on / p.of >= 0.5 ? 'hd-good' : 'hd-bad' %>"><%= p.on %> / <%= p.of %></td></tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <% if (teamFocus.length) { %><p class="hd-tip">Coach first: <b><%= teamFocus[0].title %></b> (<%= teamFocus[0].owner %> · <%= teamFocus[0].now %>) – bring it to Tuesday’s WIG session.</p><% } %>
+    <a class="small" href="/commitments">Branch WIG session ›</a>
+  </section>
+  <% } %>
+
+  <% if (H.targets && H.targets.rows.length) { const T = H.targets; %>
+  <section class="hd-card" aria-labelledby="hl-targets">
+    <h2 id="hl-targets" class="hd-k"><%= T.code %> – <%= T.monthName %> lead measures</h2>
+    <ul class="hd-measures hd-compact">
+      <% T.rows.forEach(function (r) { %>
+        <li class="is-<%= r.status %>"><a class="hd-m-main" href="<%= r.href %>">
+          <span class="hd-m-top"><b><%= r.label %></b><span class="hd-m-val"><%= r.sofar %><%= r.monthTarget ? ' / ' + r.monthTarget : '' %></span></span>
+          <% if (r.fill !== null) { %><span class="hd-mbar" aria-hidden="true"><span style="width: <%= r.fill %>%"></span><% if (r.pace !== null) { %><i style="left: <%= r.pace %>%"></i><% } %></span><% } %>
+          <span class="small muted"><%= r.owner %><%= r.rate ? ' · ' + r.rate : ' · track only' %><% if (r.status && statusText[r.status]) { %> · <%= statusText[r.status] %><% } %></span>
+        </a></li>
       <% }) %>
     </ul>
   </section>
   <% } %>
+
+  <% if (H.oosLoss && H.oosLoss.items) { const L = H.oosLoss; const mineB = L.branches.find(function (b) { return b.code === branch.code; }); const rmL = function (n) { return 'RM ' + Math.round(n).toLocaleString('en-MY'); };
+       if (mineB) { %>
+  <a class="hd-card hd-linkcard" href="/oos">
+    <span class="hd-k">Sales lost to out of stock – <%= L.monthName %> <small>(estimate)</small></span>
+    <span><b class="hd-big hd-big-s"><%= rmL(mineB.total) %></b> lost at <%= branch.code %></span>
+    <span class="small muted"><%= mineB.open ? mineB.open + ' item' + (mineB.open === 1 ? '' : 's') + ' still out (' + rmL(mineB.openTotal) + ') · ' : '' %>tap to see them</span>
+  </a>
+  <% } } %>
+
+  <% if (wins.length) { %>
+  <section class="hd-card hd-wins" aria-labelledby="mh-wins">
+    <h2 id="mh-wins" class="hd-k">🎉 Wins to celebrate</h2>
+    <ul class="hd-plain">
+      <% wins.slice(0, 3).forEach(function (w) { %><li><a href="<%= w.href %>"><b><%= w.title %></b><% if (w.sub) { %> <span class="muted small">· <%= w.sub %></span><% } %></a></li><% }) %>
+    </ul>
+  </section>
+  <% } %>
+
+  <%- include('partials/hd-news-line', { H: H }) %>
 </main>
 </body>
 </html>

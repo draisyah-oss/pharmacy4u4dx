@@ -1,0 +1,62 @@
+<%# 9 Nov: HQ / admin / HQ staff home body – company WIG with every branch, the month's goals, sales lost to out of stock.
+    Inputs: H (highlights), branches (optional, with today_entries/fields), links (bool: link into branches). %>
+<%
+  const C = H.wins.company; const W = H.wins;
+  const chipCls = { 'On track': 's-on_track', 'At risk': 's-watch', 'Off track': 's-off_track', 'Done': 's-on_track' };
+  const monthName = C && C.rows && C.rows[0] && C.rows[0].sales ? new Date(C.rows[0].sales.month + '-01T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', month: 'long' }) : '';
+  const leads = {}; (W.teams || []).forEach(function (t) { leads[t.code] = t; });
+  const rmL = function (n) { return 'RM ' + Math.round(n).toLocaleString('en-MY'); };
+%>
+<div class="hd-row hd-row-wide">
+  <div class="hd-col">
+    <% if (C && C.target) { %>
+      <%- include('hd-wig', { k: 'Pharmacy4U this month · company WIG', v: { mtd: C.total, target: C.target, pct: C.pct, paceTarget: C.paceTarget, perDay: C.perDay, daysLeft: C.daysLeft, status: C.status }, href: '/group' }) %>
+    <% } %>
+    <% if (C && C.rows && C.rows.length) { %>
+    <section class="hd-card" aria-labelledby="hd-br-h">
+      <h2 id="hd-br-h" class="hd-k">Branches · <%= monthName %> sales so far</h2>
+      <div class="hd-scroll">
+        <table class="hd-table hd-branches">
+          <thead><tr><th scope="col">Branch</th><th scope="col" class="num">Sales</th><th scope="col">vs target</th><th scope="col" class="num">Needed per day</th><th scope="col" class="num">Lead targets hit last week</th></tr></thead>
+          <tbody>
+            <% C.rows.forEach(function (r) { const s = r.sales || {}; const fill = s.monthTarget ? Math.min(100, (s.mtd || 0) / s.monthTarget * 100) : 0; const pace = s.monthTarget && s.paceTarget ? Math.min(100, s.paceTarget / s.monthTarget * 100) : null; const t = leads[r.code];
+                 const b = typeof branches !== 'undefined' && branches ? branches.find(function (x) { return x.code === r.code; }) : null; %>
+              <tr>
+                <th scope="row"><% if (links) { %><a href="/scoreboard?branch=<%= encodeURIComponent(r.code) %>"><%= r.name %></a><% } else { %><%= r.name %><% } %>
+                  <% if (b) { %><small class="muted hd-today"><%= b.today_entries ? b.today_entries + ' of ' + b.fields + ' in today' : 'nothing in today' %></small><% } %></th>
+                <td class="num"><% if (links && r.started) { %><a href="/scoreboard/trace?type=sales&from=<%= s.month %>-01&to=<%= r.asOf %>&branch=<%= encodeURIComponent(r.code) %>"><%= fmt.money(s.mtd) %></a><% } else { %><%= fmt.money(s.mtd) %><% } %></td>
+                <td><span class="hd-cellbar"><span class="hd-mbar is-<%= s.status %>" aria-hidden="true"><span style="width: <%= fill.toFixed(1) %>%"></span><% if (pace !== null) { %><i style="left: <%= pace.toFixed(1) %>%"></i><% } %></span><span class="small"><%= s.monthTarget ? fmt.pct(s.pct) : '–' %></span></span></td>
+                <td class="num"><%= s.perDay === null || s.perDay === undefined ? '–' : s.perDay === 0 ? 'reached' : fmt.money(s.perDay) %></td>
+                <td class="num <%= t && t.of ? (t.on / t.of >= 0.5 ? 'hd-good' : 'hd-bad') : '' %>"><%= t && t.of ? t.on + ' / ' + t.of : '–' %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+      </div>
+      <p class="small muted">Bar line = where each branch should be today. Tap a branch for its scoreboard.</p>
+    </section>
+    <% } %>
+  </div>
+  <div class="hd-col">
+    <% if (H.goals && H.goals.goals.length) { %>
+    <section class="hd-card" aria-labelledby="hl-goals">
+      <h2 id="hl-goals" class="hd-k"><%= H.goals.name.split(' ')[0] %> goals <% if (H.goals.locked) { %><span class="mh-chip s-on_track">Agreed</span><% } %></h2>
+      <ol class="hd-goals">
+        <% H.goals.goals.forEach(function (g) { %>
+          <li><span class="hd-m-top"><b><%= g.title %></b><% if (g.chip) { %><span class="mh-chip <%= chipCls[g.chip] %>"><%= g.chip %></span><% } %></span>
+            <% if (g.auto) { %><a class="small" href="<%= g.auto.href %>"><%= g.auto.text %></a><% } else if (g.progress) { %><span class="small"><%= g.progress %></span><% } else { %><span class="small muted"><%= g.owner || 'No owner yet' %><%= g.due ? ' · by ' + g.due : '' %></span><% } %>
+          </li>
+        <% }) %>
+      </ol>
+      <a class="small" href="/review/conclusion?month=<%= H.goals.reviewMonth %>">All goals ›</a>
+    </section>
+    <% } %>
+    <% if (H.oosLoss && H.oosLoss.items) { const L = H.oosLoss; const worst = L.branches.slice().sort(function (a, b) { return b.total - a.total; })[0]; %>
+    <a class="hd-card hd-linkcard" href="/oos/scoreboard">
+      <span class="hd-k">Sales lost to out of stock · <%= L.monthName %></span>
+      <span class="hd-big hd-big-s"><%= rmL(L.total) %> <span class="hd-of">estimate</span></span>
+      <span class="small muted"><%= L.open %> item<%= L.open === 1 ? '' : 's' %> still out<%= worst ? ' · biggest: ' + worst.code + ' ' + rmL(worst.total) : '' %></span>
+    </a>
+    <% } %>
+  </div>
+</div>

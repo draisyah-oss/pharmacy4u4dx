@@ -140,11 +140,43 @@ async function buildMyPage(db, { user, branch, now, trackerStart }) {
       .map(({ m, r }) => ({ title: r.label, owner: r.owner, now: `${show(r, r.week.actual)} of ${show(r, r.week.target)}`, status: r.week.status, href: trace(m.code, week) }))
     : [];
 
+  // 9 Nov (CEO: "staff want to look at their WIG and lead measures"): every one of my measures this
+  // week – leads first, then the ones behind – with a progress bar and a link to log it on Daily entry.
+  const rated = (st) => ['on_track', 'watch', 'off_track'].includes(st);
+  const order = { off_track: 0, watch: 1, on_track: 2 };
+  const myMeasures = mine.map((m) => ({ m, r: thisRows.get(m.code) })).filter(({ r }) => r)
+    .map(({ m, r }) => {
+      const rateOk = rated(r.week.status);
+      const pct = rateOk && r.week.pct !== null && r.week.pct !== undefined ? r.week.pct : null;
+      return {
+        code: m.code, label: r.label, status: rateOk ? r.week.status : 'track_only',
+        lead: !!(r.top || r.kind === 'Lead'),
+        actual: r.week.actual === null || r.week.actual === undefined ? '–' : show(r, r.week.actual),
+        target: r.week.target === null || r.week.target === undefined ? null : show(r, r.week.target),
+        fill: pct === null ? null : Math.max(0, Math.min(100, Math.round(pct * 100))),
+        href: trace(m.code, week), logHref: m.numerator_field ? `/daily#f_${encodeURIComponent(m.numerator_field)}` : '/daily',
+      };
+    })
+    .sort((a, b) => (b.lead - a.lead) || ((order[a.status] ?? 3) - (order[b.status] ?? 3)));
+  // Managers: each teammate's targets on track this week and the one furthest behind.
+  const team = [];
+  if (isManager) {
+    const byOwner = new Map();
+    for (const r of thisRows.values()) {
+      if (!r.owner || r.owner === 'Team' || !rated(r.week.status)) continue;
+      const x = byOwner.get(r.owner) || { name: r.owner, on: 0, of: 0, low: null };
+      x.of++; if (r.week.status === 'on_track') x.on++;
+      else if (!x.low || (r.week.pct ?? 0) < (x.low.pct ?? 0)) x.low = { label: r.label, pct: r.week.pct };
+      byOwner.set(r.owner, x);
+    }
+    team.push(...[...byOwner.values()].sort((a, b) => a.on / a.of - b.on / b.of));
+  }
+
   const dayIndex = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86400000);
   return {
     greeting: greeting(at), name: person ? person.name : user.display_name, branch, isManager,
     line: LINES[dayIndex % LINES.length],
-    wins: wins.slice(0, 5), shoutouts, focus, myCommit, teamFocus, enteredToday, today,
+    wins: wins.slice(0, 5), shoutouts, myMeasures, team, weekStart: week, focus, myCommit, teamFocus, enteredToday, today,
     wig: branch.wig || null, sales: s, onTrackMine: mine.filter((m) => (thisRows.get(m.code) || {}).week?.status === 'on_track').length,
     mineCount: mine.filter((m) => ['on_track', 'watch', 'off_track'].includes((thisRows.get(m.code) || {}).week?.status)).length,
   };

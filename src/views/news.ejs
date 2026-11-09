@@ -1,0 +1,97 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'news' }) %>
+<%# 9 Nov redesign: everything to celebrate and read lives here, off the home page – Dr Aisyah's push,
+    the monthly achievers, HQ's posts, today's reminder and tip, last week's stars, sales lost to out of stock. %>
+<link rel="stylesheet" href="/css/home.css?v=1">
+<% const H = hl; const W = H.wins; %>
+<main class="page hd-page hd-newspage">
+  <% if (typeof ok !== 'undefined' && ok) { %><p class="alert alert-good"><%= ok %></p><% } %>
+  <% if (typeof err !== 'undefined' && err) { %><p class="alert alert-bad"><%= err %></p><% } %>
+  <header class="hd-hello">
+    <div><p class="hd-date"><a href="/">‹ Home</a></p><h1>News</h1><p class="muted">Wins, awards and announcements from across Pharmacy4U</p></div>
+  </header>
+  <div class="hd-row hd-row-wide">
+    <div class="hd-col">
+      <section class="mh-card" aria-labelledby="hl-news">
+  <h2 id="hl-news">📣 News</h2>
+  <% if (H.rally) { %><%- include('rally', { R: H.rally, myCode: H.myCode }) %><% } %>
+  <% if (H.achievers) { %><%- include('achievers', { A: H.achievers }) %><% } %>
+  <% if (!H.news.length && !H.achievers && !H.rally) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
+  <ul class="hl-news">
+    <% H.news.forEach(function (n) { %>
+      <li class="<%= n.pinned ? 'is-pinned' : '' %>"><span class="hl-emoji" aria-hidden="true"><%= n.emoji || '📌' %></span>
+        <div><b><%= n.title %></b><% if (n.body) { %><p><%= n.body %></p><% } %><small class="muted"><%= n.by_name || '' %> · <%= new Date(n.created_at).toLocaleDateString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short' }) %><%= n.pinned ? ' · pinned' : '' %></small>
+          <% if (H.canPost) { %><form method="post" action="/news/<%= n.id %>/remove" class="hl-remove"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="link-button small" type="submit">Take down</button></form><% } %></div>
+      </li>
+    <% }) %>
+  </ul>
+  <% if (H.canPost) { %>
+    <details class="hl-post"><summary>➕ Post news</summary>
+      <form method="post" action="/news">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <div class="hl-post-row"><select name="emoji" aria-label="Icon"><% ['🎉','🏆','📣','💊','🛍️','📅','🙌','⭐','❤️','🎂'].forEach(function (e) { %><option><%= e %></option><% }) %></select>
+          <input type="text" name="title" maxlength="120" placeholder="Headline – e.g. JH hit 100 Google reviews!" aria-label="Headline" required></div>
+        <textarea name="body" rows="2" maxlength="600" placeholder="A few words (optional)" aria-label="Story"></textarea>
+        <div class="hl-post-row"><label><input type="checkbox" name="pinned" value="1"> Pin to the top</label>
+          <label>Show until <input type="date" name="show_until"></label>
+          <button class="button" type="submit">Post</button></div>
+      </form>
+    </details>
+  <% } %>
+</section>
+      <section class="mh-card" aria-labelledby="hl-wins">
+  <h2 id="hl-wins">🏆 Last week’s stars <small class="muted">w/c <%= new Date(W.week + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', day: 'numeric', month: 'short' }) %></small></h2>
+  <% if (!W.people.length && !W.ahead.length && !W.streaks.length && !W.words.length) { %><p class="muted">The first stars show up here after a full week of numbers.</p><% } %>
+  <% if (W.ahead.length) { %><p>📈 <b>Ahead of pace this month:</b> <%= W.ahead.map(function (a) { return a.name; }).join(', ') %></p><% } %>
+  <% if (W.people.length) { %>
+    <ul class="hl-stars">
+      <% W.people.forEach(function (p, i) { %><li><span class="mh-avatar" aria-hidden="true"><%= i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : p.name.slice(0, 1) %></span><span><b><%= p.name %></b> <small class="muted"><%= p.branch %></small><br><small><%= p.on %> of <%= p.of %> targets hit<%= p.labels.length ? ' · ' + p.labels.join(' · ') : '' %></small></span></li><% }) %>
+    </ul>
+  <% } %>
+  <% if (W.streaks.length) { %>
+    <p class="hl-sub">🔥 On a streak</p>
+    <ul class="hl-plain"><% W.streaks.forEach(function (s) { %><li><b><%= s.name %></b> (<%= s.branch %>) – <%= s.days %> days in a row on “<%= s.label %>”</li><% }) %></ul>
+  <% } %>
+  <% if (W.words.length) { %>
+    <p class="hl-sub">🙌 Wins from the branches</p>
+    <ul class="hl-plain"><% W.words.forEach(function (w) { %><li><b><%= w.code %>:</b> <%= w.win_this_week %></li><% }) %></ul>
+  <% } %>
+  <% if (W.teams.length) { %><p class="small muted">Targets hit last week: <%= W.teams.map(function (t) { return t.code + ' ' + t.on + '/' + t.of; }).join(' · ') %></p><% } %>
+</section>
+    </div>
+    <div class="hd-col">
+      <section class="mh-card hd-side" aria-label="Today’s reminder and tip">
+      <% if (H.tazkirah) { const z = H.tazkirah; %>
+    <div class="hl-tazkirah"><span class="hl-emoji" aria-hidden="true"><%= z.emoji %></span>
+      <div><small class="hl-tz-k"><%= z.kind === 'Reminder' ? 'Today’s reminder' : z.kind + ' – today’s reminder' %></small>
+        <p>“<%= z.text %>”</p><small class="muted"><%= z.src %></small></div></div>
+  <% } %>
+  <% if (H.tip) { %>
+    <div class="hl-tip"><span class="hl-emoji" aria-hidden="true"><%= H.tip.kind === 'effective' ? '⚡' : '🌱' %></span>
+      <div><small class="hl-tip-k">Tip of the day – <%= H.tip.kind === 'effective' ? 'work smooth and efficient' : 'look after yourself, find meaning at work' %></small>
+        <p><b><%= H.tip.title %>.</b> <%= H.tip.text %></p></div></div>
+  <% } %>
+  
+      </section>
+      <% if (H.oosLoss && H.oosLoss.items) { const L = H.oosLoss; const mineB = H.targets ? L.branches.find(function (b) { return b.code === H.targets.code; }) : null;
+     const rmL = function (n) { return 'RM ' + Math.round(n).toLocaleString('en-MY'); }; %>
+<section class="mh-card hl-loss" aria-labelledby="hl-loss">
+  <h2 id="hl-loss">💸 Sales lost to out of stock – <%= L.monthName %> <small class="muted">(estimate)</small></h2>
+  <% if (mineB) { %>
+    <p class="hl-loss-big"><b><%= rmL(mineB.total) %></b> lost at <%= H.targets.code %> <span class="small muted">· <%= mineB.items %> report<%= mineB.items === 1 ? '' : 's' %><%= mineB.open ? ' · ' + mineB.open + ' still out (' + rmL(mineB.openTotal) + ')' : '' %></span></p>
+    <p class="small">All Pharmacy4U: <b><%= rmL(L.total) %></b> · <%= L.open %> item<%= L.open === 1 ? '' : 's' %> still out</p>
+  <% } else { %>
+    <p class="hl-loss-big"><b><%= rmL(L.total) %></b> lost <span class="small muted">· <%= L.items %> reports · <%= L.open %> still out (<%= rmL(L.openTotal) %>)</span></p>
+    <ul class="hl-loss-br"><% L.branches.forEach(function (b) { %><li><a href="/oos?branch=<%= b.code %>"><b><%= b.code %></b> <%= rmL(b.total) %></a><% if (b.open) { %> <small class="muted">· <%= b.open %> out</small><% } %></li><% }) %></ul>
+  <% } %>
+  <% if (L.top.length) { %><p class="hl-sub">Biggest losses – push to get these back</p>
+    <ol class="hl-plain"><% L.top.forEach(function (t) { %><li><b><%= t.item %></b> – <%= rmL(t.loss) %> <small class="muted">(<%= t.branches.join(', ') %><%= t.reports > 1 ? ', ' + t.reports + ' reports' : '' %><%= t.open ? ', still out' : '' %>)</small></li><% }) %></ol><% } %>
+  <p class="muted small">Estimate = selling price (Dynamod Price 1) × customers turned away when it was reported (at least 1).<%= L.unpriced ? ' ' + L.unpriced + ' report' + (L.unpriced === 1 ? '' : 's') + ' without a Dynamod price not counted.' : '' %></p>
+</section>
+<% } %>
+    </div>
+  </div>
+</main>
+</body>
+</html>

@@ -83,7 +83,7 @@ async function postNews(db, user, body, { now }) {
   await db.query('INSERT INTO news (emoji, title, body, pinned, show_until, created_by, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)',
     [emoji, t.value, b.value, body.pinned === '1', until, user.id, now()]);
   await db.query(`INSERT INTO audit_log (user_id, action, table_name, record_key, new_value) VALUES ($1, 'insert', 'news', $2, NULL)`, [user.id, t.value]);
-  return { ok: 'Posted – everyone sees it on the front page.' };
+  return { ok: 'Posted – everyone sees it on the News page.' };
 }
 async function removeNews(db, user, id, { now }) {
   if (!canPost(user)) return { error: 'HQ posts the news.' };
