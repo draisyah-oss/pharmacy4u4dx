@@ -1680,3 +1680,22 @@ body:has(.savebar) .tabbar { display: none !important; }
 .tab.is-current { color: var(--brand); background: var(--brand-tint); }
 .tab:focus-visible { outline: 3px solid var(--focus); outline-offset: -3px; }
 .tab-badge { position: absolute; top: 2px; left: 54%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--short); color: #fff; font-size: 0.66rem; display: inline-flex; align-items: center; justify-content: center; }
+
+/* 10 Nov: invoice scanner – "Adjust the page" screen (public/js/scan.js) */
+body.sc-open { overflow: hidden; }
+.sc-overlay { position: fixed; inset: 0; z-index: 1000; background: #111; color: #fff; display: flex; flex-direction: column; }
+.sc-head { padding: 12px 16px; display: flex; flex-direction: column; gap: 2px; }
+.sc-hint { font-size: 0.85rem; color: #ccc; }
+.sc-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.sc-wrap { position: relative; touch-action: none; }
+.sc-photo { display: block; }
+.sc-lines { position: absolute; inset: 0; pointer-events: none; }
+.sc-lines polygon { fill: rgba(59, 130, 246, 0.15); stroke: #3b82f6; stroke-width: 2; }
+.sc-h { position: absolute; width: 36px; height: 36px; margin: -18px 0 0 -18px; border-radius: 50%; border: 3px solid #fff; background: rgba(59, 130, 246, 0.85); box-shadow: 0 1px 4px rgba(0,0,0,.5); padding: 0; cursor: grab; touch-action: none; }
+.sc-h:focus-visible { outline: 3px solid #facc15; outline-offset: 2px; }
+.sc-bar { background: #fff; color: var(--ink, #111); padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
+.sc-looks { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.95rem; }
+.sc-looks label { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+.sc-btns { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
+.sc-btns .button { flex: 0 0 auto; }
+.sc-busy { margin: 0; font-size: 0.85rem; color: var(--ink-soft, #555); min-height: 1em; }

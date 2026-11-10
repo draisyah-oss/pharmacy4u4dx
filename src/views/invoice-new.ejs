@@ -4,7 +4,7 @@
 <main class="page oo-page in-page">
   <p><a href="/invoices">‹ Invoices</a></p>
   <h1>Scan an invoice</h1>
-  <p class="muted">Take a photo of each page. The app makes one PDF and saves it in the Finance inbox for Mr Eve.</p>
+  <p class="muted">Take a photo of each page – the app straightens it and makes it look like a scan, then puts all pages in one PDF saved in the Finance inbox for Mr Eve.</p>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
   <form method="post" action="/invoices" class="oo-card oo-form" data-invoice-form novalidate>
     <input type="hidden" name="_csrf" value="<%= csrfToken %>">
@@ -52,6 +52,7 @@
     <button class="button wide" type="submit">Save invoice</button>
   </form>
 </main>
-<script src="/js/invoice.js?v=1" defer></script>
+<script src="/js/scan.js?v=1" defer></script>
+<script src="/js/invoice.js?v=2" defer></script>
 </body>
 </html>

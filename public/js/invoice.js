@@ -1,4 +1,4 @@
-// 6 Nov: invoice scan. Each photo is shrunk on the phone (max 1600 px, JPEG) and added as a page
+// 6 Nov: invoice scan. (10 Nov: each photo goes through the scanner – public/js/scan.js.) Each photo is shrunk on the phone (max 1600 px, JPEG) and added as a page
 // (hidden "page" box + thumbnail); pages can be removed. While typing the supplier and invoice no., the
 // app warns when that invoice is already saved.
 (function () {
@@ -53,7 +53,10 @@
       if (!f) return renumber();
       if (box.querySelectorAll('figure').length >= MAX_PAGES) { msg.textContent = MAX_PAGES + ' pages at most.'; return; }
       msg.textContent = 'Preparing page…';
-      shrink(f, function (data) { if (data) addPage(data); else msg.textContent = 'That file couldn’t be opened as a photo.'; next(); });
+      var after = function (data, cancelled) { if (data) addPage(data); else if (!cancelled) msg.textContent = 'That file couldn’t be opened as a photo.'; else renumber(); next(); };
+      // 10 Nov: scan look – corners, straighten, white paper (scan.js); plain shrink if it isn't there
+      if (window.P4UScan) window.P4UScan.open(f, function (data) { after(data, !data); });
+      else shrink(f, function (data) { after(data, false); });
     })();
   });
   form.addEventListener('submit', function (e) {
