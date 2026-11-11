@@ -18,12 +18,16 @@ function quotationRoutes(db, { now }) {
   const router = express.Router();
   const msg = (res, status, text) => res.status(status).render('message', { title: 'Zakat quotation', message: text });
   const back = (res, to, text, kind = 'ok') => res.redirect(303, `${to}${to.includes('?') ? '&' : '?'}${kind}=${encodeURIComponent(text)}`);
-  const gate = (req, res, next) => (D.canMake(req.user) ? next() : msg(res, 403, 'Zakat quotations are made by WM’s manager and HQ.'));
+  const gate = (req, res, next) => (D.canMake(req.user) ? next() : msg(res, 403, 'Zakat quotations are made by the branch managers and HQ.'));
   const id = (req) => Number(req.params.id) || 0;
 
   router.get('/quotations', gate, async (req, res, next) => {
     try {
-      res.render('quotations', { title: 'Zakat quotation (WM)', rows: await D.list(db), master: await D.itemMasterInfo(db),
+      const outlets = D.outletsFor(req.user);
+      const branch = outlets.includes(req.query.branch) ? req.query.branch : '';
+      const configs = await D.branchConfigs(db);
+      res.render('quotations', { title: 'Zakat quotation', rows: await D.list(db, { outlets: branch ? [branch] : outlets }), master: await D.itemMasterInfo(db),
+        outlets, branch, configs,
         settings: await D.settings(db), canSettings: D.canSettings(req.user), canProducts: req.user.role === 'admin' || Boolean(req.user.inventory),
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'quotations' });
     } catch (err) { next(err); }
@@ -42,7 +46,7 @@ function quotationRoutes(db, { now }) {
   router.get('/quotations/settings', gate, settingsGate, async (req, res, next) => {
     try {
       res.render('quotation-settings', { title: 'Quotation settings', settings: await D.settings(db), series: await D.seriesRows(db),
-        thisYear: Number(require('../calc').todayInMalaysia(now()).slice(0, 4)), formatRef: L.formatRef,
+        thisYear: Number(require('../calc').todayInMalaysia(now()).slice(0, 4)), formatRef: L.formatRef, configs: await D.branchConfigs(db), seriesList: D.SERIES_LIST,
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'quotations' });
     } catch (err) { next(err); }
   });
@@ -51,6 +55,21 @@ function quotationRoutes(db, { now }) {
   });
   router.post('/quotations/settings/signature', gate, settingsGate, async (req, res, next) => {
     try { const r = await D.saveSignature(db, req.user, req.body.file); back(res, '/quotations/settings', r.error || r.ok, r.error ? 'err' : 'ok'); } catch (err) { next(err); }
+  });
+  router.post('/quotations/settings/branch/:code', gate, settingsGate, async (req, res, next) => {
+    try { const r = await D.saveBranch(db, req.user, req.params.code, req.body); back(res, '/quotations/settings', r.error || r.ok, r.error ? 'err' : 'ok'); } catch (err) { next(err); }
+  });
+  router.post('/quotations/settings/image/:code/:kind', gate, settingsGate, async (req, res, next) => {
+    try { const r = await D.saveImage(db, req.user, req.params.code, req.params.kind, req.body.file); back(res, '/quotations/settings', r.error || r.ok, r.error ? 'err' : 'ok'); } catch (err) { next(err); }
+  });
+  router.get('/quotations/settings/image/:code/:kind', gate, settingsGate, async (req, res, next) => {
+    try {
+      const pic = D.IMAGE_KINDS.includes(req.params.kind) && D.BRANCHES[req.params.code] ? await D.image(db, req.params.code, req.params.kind) : null;
+      if (!pic) return msg(res, 404, 'No picture uploaded yet.');
+      res.setHeader('Content-Type', pic[0] === 0xff ? 'image/jpeg' : 'image/png');
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(pic);
+    } catch (err) { next(err); }
   });
   router.get('/quotations/settings/signature', gate, settingsGate, async (req, res, next) => {
     try {
@@ -69,8 +88,9 @@ function quotationRoutes(db, { now }) {
   router.get('/quotations/:id', gate, async (req, res, next) => {
     try {
       const q = await D.loadOne(db, id(req));
-      if (!q) return msg(res, 404, 'That quotation isn’t in the list.');
+      if (!D.canOpen(req.user, q)) return msg(res, 404, 'That quotation isn’t in the list.');
       const s = await D.settings(db);
+      const branchCfg = await D.branchConfig(db, q.outlet);
       if (q.status === 'draft') {
         for (const l of q.lines) l.matches = await D.candidates(db, l.search_text || l.portal_text);
       }
@@ -82,7 +102,7 @@ function quotationRoutes(db, { now }) {
         for (const m of l.matches || []) { m.price = L.autoPrice(m.cost, s.markup_default); }
         if (!seeCost) { l.cost_at_quote = null; l.product_cost = null; l.markupPct = null; for (const m of l.matches || []) m.cost = null; }
       }
-      res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, missing: q.status === 'draft' ? D.missing(q) : [],
+      res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, missing: q.status === 'draft' ? D.missing(q) : [],
         lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: q.status === 'draft' && (req.user.role === 'admin' || q.created_by === req.user.id),
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'quotations' });
     } catch (err) { next(err); }
@@ -114,6 +134,7 @@ function quotationRoutes(db, { now }) {
 
   router.get('/quotations/:id/pdf', gate, async (req, res, next) => {
     try {
+      if (!D.canOpen(req.user, await D.loadOne(db, id(req)))) return msg(res, 404, 'That quotation isn’t in the list.');
       const p = await D.pdfOf(db, id(req));
       if (!p) return msg(res, 404, 'This quotation has no PDF yet – generate it first.');
       res.setHeader('Content-Type', 'application/pdf');

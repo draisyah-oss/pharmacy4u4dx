@@ -1748,3 +1748,11 @@ body.sc-open { overflow: hidden; }
 .qt-copy-row { white-space: nowrap; }
 .qt-draft td { color: var(--ink-soft); }
 .qt-sig { max-height: 90px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 4px; }
+.qt-grid4 { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 0 12px; align-items: end; }
+@media (max-width: 700px) { .qt-grid4 { grid-template-columns: 1fr; } }
+.qt-pills { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 14px; }
+.qt-pills a { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: #fff; text-decoration: none; font-weight: 700; }
+.qt-pills a.is-on { background: var(--brand); color: #fff; border-color: var(--brand); }
+.qt-pics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+@media (max-width: 700px) { .qt-pics { grid-template-columns: 1fr; } }
+.qt-pic { border: 1px dashed var(--line); border-radius: 12px; padding: 10px; }

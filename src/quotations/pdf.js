@@ -83,7 +83,22 @@ function paginate(heights, shift = 0) {
   return pages;
 }
 
-function pageFrame(doc, q, pageNo, pageCount) {
+// The footer band: the branch's own footer picture if uploaded; else WM's footer picture, and for the
+// other branches WM's address panel (navy #28326e) is covered and the branch's name and typed address
+// are printed in the same place and style (CEO 11 Nov: same letterhead as WM for every branch).
+function footer(doc, opts) {
+  const b = opts.branch || {};
+  if (opts.footer) { try { doc.image(opts.footer, 56.1, 693.1, { width: 477.7, height: 63.6 }); return; } catch (err) { /* use WM's */ } }
+  doc.image(files().footer, 56.1, 693.1, { width: 477.7, height: 63.6 });
+  if (!b.code || b.code === 'WM') return;
+  doc.rect(352.4, 701.6, 178.5, 43).fill('#28326e');
+  doc.fillColor('#ffffff');
+  const lines = [`Pharmacy4u ${b.name || ''}`.trim(), ...String(b.footer_lines || '').split('\n').filter(Boolean)].slice(0, 4);
+  lines.forEach((t, i) => { doc.font('B').fontSize(8.6); let size = 8.6; while (size > 6 && doc.widthOfString(t, NOLIG) > 172) { size -= 0.2; doc.fontSize(size); } at(doc, 'B', size, t, 355.3, 708.8 + i * 11.2); });
+  doc.fillColor('#000000');
+}
+
+function pageFrame(doc, q, pageNo, pageCount, opts = {}) {
   const f = files();
   doc.addPage({ size: 'A4', margin: 0 });
   doc.image(f.header, 54, 28.35, { width: 443.4, height: 106.4 });
@@ -111,7 +126,7 @@ function pageFrame(doc, q, pageNo, pageCount) {
   at(doc, 'B', H, 'Qty', COL.qty, 278.0 + shift);
   at(doc, 'B', H, 'U/ Price (RM)', COL.price, 278.0 + shift);
   at(doc, 'B', H, 'Total (RM)', COL.total, 278.0 + shift);
-  doc.image(f.footer, 56.1, 693.1, { width: 477.7, height: 63.6 });
+  footer(doc, opts);
   return shift;
 }
 
@@ -122,7 +137,9 @@ function centres(doc) {
   return { item: c(COL.item, 'Item'), qty: c(COL.qty, 'Qty'), price: c(COL.price, 'U/ Price (RM)'), total: c(COL.total, 'Total (RM)') };
 }
 
-async function quotationPdf(q, { signature = null } = {}) {
+async function quotationPdf(q, opts = {}) {
+  const signature = opts.signature || null;
+  const b = opts.branch || {};
   const doc = makeDoc();
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
@@ -136,7 +153,7 @@ async function quotationPdf(q, { signature = null } = {}) {
   const total = q.total !== undefined && q.total !== null ? Number(q.total) : lines.reduce((s, l) => s + Math.round(l.qty * l.unit_price * 100) / 100, 0);
 
   pagesFinal.forEach((idx, p) => {
-    const shift = pageFrame(doc, q, p + 1, pagesFinal.length);
+    const shift = pageFrame(doc, q, p + 1, pagesFinal.length, opts);
     const c = centres(doc);
     let y = ROW_TOP + shift;
     for (const i of idx) {
@@ -164,8 +181,9 @@ async function quotationPdf(q, { signature = null } = {}) {
     if (signature) {
       try { doc.image(signature, 160.4, 603.9, { fit: [37.1, 59.3], align: 'center', valign: 'center' }); } catch (err) { /* a bad picture never stops the quotation */ }
     }
-    at(doc, 'B', H, 'ALIA SURAYA BINTI ESA', INDENT, 675.1);
-    at(doc, 'R', 10.2, '(Pharmacist)', INDENT, 688.1);
+    at(doc, 'B', H, b.signer || 'ALIA SURAYA BINTI ESA', INDENT, 675.1);
+    const title = b.signer ? (b.title || '') : '(Pharmacist)';
+    if (title) at(doc, 'R', 10.2, title, INDENT, 688.1);
   });
   doc.end();
   await done;

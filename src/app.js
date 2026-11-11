@@ -48,7 +48,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
   // 27 Oct: out-of-stock forms can carry a photo (shrunk on the phone, sent as a data URL).
   app.use('/oos/products', express.urlencoded({ extended: true, limit: '15mb', parameterLimit: FORM_FIELDS })); // 3 Nov: Dynamod masterlist upload
   app.use('/oos', express.urlencoded({ extended: true, limit: '3mb', parameterLimit: FORM_FIELDS }));
-  app.use('/quotations/settings/signature', express.urlencoded({ extended: true, limit: '3mb', parameterLimit: FORM_FIELDS })); // 11 Nov: signature picture
+  app.use(['/quotations/settings/signature', '/quotations/settings/image'], express.urlencoded({ extended: true, limit: '3mb', parameterLimit: FORM_FIELDS })); // 11 Nov: signature picture
   app.use('/invoices', express.urlencoded({ extended: true, limit: '25mb', parameterLimit: FORM_FIELDS })); // 6 Nov: invoice scan – up to 10 page photos
   app.use('/meetings/m', express.urlencoded({ extended: true, limit: '4mb', parameterLimit: FORM_FIELDS })); // 8 Nov: minutes – long notes + an optional photo
   app.use(express.urlencoded({ extended: true, limit: '100kb', parameterLimit: FORM_FIELDS }));

@@ -12,7 +12,7 @@
 %>
 <main class="page qt-page">
   <p class="small"><a href="/quotations">← All quotations</a></p>
-  <h1><%= q.ref ? q.ref : 'New zakat quotation' %> <span class="qt-chip qt-chip-<%= q.status %>"><%= draft ? 'Draft' : 'Issued' %></span></h1>
+  <h1><%= q.ref ? q.ref : 'New zakat quotation' %> <span class="qt-chip"><%= q.outlet %><%= branchCfg ? ' – ' + branchCfg.name : '' %></span> <span class="qt-chip qt-chip-<%= q.status %>"><%= draft ? 'Draft' : 'Issued' %></span></h1>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
@@ -40,6 +40,7 @@
           <label class="oo-label">RFQ description <textarea name="rfq_description" rows="2" maxlength="2000"><%= q.rfq_description %></textarea></label>
         </div>
       </div>
+      <% if (branchCfg && !branchCfg.signer) { %><p class="alert alert-info small">Who signs <%= branchCfg.name %>’s quotations isn’t set yet – admin or Alia sets it on Quotation settings before the PDF can be made.</p><% } %>
       <label class="oo-label">Add more items <span class="muted small">– paste or type, one per line, qty at the end</span>
         <textarea name="add" rows="2" placeholder="Item name ×qty"></textarea></label>
     </section>
@@ -120,6 +121,6 @@
     <% if (canDelete) { %><form method="post" action="/quotations/<%= q.id %>/delete" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button secondary small-button" type="submit">Delete this draft</button></form><% } %>
   <% } %>
 </main>
-<script src="/js/quotation.js?v=1" defer></script>
+<script src="/js/quotation.js?v=2" defer></script>
 </body>
 </html>
