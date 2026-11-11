@@ -414,12 +414,14 @@ async function copy(db, user, id, { now }) {
   return { id: nid };
 }
 
-// Who deletes: a draft – the person who started it or admin; an issued quotation (12 Nov, CEO: "have
-// option delete so it's easier", e.g. a test quote) – admin and Alia (the people who own the numbers).
-const canDeleteIssued = (u) => canSettings(u);
+// Who deletes (12 Nov, CEO: "have option delete so it's easier", then "also for branch manager"):
+// admin, Alia, and the branch manager of that quotation's branch – drafts and issued ones; a draft
+// also by the person who started it.
+const isBranchManagerOf = (u, q) => Boolean(u && q) && u.role === 'branch_manager' && u.branch_code === q.outlet;
+const canDeleteIssued = (u, q) => canSettings(u) || isBranchManagerOf(u, q);
 function canDelete(user, q) {
   if (!q) return false;
-  return q.status === 'draft' ? (user.role === 'admin' || q.created_by === user.id) : canDeleteIssued(user);
+  return q.status === 'draft' ? (user.role === 'admin' || q.created_by === user.id || isBranchManagerOf(user, q)) : canDeleteIssued(user, q);
 }
 
 // Delete a quotation for good (the audit log keeps what it was). An issued one needs confirm = '1'.
@@ -429,7 +431,7 @@ async function removeQuote(db, user, id, { confirm = false } = {}) {
   const q = await loadOne(db, id);
   if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   if (!canDelete(user, q)) {
-    return { error: q.status === 'draft' ? 'Only the person who started this draft (or admin) can delete it.' : 'Only admin and Alia delete an issued quotation.' };
+    return { error: q.status === 'draft' ? 'Only the person who started this draft, the branch manager or admin can delete it.' : 'Only admin, Alia and the branch manager delete an issued quotation.' };
   }
   if (q.status === 'draft') {
     await db.query('DELETE FROM quotations WHERE id = $1', [id]);

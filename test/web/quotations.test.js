@@ -298,19 +298,24 @@ test('Bangi: no signer set yet → no PDF until admin / Alia sets one; pictures 
   for (const s of ['QT-WM', 'QT-JH', 'QT-BR', 'QT-BGI', 'QT-AMP']) assert.match(set.html, new RegExp(s));
 });
 
-test('delete an issued quotation: admin / Alia only, ticked to confirm; the newest number is given back', async () => {
+test('delete an issued quotation: admin / Alia / that branch\'s manager, ticked to confirm; the newest number is given back', async () => {
   const idOf = async (ref) => (await db.query('SELECT id FROM quotations WHERE ref = $1', [ref])).rows[0].id;
   const next = async (series) => (await db.query('SELECT next_no FROM quotation_series WHERE series = $1 AND year = 2026', [series])).rows[0].next_no;
   const h = await login('hafizah', 'pass-word-1');
   const id403 = await idOf('QT-WM-2026-0403'); const id404 = await idOf('QT-WM-2026-0404');
-  assert.doesNotMatch((await h.get(`/quotations/${id404}`)).html, /Delete this quotation/, 'the branch manager has no delete button');
-  assert.match(decodeURIComponent((await h.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /Only admin and Alia delete an issued quotation/);
+  assert.match((await h.get(`/quotations/${id404}`)).html, /Delete this quotation/, 'WM\'s manager has the delete button');
+  // another branch's manager can't even open it; HQ staff (not Alia) can open but not delete
+  const jhm = await login('afifah', 'pass-word-1');
+  assert.match(decodeURIComponent((await jhm.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /isn’t in the list/);
+  const hn = await login('hanin', 'pass-word-1');
+  assert.doesNotMatch((await hn.get(`/quotations/${id404}`)).html, /Delete this quotation/);
+  assert.match(decodeURIComponent((await hn.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /Only admin, Alia and the branch manager/);
   const a = await login('alia', 'pass-word-1');
   assert.match((await a.get(`/quotations/${id404}`)).html, /Yes, delete QT-WM-2026-0404/);
   assert.match(decodeURIComponent((await a.post(`/quotations/${id404}/delete`, {})).location), /Tick “Yes, delete QT-WM-2026-0404” first/);
   assert.equal(await next('QT-WM'), 405);
-  // 0404 is the newest → deleted and the number comes back
-  let r = await a.post(`/quotations/${id404}/delete`, { confirm: '1' });
+  // 0404 is the newest → Hafizah (WM manager) deletes it and the number comes back
+  let r = await h.post(`/quotations/${id404}/delete`, { confirm: '1' });
   assert.match(decodeURIComponent(r.location), /QT-WM-2026-0404 deleted\. The next QT-WM quotation gets QT-WM-2026-0404 again/);
   assert.equal(await next('QT-WM'), 404);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM quotations WHERE id = $1', [id404])).rows[0].n, 0);
