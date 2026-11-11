@@ -13,19 +13,19 @@ const { mentionsSalary, SALARY_MESSAGE } = require('../privacy');
 
 const SERIES = 'QT-WM';
 const MAX_LINES = 60;
-// 11 Nov (CEO): every branch quotes, each with its own series and signer. layout 'p4u' = the WM
-// template (banner, title, footer); 'br' = BR's Bandar Rinching letterhead with Validity / terms.
-// Names, titles, footer address and the BR terms can be changed on Quotation settings.
+// 11 Nov (CEO): every branch quotes, each with its own series and signer, all on the WM layout
+// ("use same letterhead with WM"): same banner and title; the footer band carries the branch's own
+// name and address. Names, titles and footer address can be changed on Quotation settings.
 const BRANCHES = {
   WM: { series: 'QT-WM', layout: 'p4u', name: 'Wangsa Maju', signer: 'ALIA SURAYA BINTI ESA', title: '(Pharmacist)', footer_lines: '' },
   JH: { series: 'QT-JH', layout: 'p4u', name: 'Jenderam Hilir', signer: 'NURUL AFIFAH BINTI ADDNAN', title: '(Pharmacist)', footer_lines: '' },
-  BR: { series: 'QT-BR', layout: 'br', name: 'Bandar Rinching', signer: 'NUR AMIRAH ABD KARIM', title: '', footer_lines: '', validity: '', delivery_term: '', payment_term: '' },
+  BR: { series: 'QT-BR', layout: 'p4u', name: 'Bandar Rinching', signer: 'NUR AMIRAH ABD KARIM', title: '(Pharmacist)', footer_lines: '' },
   Bangi: { series: 'QT-BGI', layout: 'p4u', name: 'Bangi', signer: '', title: '(Pharmacist)', footer_lines: '' },
   Ampang: { series: 'QT-AMP', layout: 'p4u', name: 'Ampang', signer: '', title: '(Pharmacist)', footer_lines: '' },
 };
 const CODES = Object.keys(BRANCHES);
 const SERIES_LIST = CODES.map((c) => BRANCHES[c].series);
-const IMAGE_KINDS = ['signature', 'footer', 'letterhead'];
+const IMAGE_KINDS = ['signature', 'footer'];
 const HQ_ROLES = ['admin', 'hq', 'hq_staff'];
 const DEFAULTS = {
   markup_default: 0.2,
@@ -98,7 +98,6 @@ async function saveBranch(db, user, code, body) {
   const t = (v, n) => String(v || '').trim().slice(0, n);
   const next = { signer: t(body.signer, 80).toUpperCase(), title: t(body.title, 60),
     footer_lines: String(body.footer_lines || '').replace(/\r/g, '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4).join('\n') };
-  if (BRANCHES[code].layout === 'br') Object.assign(next, { validity: t(body.validity, 120), delivery_term: t(body.delivery_term, 120), payment_term: t(body.payment_term, 120) });
   if (mentionsSalary(...Object.values(next))) return { error: SALARY_MESSAGE };
   const old = all[code] || null;
   all[code] = next;
@@ -107,7 +106,7 @@ async function saveBranch(db, user, code, body) {
   return { ok: `${BRANCHES[code].name} saved.` };
 }
 
-// Pictures per branch: signature, footer (WM-style layout) or letterhead (BR). Uploaded on the settings
+// Pictures per branch: signature and (optional) footer picture. Uploaded on the settings
 // page into photos – the signatures never sit in the public repo. JPEG / PNG data URL.
 const imageKey = (code, kind) => `quote_img_${code}_${kind}`;
 async function saveImage(db, user, code, kind, dataUrl) {
@@ -201,9 +200,8 @@ async function createDraft(db, user, body, { now }) {
   if (!rfq && !rows.length) return { error: 'Paste the RFQ items (one per line, qty at the end) or type the RFQ description.' };
   if (!textOk(rfq, ...rows.map((r) => r.text))) return { error: SALARY_MESSAGE };
   const id = await db.transaction(async (tx) => {
-    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, recipient, tel, cc, rfq_description, markup, from_name, validity, delivery_term, payment_term, created_by, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13) RETURNING id`,
-    [b.series, outlet, s.recipient, s.tel, s.cc, rfq, s.markup_default, b.layout === 'br' ? (b.signer || '') : '', b.validity || '', b.delivery_term || '', b.payment_term || '', user.id, now()])).rows[0].id;
+    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, recipient, tel, cc, rfq_description, markup, created_by, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $9) RETURNING id`, [b.series, outlet, s.recipient, s.tel, s.cc, rfq, s.markup_default, user.id, now()])).rows[0].id;
     let n = 0;
     for (const r of rows.slice(0, MAX_LINES)) {
       n++;
@@ -237,15 +235,12 @@ async function saveDraft(db, user, id, body, { now }) {
   const recipient = String(body.recipient === undefined ? q.recipient : body.recipient).replace(/\r/g, '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 8).join('\n');
   const tel = String(body.tel === undefined ? q.tel : body.tel).trim().slice(0, 80);
   const cc = String(body.cc === undefined ? q.cc : body.cc).trim().slice(0, 120);
-  // BR template extras (kept as they are when the form has no box for them)
-  const ex = {};
-  for (const [k, n] of [['fax', 80], ['from_name', 80], ['validity', 120], ['delivery_term', 120], ['payment_term', 120]]) ex[k] = String(body[k] === undefined ? (q[k] || '') : body[k]).trim().slice(0, n);
   const rfq = String(body.rfq_description === undefined ? q.rfq_description : body.rfq_description).trim().slice(0, 2000);
   if (!recipient) return { error: 'Type who the quotation is to.' };
   const form = body.l && typeof body.l === 'object' ? body.l : {};
   const problems = [];
   const updates = []; const removes = [];
-  const allText = [recipient, tel, cc, rfq, ...Object.values(ex)];
+  const allText = [recipient, tel, cc, rfq];
   for (const l of q.lines) {
     const f = form[`i${l.id}`];
     if (!f) continue;
@@ -318,9 +313,8 @@ async function saveDraft(db, user, id, body, { now }) {
   if (!textOk(...allText)) return { error: SALARY_MESSAGE };
   if (q.lines.length - removes.length + more.length > MAX_LINES) return { error: `A quotation can have up to ${MAX_LINES} lines.` };
   await db.transaction(async (tx) => {
-    await tx.query(`UPDATE quotations SET recipient = $2, tel = $3, cc = $4, rfq_description = $5, markup = $6, updated_at = $7,
-      fax = $8, from_name = $9, validity = $10, delivery_term = $11, payment_term = $12 WHERE id = $1`,
-      [id, recipient, tel, cc, rfq, s.markup_default, now(), ex.fax, ex.from_name, ex.validity, ex.delivery_term, ex.payment_term]);
+    await tx.query('UPDATE quotations SET recipient = $2, tel = $3, cc = $4, rfq_description = $5, markup = $6, updated_at = $7 WHERE id = $1',
+      [id, recipient, tel, cc, rfq, s.markup_default, now()]);
     if (removes.length) await tx.query('DELETE FROM quotation_lines WHERE quotation_id = $1 AND id = ANY($2::int[])', [id, removes]);
     for (const n of updates) {
       await tx.query(`UPDATE quotation_lines SET portal_text = $2, search_text = $3, product_id = $4, stock_id = $5, barcode = $6, description = $7, uom = $8,
@@ -371,7 +365,7 @@ async function issue(db, user, id, { now, makePdf }) {
   const branch = await branchConfig(db, q.outlet);
   if (!branch) return { error: 'This quotation has no branch.' };
   if (!branch.signer) return { error: `Set who signs ${branch.name}’s quotations in Quotation settings (admin or Alia) first.` };
-  const pics = { signature: await image(db, q.outlet, 'signature'), footer: await image(db, q.outlet, 'footer'), letterhead: await image(db, q.outlet, 'letterhead') };
+  const pics = { signature: await image(db, q.outlet, 'signature'), footer: await image(db, q.outlet, 'footer') };
   let ref;
   try {
     ref = await db.transaction(async (tx) => {
@@ -406,9 +400,8 @@ async function copy(db, user, id, { now }) {
   if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   const s = await settings(db);
   const nid = await db.transaction(async (tx) => {
-    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, customer_kind, recipient, tel, cc, rfq_description, markup, fax, from_name, validity, delivery_term, payment_term, created_by, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15) RETURNING id`,
-    [q.series, q.outlet, q.customer_kind, q.recipient, q.tel, q.cc, q.rfq_description, s.markup_default, q.fax, q.from_name, q.validity, q.delivery_term, q.payment_term, user.id, now()])).rows[0].id;
+    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, customer_kind, recipient, tel, cc, rfq_description, markup, created_by, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10) RETURNING id`, [q.series, q.outlet, q.customer_kind, q.recipient, q.tel, q.cc, q.rfq_description, s.markup_default, user.id, now()])).rows[0].id;
     for (const l of q.lines) {
       await tx.query(`INSERT INTO quotation_lines (quotation_id, line_no, portal_text, search_text, product_id, stock_id, barcode, description, uom, qty, unit_price, auto_price,
         cost_at_quote, balance_at_quote, price_source, need_cost, stock_option, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,

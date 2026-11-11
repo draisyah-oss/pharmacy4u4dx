@@ -256,20 +256,17 @@ test('every branch quotes with its own numbers; managers see only their branch',
   assert.equal(pdf.buf.subarray(0, 5).toString(), '%PDF-');
 });
 
-test('BR: letterhead layout with From / Validity / terms; HQ picks the branch', async () => {
+test('BR: same layout as WM, its own footer address and signer; HQ picks the branch', async () => {
   const a = await login('alia', 'pass-word-1');
-  let r = await a.post('/quotations/settings/branch/BR', { signer: 'nur amirah abd karim', title: '', validity: '30 days', delivery_term: '7 working days', payment_term: '30 days' });
+  let r = await a.post('/quotations/settings/branch/BR', { signer: 'nur amirah abd karim', title: '(Pharmacist)', footer_lines: 'Bandar Rinching, Semenyih\nTel: 000-000 0000' });
   assert.match(decodeURIComponent(r.location), /Bandar Rinching saved/);
+  const cfg = await require('../../src/quotations/data').branchConfig(db, 'BR');
+  assert.equal(cfg.signer, 'NUR AMIRAH ABD KARIM'); assert.equal(cfg.layout, 'p4u');
   const c = await a.post('/quotations', { outlet: 'BR', items: 'Underpad 75cm x 75cm 10\'s ×5' });
   const id = Number(c.location.split('/').pop());
-  let q = (await db.query('SELECT outlet, from_name, validity, payment_term FROM quotations WHERE id = $1', [id])).rows[0];
-  assert.deepEqual(q, { outlet: 'BR', from_name: 'NUR AMIRAH ABD KARIM', validity: '30 days', payment_term: '30 days' });
-  const page = await a.get(`/quotations/${id}`);
-  assert.match(page.html, /name="delivery_term" value="7 working days"/);
+  assert.equal((await db.query('SELECT outlet FROM quotations WHERE id = $1', [id])).rows[0].outlet, 'BR');
   const [l1] = await lineIds(id);
-  await a.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('PRIMES DISPOSABLE UNDERPAD 75X75 4PLY 10 SHEETS')), validity: '14 days', fax: '03-555' });
-  q = (await db.query('SELECT validity, fax FROM quotations WHERE id = $1', [id])).rows[0];
-  assert.deepEqual(q, { validity: '14 days', fax: '03-555' });
+  await a.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('PRIMES DISPOSABLE UNDERPAD 75X75 4PLY 10 SHEETS')) });
   r = await a.post(`/quotations/${id}/generate`, {});
   assert.match(decodeURIComponent(r.location), /QT-BR-2026-0034 is ready/);
   // Amirah (BR manager) sees it; Hafizah (WM) doesn't

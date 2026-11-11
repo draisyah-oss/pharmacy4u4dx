@@ -40,15 +40,6 @@
           <label class="oo-label">RFQ description <textarea name="rfq_description" rows="2" maxlength="2000"><%= q.rfq_description %></textarea></label>
         </div>
       </div>
-      <% if (branchCfg && branchCfg.layout === 'br') { %>
-        <div class="qt-grid2">
-          <label class="oo-label">From <input type="text" name="from_name" value="<%= q.from_name %>" maxlength="80"></label>
-          <label class="oo-label">FAX <input type="text" name="fax" value="<%= q.fax %>" maxlength="80"></label>
-          <label class="oo-label">Validity <input type="text" name="validity" value="<%= q.validity %>" maxlength="120" placeholder="e.g. 30 days"></label>
-          <label class="oo-label">Delivery Term <input type="text" name="delivery_term" value="<%= q.delivery_term %>" maxlength="120"></label>
-          <label class="oo-label">Payment Term <input type="text" name="payment_term" value="<%= q.payment_term %>" maxlength="120"></label>
-        </div>
-      <% } %>
       <% if (branchCfg && !branchCfg.signer) { %><p class="alert alert-info small">Who signs <%= branchCfg.name %>’s quotations isn’t set yet – admin or Alia sets it on Quotation settings before the PDF can be made.</p><% } %>
       <label class="oo-label">Add more items <span class="muted small">– paste or type, one per line, qty at the end</span>
         <textarea name="add" rows="2" placeholder="Item name ×qty"></textarea></label>
