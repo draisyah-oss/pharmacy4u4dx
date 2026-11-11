@@ -1,0 +1,58 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'quotations' }) %>
+<main class="page qt-page">
+  <p class="small"><a href="/quotations">← Zakat quotations</a></p>
+  <h1>Quotation settings</h1>
+  <p class="muted">For admin and Alia. Changes apply to drafts and new quotations; issued PDFs never change.</p>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <section class="oo-card qt-card">
+    <h2>Prices and recipient</h2>
+    <form method="post" action="/quotations/settings" class="qt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="qt-grid2">
+        <label class="oo-label">Markup (%) <span class="muted small">price = cost × (1 + markup), rounded up to the next 10 sen</span>
+          <input type="text" name="markup_default" value="<%= Math.round(settings.markup_default * 10000) / 100 %>" inputmode="decimal" required></label>
+        <label class="oo-label">Floor (%) <span class="muted small">a price under cost + this shows amber</span>
+          <input type="text" name="markup_floor" value="<%= Math.round(settings.markup_floor * 10000) / 100 %>" inputmode="decimal" required></label>
+      </div>
+      <label class="oo-label">Default recipient <span class="muted small">(“To:” – one line each)</span><textarea name="recipient" rows="5" maxlength="600" required><%= settings.recipient %></textarea></label>
+      <div class="qt-grid2">
+        <label class="oo-label">TEL <input type="text" name="tel" value="<%= settings.tel %>" maxlength="80"></label>
+        <label class="oo-label">C. C. <input type="text" name="cc" value="<%= settings.cc %>" maxlength="120"></label>
+      </div>
+      <button class="button" type="submit">Save</button>
+    </form>
+  </section>
+
+  <section class="oo-card qt-card">
+    <h2>Ref numbers</h2>
+    <p class="muted small">Each number is taken when a quotation PDF is generated and never reused. For a new year, set its first number here (Dr Aisyah decides it) – until then the app won’t make quotations that year.</p>
+    <div class="table-wrap"><table class="admin-table">
+      <thead><tr><th>Series</th><th>Year</th><th>Last used</th><th>Next</th></tr></thead>
+      <tbody><% series.forEach(function (r) { %><tr><td><%= r.series %></td><td><%= r.year %></td><td><%= r.last_no ? formatRef(r.series, r.year, r.last_no) : '–' %></td><td><b><%= formatRef(r.series, r.year, r.next_no) %></b></td></tr><% }) %></tbody>
+    </table></div>
+    <form method="post" action="/quotations/settings/series" class="qt-form qt-grid3">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="series" value="QT-WM">
+      <label class="oo-label">Year <input type="number" name="year" value="<%= thisYear %>" min="2026" max="2100" required></label>
+      <label class="oo-label">Next number <input type="number" name="next_no" min="1" max="9999" required></label>
+      <button class="button secondary" type="submit">Set the next number</button>
+    </form>
+  </section>
+
+  <section class="oo-card qt-card">
+    <h2>Signature on the PDF</h2>
+    <p class="muted small">Alia’s signature picture (.jpg or .png). It is kept in the app’s database only (never in the code on GitHub) and goes on every quotation generated after it is saved.</p>
+    <% if (settings.signature_id) { %><p><img src="/quotations/settings/signature" alt="Current signature" class="qt-sig"></p><% } else { %><p class="alert alert-info small">No signature yet – quotations are made without one until it is uploaded.</p><% } %>
+    <form method="post" action="/quotations/settings/signature" class="qt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="file">
+      <label class="oo-label">Picture <input type="file" accept="image/jpeg,image/png" data-dataurl-upload required></label>
+      <button class="button secondary" type="submit">Upload the signature</button>
+    </form>
+  </section>
+</main>
+<script src="/js/quotation.js?v=1" defer></script>
+</body>
+</html>

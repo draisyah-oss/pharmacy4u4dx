@@ -9,11 +9,13 @@ const { mentionsSalary } = require('../privacy');
 const searchText = (p) => [p.description, p.generic, p.brand, p.stock_id, p.barcode].filter(Boolean).join(' ').toLowerCase();
 
 // rows: [{ active, stock_id, barcode, description, uom, generic, brand, group_desc, category }]
+// 11 Nov: balance = "Balance Quantity (UOM)" from Alia's weekly stock export (zakat quotations:
+// Readystock / Pre-order). A file without that column leaves the balances as they are.
 async function upsertProducts(db, rows, { deactivateMissing = false } = {}) {
   let added = 0; let updated = 0;
   const seen = new Set();
   await db.transaction(async (tx) => {
-    const existing = new Map((await tx.query('SELECT id, barcode, description, uom, active, cost, price1, price2 FROM products')).rows.map((r) => [r.barcode, r]));
+    const existing = new Map((await tx.query('SELECT id, barcode, description, uom, active, cost, price1, price2, balance FROM products')).rows.map((r) => [r.barcode, r]));
     // 3 Nov: Cost / Price 1 / Price 2 from the Dynamod export (blank = keep what we have).
     const money = (v) => { if (v === undefined || v === null || String(v).trim() === '') return null; const n = Number(String(v).replace(/[^0-9.\-]/g, '')); return Number.isFinite(n) ? n : null; };
     const same = (a, b) => (a === null || a === undefined ? null : Number(a)) === b;
@@ -23,15 +25,18 @@ async function upsertProducts(db, rows, { deactivateMissing = false } = {}) {
       seen.add(r.barcode);
       const active = r.active !== 'N';
       const ex = existing.get(r.barcode);
-      const cost = money(r.cost); const p1 = money(r.price1); const p2 = money(r.price2);
-      const vals = [r.barcode, r.stock_id, r.description, r.uom || null, r.generic || null, r.brand || null, r.group_desc || null, r.category || null, active, searchText(r), cost, p1, p2];
+      const cost = money(r.cost); const p1 = money(r.price1); const p2 = money(r.price2); const bal = money(r.balance);
+      const vals = [r.barcode, r.stock_id, r.description, r.uom || null, r.generic || null, r.brand || null, r.group_desc || null, r.category || null, active, searchText(r), cost, p1, p2, bal];
       if (!ex) {
-        await tx.query(`INSERT INTO products (barcode, stock_id, description, uom, generic, brand, group_desc, category, active, search, cost, price1, price2) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, vals);
+        await tx.query(`INSERT INTO products (barcode, stock_id, description, uom, generic, brand, group_desc, category, active, search, cost, price1, price2, balance, balance_at)
+          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, CASE WHEN $14::numeric IS NULL THEN NULL ELSE now() END)`, vals);
         added++;
       } else if (ex.description !== r.description || ex.uom !== (r.uom || null) || ex.active !== active
-        || (cost !== null && !same(ex.cost, cost)) || (p1 !== null && !same(ex.price1, p1)) || (p2 !== null && !same(ex.price2, p2))) {
+        || (cost !== null && !same(ex.cost, cost)) || (p1 !== null && !same(ex.price1, p1)) || (p2 !== null && !same(ex.price2, p2))
+        || bal !== null) {
         await tx.query(`UPDATE products SET stock_id = $2, description = $3, uom = $4, generic = $5, brand = $6, group_desc = $7, category = $8, active = $9, search = $10,
-          cost = COALESCE($11, cost), price1 = COALESCE($12, price1), price2 = COALESCE($13, price2), updated_at = now() WHERE barcode = $1`, vals);
+          cost = COALESCE($11, cost), price1 = COALESCE($12, price1), price2 = COALESCE($13, price2),
+          balance = COALESCE($14, balance), balance_at = CASE WHEN $14::numeric IS NULL THEN balance_at ELSE now() END, updated_at = now() WHERE barcode = $1`, vals);
         updated++;
       }
     }
@@ -137,14 +142,44 @@ async function parseXlsx(buffer) {
   if (missing.length) return { error: `The file has no column ${missing.join(', ')} – export the Dynamod stock masterlist.` };
   const val = (row, name) => { const i = col(name); if (!i) return ''; const v = row.getCell(i).value; return v === null || v === undefined ? '' : String(v.text || v.result || v).trim(); };
   const rows = [];
-  ws.eachRow((row, n) => {
-    if (n === 1) return;
-    rows.push({ active: val(row, 'Active') || 'Y', stock_id: val(row, 'Stock ID'), barcode: val(row, 'Barcode'), description: val(row, 'Description 1'),
-      uom: val(row, 'UOM ID'), generic: val(row, 'Description 2'), brand: val(row, 'Brand Description') || val(row, 'Brand ID'),
-      group_desc: val(row, 'Group Description'), category: val(row, 'Category Description') || val(row, 'Category ID'),
-      cost: val(row, 'Cost'), price1: val(row, 'Price 1'), price2: val(row, 'Price 2') });
-  });
+  ws.eachRow((row, n) => { if (n > 1) rows.push(masterRow((name) => val(row, name))); });
   return { rows };
 }
 
-module.exports = { upsertProducts, loadBundledOnce, loadPricesOnce, search, byId, resolve, count, parseXlsx, searchText };
+// One masterlist row from a cell reader (header name → text). Same columns for .xlsx and .csv.
+// No "Active" column (e.g. the weekly stock export) = every row is active; Active = N rows are kept off.
+function masterRow(val) {
+  return { active: (val('Active') || 'Y').toUpperCase() === 'N' ? 'N' : 'Y', stock_id: val('Stock ID'), barcode: val('Barcode'), description: val('Description 1'),
+    uom: val('UOM ID'), generic: val('Description 2'), brand: val('Brand Description') || val('Brand ID'),
+    group_desc: val('Group Description'), category: val('Category Description') || val('Category ID'),
+    cost: val('Cost'), price1: val('Price 1'), price2: val('Price 2'), balance: val('Balance Quantity (UOM)') || val('Balance Quantity') };
+}
+
+// 11 Nov: the same export as .csv (quoted fields with commas / "" allowed).
+function csvRows(text) {
+  const out = []; let row = []; let cell = ''; let q = false;
+  const t = String(text).replace(/^\uFEFF/, '');
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) {
+      if (c === '"' && t[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(cell); cell = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); cell = ''; if (row.some((x) => x !== '')) out.push(row); row = []; }
+    else cell += c;
+  }
+  row.push(cell); if (row.some((x) => x !== '')) out.push(row);
+  return out;
+}
+
+function parseCsv(text) {
+  const all = csvRows(text);
+  if (!all.length) return { error: 'The file is empty.' };
+  const head = {}; all[0].forEach((h, i) => { head[String(h).trim().toLowerCase()] = i; });
+  const missing = ['Stock ID', 'Barcode', 'Description 1'].filter((n) => head[n.toLowerCase()] === undefined);
+  if (missing.length) return { error: `The file has no column ${missing.join(', ')} – export the Dynamod stock masterlist.` };
+  const rows = all.slice(1).map((r) => masterRow((name) => { const i = head[name.toLowerCase()]; return i === undefined ? '' : String(r[i] || '').trim(); }));
+  return { rows };
+}
+
+module.exports = { upsertProducts, loadBundledOnce, loadPricesOnce, search, byId, resolve, count, parseXlsx, parseCsv, searchText };

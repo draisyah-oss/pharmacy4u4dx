@@ -6,3 +6,7 @@ google-service-account*.json
 
 # 8 Nov: Meetings prototype exports hold business data – never commit them (public repo).
 meetings-export*.json
+
+# 11 Nov: zakat quotations – the Dynamod item master holds costs and Alia's signature is uploaded in the app; never commit them.
+sample_item_master*.csv
+signature_alia*

@@ -1,0 +1,55 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'quotations' }) %>
+<%
+  const money = function (n) { return n === null || n === undefined ? '–' : 'RM' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+  const dmy = function (d) { return d ? d.split('-').reverse().join('/') : ''; };
+  const when = function (t) { return t ? new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''; };
+%>
+<main class="page qt-page">
+  <h1>Zakat quotation (WM)</h1>
+  <p class="muted">Paste a zakat RFQ, match each item to the Dynamod item master, check the prices, then copy the lines into the zakat form and make the quotation PDF.</p>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <p class="small muted">Item master: <b><%= master.active %></b> items<%= master.with_balance ? ', ' + master.with_balance + ' with a stock balance' : ' – no stock balances yet' %><%= master.last ? ' · last upload ' + master.last.source + (master.last.by ? ' (' + master.last.by + ')' : '') + ', ' + when(master.last.at) : '' %>.
+    <% if (canProducts) { %><a href="/oos/products">Upload the weekly stock export</a><% } %>
+    <% if (canSettings) { %> · <a href="/quotations/settings">Quotation settings</a><% } %></p>
+
+  <section class="oo-card qt-card" id="new">
+    <h2><span class="qt-step">1</span> New quotation – the RFQ</h2>
+    <form method="post" action="/quotations" class="qt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">RFQ description <span class="muted small">(as on the zakat portal)</span>
+        <textarea name="rfq_description" rows="2" maxlength="2000" placeholder="e.g. RFQ 0401 – adult diapers and nutrition for asnaf patients"></textarea></label>
+      <label class="oo-label">Items <span class="muted small">– paste the list: one item per line, the qty at the end (“Ensure Gold 850g ×30”) or in a column</span>
+        <textarea name="items" rows="7" placeholder="Ensure Gold 850g ×30&#10;Dr. P Premium LV7 Pants L 8's ×90&#10;Adult wet wipes 40's ×60&#10;Underpad 75cm x 75cm 10's ×36"></textarea></label>
+      <button class="button" type="submit">Next – match the items</button>
+    </form>
+  </section>
+
+  <section class="oo-card qt-card">
+    <h2>Quotations</h2>
+    <% if (!rows.length) { %><p class="muted">No quotations yet.</p><% } else { %>
+    <div class="table-wrap"><table class="admin-table qt-list">
+      <thead><tr><th>Ref</th><th>Date</th><th>To</th><th>RFQ</th><th class="n">Items</th><th class="n">Total</th><th>By</th><th></th></tr></thead>
+      <tbody>
+      <% rows.forEach(function (r) { %>
+        <tr<%= r.status === 'draft' ? ' class="qt-draft"' : '' %>>
+          <td><a href="/quotations/<%= r.id %>"><%= r.ref || 'Draft' %></a></td>
+          <td><%= r.quote_date ? dmy(r.quote_date) : when(r.created_at) %></td>
+          <td><%= r.customer %></td>
+          <td><%= (r.rfq_description || '').slice(0, 80) %></td>
+          <td class="n"><%= r.lines %></td>
+          <td class="n"><%= r.total === null ? '–' : money(r.total) %></td>
+          <td><%= r.by_name %></td>
+          <td><% if (r.ref) { %><a href="/quotations/<%= r.id %>/pdf?download=1">PDF</a><% } else { %><a href="/quotations/<%= r.id %>">Continue</a><% } %></td>
+        </tr>
+      <% }) %>
+      </tbody>
+    </table></div>
+    <% } %>
+  </section>
+</main>
+</body>
+</html>
