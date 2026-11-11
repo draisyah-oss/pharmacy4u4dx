@@ -28,11 +28,12 @@
     });
   }
 
-  var up = document.querySelector('input[data-dataurl-upload]');
-  if (up) up.addEventListener('change', function () {
-    var f = up.files[0]; if (!f) return;
-    var rd = new FileReader();
-    rd.onload = function () { up.form.querySelector('input[name="file"]').value = rd.result; };
-    rd.readAsDataURL(f);
+  document.querySelectorAll('input[data-dataurl-upload]').forEach(function (up) {
+    up.addEventListener('change', function () {
+      var f = up.files[0]; if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () { up.form.querySelector('input[name="file"]').value = rd.result; };
+      rd.readAsDataURL(f);
+    });
   });
 })();

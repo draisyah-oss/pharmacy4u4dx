@@ -7,8 +7,9 @@
   const when = function (t) { return t ? new Date(t).toLocaleString('en-GB', { timeZone: 'Asia/Kuala_Lumpur', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''; };
 %>
 <main class="page qt-page">
-  <h1>Zakat quotation (WM)</h1>
-  <p class="muted">Paste a zakat RFQ, match each item to the Dynamod item master, check the prices, then copy the lines into the zakat form and make the quotation PDF.</p>
+  <h1>Zakat quotation<%= outlets.length === 1 ? ' – ' + configs[outlets[0]].name : '' %></h1>
+  <p class="muted">Paste a zakat RFQ, match each item to the Dynamod item master, check the prices, then copy the lines into the zakat form and make the quotation PDF (each branch has its own numbers and signature).</p>
+  <% if (outlets.length > 1) { %><nav class="qt-pills" aria-label="Branch"><a href="/quotations"<%= branch ? '' : ' class="is-on"' %>>All branches</a><% outlets.forEach(function (c) { %><a href="/quotations?branch=<%= c %>"<%= branch === c ? ' class="is-on"' : '' %>><%= c %></a><% }) %></nav><% } %>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
@@ -20,6 +21,8 @@
     <h2><span class="qt-step">1</span> New quotation – the RFQ</h2>
     <form method="post" action="/quotations" class="qt-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <% if (outlets.length > 1) { %><label class="oo-label">From branch <select name="outlet" required><% outlets.forEach(function (c) { %><option value="<%= c %>"<%= (branch || 'WM') === c ? ' selected' : '' %>><%= c %> – <%= configs[c].name %> (<%= configs[c].series %>)</option><% }) %></select></label>
+      <% } else { %><input type="hidden" name="outlet" value="<%= outlets[0] %>"><% } %>
       <label class="oo-label">RFQ description <span class="muted small">(as on the zakat portal)</span>
         <textarea name="rfq_description" rows="2" maxlength="2000" placeholder="e.g. RFQ 0401 – adult diapers and nutrition for asnaf patients"></textarea></label>
       <label class="oo-label">Items <span class="muted small">– paste the list: one item per line, the qty at the end (“Ensure Gold 850g ×30”) or in a column</span>
@@ -32,11 +35,12 @@
     <h2>Quotations</h2>
     <% if (!rows.length) { %><p class="muted">No quotations yet.</p><% } else { %>
     <div class="table-wrap"><table class="admin-table qt-list">
-      <thead><tr><th>Ref</th><th>Date</th><th>To</th><th>RFQ</th><th class="n">Items</th><th class="n">Total</th><th>By</th><th></th></tr></thead>
+      <thead><tr><th>Ref</th><th>Branch</th><th>Date</th><th>To</th><th>RFQ</th><th class="n">Items</th><th class="n">Total</th><th>By</th><th></th></tr></thead>
       <tbody>
       <% rows.forEach(function (r) { %>
         <tr<%= r.status === 'draft' ? ' class="qt-draft"' : '' %>>
           <td><a href="/quotations/<%= r.id %>"><%= r.ref || 'Draft' %></a></td>
+          <td><%= r.outlet %></td>
           <td><%= r.quote_date ? dmy(r.quote_date) : when(r.created_at) %></td>
           <td><%= r.customer %></td>
           <td><%= (r.rfq_description || '').slice(0, 80) %></td>

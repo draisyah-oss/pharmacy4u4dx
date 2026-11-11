@@ -274,11 +274,12 @@ test('19 Oct: Inventory menu only for Alia, Syarafana, Fariz (and admin); Projec
   assert.equal((await (await hanin()).get('/oos/transfers')).status, 403);
   const f = (await (await fariz()).get('/hq/today')).html;
   assert.match(f, /<summary><span>Inventory<\/span>/);
-  // 11 Nov: WM's manager (Hafizah) gets Inventory → Zakat quotation (WM) only – no OOS pages, no Projects.
+  // 11 Nov: managers get a Zakat menu (Zakat claims + Zakat quotation) – no Inventory, no Projects.
   const mh = (await (await manager()).get('/daily')).html;
-  assert.doesNotMatch(mh, /<summary><span>Projects<\/span>|href="\/oos\/inbox"|href="\/inventory"/);
-  assert.match(mh, /<summary><span>Inventory<\/span>/);
+  assert.doesNotMatch(mh, /<summary><span>Projects<\/span>|<summary><span>Inventory<\/span>/);
+  assert.match(mh, /<summary><span>Zakat<\/span>/);
   assert.match(mh, /href="\/quotations"/);
+  assert.match(mh, /href="\/zakat"/);
   const anis = (await db.query("SELECT p.role, u.username, u.role AS login FROM people p JOIN branches b ON b.id = p.branch_id JOIN users u ON u.person_id = p.id WHERE b.code = 'Ampang' AND p.name = 'Anis'")).rows[0];
   assert.deepEqual(anis, { role: 'Intern', username: 'anis', login: 'branch_staff' });
 });

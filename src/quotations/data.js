@@ -13,6 +13,20 @@ const { mentionsSalary, SALARY_MESSAGE } = require('../privacy');
 
 const SERIES = 'QT-WM';
 const MAX_LINES = 60;
+// 11 Nov (CEO): every branch quotes, each with its own series and signer. layout 'p4u' = the WM
+// template (banner, title, footer); 'br' = BR's Bandar Rinching letterhead with Validity / terms.
+// Names, titles, footer address and the BR terms can be changed on Quotation settings.
+const BRANCHES = {
+  WM: { series: 'QT-WM', layout: 'p4u', name: 'Wangsa Maju', signer: 'ALIA SURAYA BINTI ESA', title: '(Pharmacist)', footer_lines: '' },
+  JH: { series: 'QT-JH', layout: 'p4u', name: 'Jenderam Hilir', signer: 'NURUL AFIFAH BINTI ADDNAN', title: '(Pharmacist)', footer_lines: '' },
+  BR: { series: 'QT-BR', layout: 'br', name: 'Bandar Rinching', signer: 'NUR AMIRAH ABD KARIM', title: '', footer_lines: '', validity: '', delivery_term: '', payment_term: '' },
+  Bangi: { series: 'QT-BGI', layout: 'p4u', name: 'Bangi', signer: '', title: '(Pharmacist)', footer_lines: '' },
+  Ampang: { series: 'QT-AMP', layout: 'p4u', name: 'Ampang', signer: '', title: '(Pharmacist)', footer_lines: '' },
+};
+const CODES = Object.keys(BRANCHES);
+const SERIES_LIST = CODES.map((c) => BRANCHES[c].series);
+const IMAGE_KINDS = ['signature', 'footer', 'letterhead'];
+const HQ_ROLES = ['admin', 'hq', 'hq_staff'];
 const DEFAULTS = {
   markup_default: 0.2,
   markup_floor: 0.15,
@@ -21,7 +35,10 @@ const DEFAULTS = {
   cc: '',
 };
 
-const canMake = (u) => Boolean(u) && (['admin', 'hq', 'hq_staff'].includes(u.role) || (u.role === 'branch_manager' && u.branch_code === 'WM'));
+// Make quotes: HQ logins and admin for any branch; a branch manager for their own branch.
+const outletsFor = (u) => (!u ? [] : HQ_ROLES.includes(u.role) ? CODES : (u.role === 'branch_manager' && BRANCHES[u.branch_code] ? [u.branch_code] : []));
+const canMake = (u) => outletsFor(u).length > 0;
+const canOpen = (u, q) => Boolean(q) && outletsFor(u).includes(q.outlet);
 const canSeeCost = (u) => Boolean(u) && (u.role === 'admin' || Boolean(u.inventory));
 const canSettings = (u) => Boolean(u) && (u.role === 'admin' || (u.role === 'hq' && Boolean(u.inventory)));
 
@@ -59,24 +76,66 @@ async function saveSettings(db, user, body) {
   return { ok: 'Quotation settings saved.' };
 }
 
-// Alia's signature: uploaded on the settings page (never in the public repo). JPEG / PNG data URL.
-async function saveSignature(db, user, dataUrl) {
-  if (!canSettings(user)) return { error: 'Only admin and Alia change the signature.' };
+// ---------- per branch: signer, footer address, BR terms (app_settings quote_branches) ----------
+async function branchConfigs(db) {
+  const r = (await db.query("SELECT value FROM app_settings WHERE key = 'quote_branches'")).rows[0];
+  let v = {}; try { v = r ? JSON.parse(r.value) : {}; } catch { v = {}; }
+  const keys = (await db.query("SELECT key FROM app_settings WHERE key LIKE 'quote_img_%' OR key = 'quote_signature'")).rows.map((x) => x.key);
+  const out = {};
+  for (const c of CODES) {
+    out[c] = { code: c, ...BRANCHES[c], ...(v[c] || {}), series: BRANCHES[c].series, layout: BRANCHES[c].layout };
+    out[c].images = Object.fromEntries(IMAGE_KINDS.map((k) => [k, keys.includes(imageKey(c, k)) || (c === 'WM' && k === 'signature' && keys.includes('quote_signature'))]));
+  }
+  return out;
+}
+const branchConfig = async (db, code) => (await branchConfigs(db))[code] || null;
+
+async function saveBranch(db, user, code, body) {
+  if (!canSettings(user)) return { error: 'Only admin and Alia change the quotation settings.' };
+  if (!BRANCHES[code]) return { error: 'Unknown branch.' };
+  const r = (await db.query("SELECT value FROM app_settings WHERE key = 'quote_branches'")).rows[0];
+  let all = {}; try { all = r ? JSON.parse(r.value) : {}; } catch { all = {}; }
+  const t = (v, n) => String(v || '').trim().slice(0, n);
+  const next = { signer: t(body.signer, 80).toUpperCase(), title: t(body.title, 60),
+    footer_lines: String(body.footer_lines || '').replace(/\r/g, '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4).join('\n') };
+  if (BRANCHES[code].layout === 'br') Object.assign(next, { validity: t(body.validity, 120), delivery_term: t(body.delivery_term, 120), payment_term: t(body.payment_term, 120) });
+  if (mentionsSalary(...Object.values(next))) return { error: SALARY_MESSAGE };
+  const old = all[code] || null;
+  all[code] = next;
+  await db.query(`INSERT INTO app_settings (key, value) VALUES ('quote_branches', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [JSON.stringify(all)]);
+  await audit(db, user, 'update', `branch ${code}`, old, next);
+  return { ok: `${BRANCHES[code].name} saved.` };
+}
+
+// Pictures per branch: signature, footer (WM-style layout) or letterhead (BR). Uploaded on the settings
+// page into photos – the signatures never sit in the public repo. JPEG / PNG data URL.
+const imageKey = (code, kind) => `quote_img_${code}_${kind}`;
+async function saveImage(db, user, code, kind, dataUrl) {
+  if (!canSettings(user)) return { error: 'Only admin and Alia change the quotation pictures.' };
+  if (!BRANCHES[code] || !IMAGE_KINDS.includes(kind)) return { error: 'Unknown picture.' };
   const m = /^data:(image\/(?:jpeg|png));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
-  if (!m) return { error: 'Choose the signature picture (.jpg or .png) first.' };
+  if (!m) return { error: 'Choose the picture (.jpg or .png) first.' };
   const buf = Buffer.from(m[2], 'base64');
   const isJpeg = buf[0] === 0xff && buf[1] === 0xd8; const isPng = buf.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   if (!(isJpeg || isPng)) return { error: 'That file isn’t a JPEG or PNG picture.' };
   if (buf.length > 1900000) return { error: 'The picture is too big (max about 1.9 MB).' };
   const id = (await db.query('INSERT INTO photos (mime, data, created_by) VALUES ($1, $2, $3) RETURNING id', [isJpeg ? 'image/jpeg' : 'image/png', buf, user.id])).rows[0].id;
-  await db.query(`INSERT INTO app_settings (key, value) VALUES ('quote_signature', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [String(id)]);
-  await audit(db, user, 'update', 'signature', null, { photo_id: id, bytes: buf.length });
-  return { ok: 'Signature saved – it goes on every new quotation PDF.' };
+  await db.query(`INSERT INTO app_settings (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = now()`, [imageKey(code, kind), String(id)]);
+  await audit(db, user, 'update', `${code} ${kind}`, null, { photo_id: id, bytes: buf.length });
+  return { ok: `${BRANCHES[code].name}: ${kind} saved – it goes on every new quotation PDF.` };
 }
-async function signature(db) {
-  const r = (await db.query("SELECT p.data FROM app_settings s JOIN photos p ON p.id = s.value::int WHERE s.key = 'quote_signature'")).rows[0];
-  return r ? Buffer.from(r.data) : null;
+async function image(db, code, kind) {
+  const keys = [imageKey(code, kind)];
+  if (code === 'WM' && kind === 'signature') keys.push('quote_signature'); // Phase 1 upload
+  for (const k of keys) {
+    const r = (await db.query('SELECT p.data FROM app_settings s JOIN photos p ON p.id = s.value::int WHERE s.key = $1', [k])).rows[0];
+    if (r) return Buffer.from(r.data);
+  }
+  return null;
 }
+// Phase 1 names, kept for WM.
+const saveSignature = (db, user, dataUrl) => saveImage(db, user, 'WM', 'signature', dataUrl);
+const signature = (db) => image(db, 'WM', 'signature');
 
 // ---------- ref numbers ----------
 async function seriesRows(db) {
@@ -86,6 +145,7 @@ async function seriesRows(db) {
 // Set the next number for a series + year (also the start number of a new year – Dr Aisyah decides it).
 async function setNextNo(db, user, { series = SERIES, year, next_no: nextNo }) {
   if (!canSettings(user)) return { error: 'Only admin and Alia change the ref numbers.' };
+  if (!SERIES_LIST.includes(series)) return { error: 'Unknown series.' };
   const y = Number(year); const n = Number(nextNo);
   if (!Number.isInteger(y) || y < 2026 || y > 2100) return { error: 'Year must be 2026 or later.' };
   if (!Number.isInteger(n) || n < 1 || n > 9999) return { error: 'The number must be between 1 and 9999.' };
@@ -99,12 +159,15 @@ async function setNextNo(db, user, { series = SERIES, year, next_no: nextNo }) {
 }
 
 // ---------- quotations ----------
-async function list(db, { limit = 100 } = {}) {
-  return (await db.query(`SELECT q.id, q.status, q.ref, q.quote_date::text AS quote_date, q.rfq_description, q.total, q.created_at, q.issued_at,
+// outlets: the branches the viewer may see (data.outletsFor).
+async function list(db, { outlets = CODES, limit = 100 } = {}) {
+  if (!outlets.length) return [];
+  return (await db.query(`SELECT q.id, q.outlet, q.status, q.ref, q.quote_date::text AS quote_date, q.rfq_description, q.total, q.created_at, q.issued_at,
       split_part(q.recipient, E'\\n', 1) AS customer, u.display_name AS by_name,
       (SELECT count(*)::int FROM quotation_lines l WHERE l.quotation_id = q.id) AS lines
     FROM quotations q LEFT JOIN users u ON u.id = q.created_by
-    WHERE q.status <> 'cancelled' ORDER BY (q.status = 'draft') DESC, coalesce(q.issued_at, q.created_at) DESC LIMIT ${Number(limit) || 100}`)).rows;
+    WHERE q.status <> 'cancelled' AND q.outlet = ANY($1::text[])
+    ORDER BY (q.status = 'draft') DESC, coalesce(q.issued_at, q.created_at) DESC LIMIT ${Number(limit) || 100}`, [outlets])).rows;
 }
 
 async function loadOne(db, id) {
@@ -127,15 +190,20 @@ function textOk(...t) { return !mentionsSalary(...t); }
 
 // New draft from step 1: RFQ description + pasted items.
 async function createDraft(db, user, body, { now }) {
-  if (!canMake(user)) return { error: 'Zakat quotations are made by WM’s manager and HQ.' };
+  if (!canMake(user)) return { error: 'Zakat quotations are made by the branch managers and HQ.' };
+  const outlets = outletsFor(user);
+  const outlet = outlets.length === 1 ? outlets[0] : String(body.outlet || '');
+  if (!outlets.includes(outlet)) return { error: 'Choose the branch the quotation is from.' };
+  const b = await branchConfig(db, outlet);
   const s = await settings(db);
   const rfq = String(body.rfq_description || '').trim().slice(0, 2000);
   const rows = L.splitPaste(body.items);
   if (!rfq && !rows.length) return { error: 'Paste the RFQ items (one per line, qty at the end) or type the RFQ description.' };
   if (!textOk(rfq, ...rows.map((r) => r.text))) return { error: SALARY_MESSAGE };
   const id = await db.transaction(async (tx) => {
-    const qid = (await tx.query(`INSERT INTO quotations (series, recipient, tel, cc, rfq_description, markup, created_by, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8) RETURNING id`, [SERIES, s.recipient, s.tel, s.cc, rfq, s.markup_default, user.id, now()])).rows[0].id;
+    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, recipient, tel, cc, rfq_description, markup, from_name, validity, delivery_term, payment_term, created_by, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13) RETURNING id`,
+    [b.series, outlet, s.recipient, s.tel, s.cc, rfq, s.markup_default, b.layout === 'br' ? (b.signer || '') : '', b.validity || '', b.delivery_term || '', b.payment_term || '', user.id, now()])).rows[0].id;
     let n = 0;
     for (const r of rows.slice(0, MAX_LINES)) {
       n++;
@@ -162,20 +230,22 @@ const money = (v) => { const s = String(v === undefined || v === null ? '' : v).
 
 // Save steps 1–3 (the whole page form). body.l = { i<lineId>: { portal, search, qty, pick, desc, price, stock, note, remove } }, body.add = more pasted lines.
 async function saveDraft(db, user, id, body, { now }) {
-  if (!canMake(user)) return { error: 'Zakat quotations are made by WM’s manager and HQ.' };
   const q = await loadOne(db, id);
-  if (!q) return { error: 'That quotation isn’t in the list.' };
+  if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   if (q.status !== 'draft') return { error: `${q.ref} is already issued – make a copy to change it.` };
   const s = await settings(db);
   const recipient = String(body.recipient === undefined ? q.recipient : body.recipient).replace(/\r/g, '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 8).join('\n');
   const tel = String(body.tel === undefined ? q.tel : body.tel).trim().slice(0, 80);
   const cc = String(body.cc === undefined ? q.cc : body.cc).trim().slice(0, 120);
+  // BR template extras (kept as they are when the form has no box for them)
+  const ex = {};
+  for (const [k, n] of [['fax', 80], ['from_name', 80], ['validity', 120], ['delivery_term', 120], ['payment_term', 120]]) ex[k] = String(body[k] === undefined ? (q[k] || '') : body[k]).trim().slice(0, n);
   const rfq = String(body.rfq_description === undefined ? q.rfq_description : body.rfq_description).trim().slice(0, 2000);
   if (!recipient) return { error: 'Type who the quotation is to.' };
   const form = body.l && typeof body.l === 'object' ? body.l : {};
   const problems = [];
   const updates = []; const removes = [];
-  const allText = [recipient, tel, cc, rfq];
+  const allText = [recipient, tel, cc, rfq, ...Object.values(ex)];
   for (const l of q.lines) {
     const f = form[`i${l.id}`];
     if (!f) continue;
@@ -248,8 +318,9 @@ async function saveDraft(db, user, id, body, { now }) {
   if (!textOk(...allText)) return { error: SALARY_MESSAGE };
   if (q.lines.length - removes.length + more.length > MAX_LINES) return { error: `A quotation can have up to ${MAX_LINES} lines.` };
   await db.transaction(async (tx) => {
-    await tx.query('UPDATE quotations SET recipient = $2, tel = $3, cc = $4, rfq_description = $5, markup = $6, updated_at = $7 WHERE id = $1',
-      [id, recipient, tel, cc, rfq, s.markup_default, now()]);
+    await tx.query(`UPDATE quotations SET recipient = $2, tel = $3, cc = $4, rfq_description = $5, markup = $6, updated_at = $7,
+      fax = $8, from_name = $9, validity = $10, delivery_term = $11, payment_term = $12 WHERE id = $1`,
+      [id, recipient, tel, cc, rfq, s.markup_default, now(), ex.fax, ex.from_name, ex.validity, ex.delivery_term, ex.payment_term]);
     if (removes.length) await tx.query('DELETE FROM quotation_lines WHERE quotation_id = $1 AND id = ANY($2::int[])', [id, removes]);
     for (const n of updates) {
       await tx.query(`UPDATE quotation_lines SET portal_text = $2, search_text = $3, product_id = $4, stock_id = $5, barcode = $6, description = $7, uom = $8,
@@ -290,15 +361,17 @@ function missing(q) {
 
 // Generate: take the next ref number and make the PDF in one transaction (a failure uses no number).
 async function issue(db, user, id, { now, makePdf }) {
-  if (!canMake(user)) return { error: 'Zakat quotations are made by WM’s manager and HQ.' };
   const q = await loadOne(db, id);
-  if (!q) return { error: 'That quotation isn’t in the list.' };
+  if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   if (q.status !== 'draft') return { error: `${q.ref} is already issued.` };
   const gaps = missing(q);
   if (gaps.length) return { error: gaps.join(' ') };
   const today = calc.todayInMalaysia(now());
   const year = Number(today.slice(0, 4));
-  const sig = await signature(db);
+  const branch = await branchConfig(db, q.outlet);
+  if (!branch) return { error: 'This quotation has no branch.' };
+  if (!branch.signer) return { error: `Set who signs ${branch.name}’s quotations in Quotation settings (admin or Alia) first.` };
+  const pics = { signature: await image(db, q.outlet, 'signature'), footer: await image(db, q.outlet, 'footer'), letterhead: await image(db, q.outlet, 'letterhead') };
   let ref;
   try {
     ref = await db.transaction(async (tx) => {
@@ -308,7 +381,7 @@ async function issue(db, user, id, { now, makePdf }) {
       if (no > 9999) throw Object.assign(new Error(`${q.series} ${year} has run out of numbers.`), { userFacing: true });
       const r = L.formatRef(q.series, year, no);
       const total = totalOf(q.lines);
-      const pdf = await makePdf({ ...q, ref: r, quote_date: today, total }, { signature: sig });
+      const pdf = await makePdf({ ...q, ref: r, quote_date: today, total }, { ...pics, branch });
       const upd = await tx.query(`UPDATE quotations SET status = 'issued', ref = $2, ref_year = $3, ref_no = $4, quote_date = $5, total = $6, pdf = $7,
         issued_by = $8, issued_at = $9, updated_at = $9 WHERE id = $1 AND status = 'draft'`, [id, r, year, no, today, total, pdf, user.id, now()]);
       if (!(upd.rowCount || upd.affectedRows)) throw Object.assign(new Error('Someone issued this quotation a moment ago.'), { userFacing: true });
@@ -329,13 +402,13 @@ async function pdfOf(db, id) {
 
 // A new draft with the same recipient, RFQ and lines (to change an issued quotation – its number stays used).
 async function copy(db, user, id, { now }) {
-  if (!canMake(user)) return { error: 'Zakat quotations are made by WM’s manager and HQ.' };
   const q = await loadOne(db, id);
-  if (!q) return { error: 'That quotation isn’t in the list.' };
+  if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   const s = await settings(db);
   const nid = await db.transaction(async (tx) => {
-    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, customer_kind, recipient, tel, cc, rfq_description, markup, created_by, created_at, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10) RETURNING id`, [q.series, q.outlet, q.customer_kind, q.recipient, q.tel, q.cc, q.rfq_description, s.markup_default, user.id, now()])).rows[0].id;
+    const qid = (await tx.query(`INSERT INTO quotations (series, outlet, customer_kind, recipient, tel, cc, rfq_description, markup, fax, from_name, validity, delivery_term, payment_term, created_by, created_at, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $15) RETURNING id`,
+    [q.series, q.outlet, q.customer_kind, q.recipient, q.tel, q.cc, q.rfq_description, s.markup_default, q.fax, q.from_name, q.validity, q.delivery_term, q.payment_term, user.id, now()])).rows[0].id;
     for (const l of q.lines) {
       await tx.query(`INSERT INTO quotation_lines (quotation_id, line_no, portal_text, search_text, product_id, stock_id, barcode, description, uom, qty, unit_price, auto_price,
         cost_at_quote, balance_at_quote, price_source, need_cost, stock_option, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
@@ -350,7 +423,7 @@ async function copy(db, user, id, { now }) {
 
 async function removeDraft(db, user, id) {
   const q = await loadOne(db, id);
-  if (!q) return { error: 'That quotation isn’t in the list.' };
+  if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   if (q.status !== 'draft') return { error: 'An issued quotation is kept (its number is used).' };
   if (!(user.role === 'admin' || q.created_by === user.id)) return { error: 'Only the person who started this draft (or admin) can delete it.' };
   await db.query('DELETE FROM quotations WHERE id = $1', [id]);
@@ -367,6 +440,7 @@ async function itemMasterInfo(db) {
 }
 
 module.exports = {
-  SERIES, DEFAULTS, MAX_LINES, canMake, canSeeCost, canSettings, settings, saveSettings, saveSignature, signature, seriesRows, setNextNo,
+  SERIES, DEFAULTS, MAX_LINES, BRANCHES, CODES, SERIES_LIST, IMAGE_KINDS, outletsFor, canMake, canOpen, canSeeCost, canSettings, settings, saveSettings,
+  branchConfigs, branchConfig, saveBranch, saveImage, image, saveSignature, signature, seriesRows, setNextNo,
   list, loadOne, lineTotal, totalOf, createDraft, candidates, saveDraft, missing, issue, pdfOf, copy, removeDraft, itemMasterInfo,
 };

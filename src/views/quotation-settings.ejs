@@ -4,7 +4,7 @@
 <main class="page qt-page">
   <p class="small"><a href="/quotations">← Zakat quotations</a></p>
   <h1>Quotation settings</h1>
-  <p class="muted">For admin and Alia. Changes apply to drafts and new quotations; issued PDFs never change.</p>
+  <p class="muted">For admin and Alia. Changes apply to drafts and new quotations; issued PDFs never change. Signatures are kept in the app’s database only (never in the code on GitHub).</p>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
@@ -34,25 +34,46 @@
       <thead><tr><th>Series</th><th>Year</th><th>Last used</th><th>Next</th></tr></thead>
       <tbody><% series.forEach(function (r) { %><tr><td><%= r.series %></td><td><%= r.year %></td><td><%= r.last_no ? formatRef(r.series, r.year, r.last_no) : '–' %></td><td><b><%= formatRef(r.series, r.year, r.next_no) %></b></td></tr><% }) %></tbody>
     </table></div>
-    <form method="post" action="/quotations/settings/series" class="qt-form qt-grid3">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="series" value="QT-WM">
+    <form method="post" action="/quotations/settings/series" class="qt-form qt-grid4">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <label class="oo-label">Series <select name="series"><% seriesList.forEach(function (x) { %><option><%= x %></option><% }) %></select></label>
       <label class="oo-label">Year <input type="number" name="year" value="<%= thisYear %>" min="2026" max="2100" required></label>
       <label class="oo-label">Next number <input type="number" name="next_no" min="1" max="9999" required></label>
       <button class="button secondary" type="submit">Set the next number</button>
     </form>
   </section>
 
-  <section class="oo-card qt-card">
-    <h2>Signature on the PDF</h2>
-    <p class="muted small">Alia’s signature picture (.jpg or .png). It is kept in the app’s database only (never in the code on GitHub) and goes on every quotation generated after it is saved.</p>
-    <% if (settings.signature_id) { %><p><img src="/quotations/settings/signature" alt="Current signature" class="qt-sig"></p><% } else { %><p class="alert alert-info small">No signature yet – quotations are made without one until it is uploaded.</p><% } %>
-    <form method="post" action="/quotations/settings/signature" class="qt-form">
-      <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="file">
-      <label class="oo-label">Picture <input type="file" accept="image/jpeg,image/png" data-dataurl-upload required></label>
-      <button class="button secondary" type="submit">Upload the signature</button>
+  <% Object.keys(configs).forEach(function (code) { const b = configs[code]; const pics = b.layout === 'br' ? [['letterhead', 'Letterhead (top of the page)'], ['signature', 'Signature']] : [['footer', 'Footer picture (address band)'], ['signature', 'Signature']]; %>
+  <section class="oo-card qt-card" id="b-<%= code %>">
+    <h2><%= code %> – <%= b.name %> <span class="muted small"><%= b.series %> · <%= b.layout === 'br' ? 'BR letterhead layout' : 'Pharmacy4U layout' %></span></h2>
+    <form method="post" action="/quotations/settings/branch/<%= code %>" class="qt-form">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+      <div class="qt-grid2">
+        <label class="oo-label">Name under the signature <input type="text" name="signer" value="<%= b.signer %>" maxlength="80" placeholder="FULL NAME AS ON THE QUOTATION"></label>
+        <label class="oo-label">Title under the name <input type="text" name="title" value="<%= b.title %>" maxlength="60" placeholder="(Pharmacist)"></label>
+      </div>
+      <% if (b.layout !== 'br') { %><label class="oo-label">Footer address <span class="muted small">(used when there is no footer picture – up to 4 lines)</span><textarea name="footer_lines" rows="3" maxlength="400"><%= b.footer_lines %></textarea></label><% } %>
+      <% if (b.layout === 'br') { %><div class="qt-grid2">
+        <label class="oo-label">Validity (default) <input type="text" name="validity" value="<%= b.validity %>" maxlength="120"></label>
+        <label class="oo-label">Delivery Term (default) <input type="text" name="delivery_term" value="<%= b.delivery_term %>" maxlength="120"></label>
+        <label class="oo-label">Payment Term (default) <input type="text" name="payment_term" value="<%= b.payment_term %>" maxlength="120"></label>
+        <input type="hidden" name="footer_lines" value="<%= b.footer_lines %>"></div><% } %>
+      <button class="button secondary" type="submit">Save <%= code %></button>
     </form>
+    <div class="qt-pics">
+    <% pics.forEach(function (p) { const has = b.images[p[0]] || (code === 'WM' && p[0] === 'footer'); %>
+      <form method="post" action="/quotations/settings/image/<%= code %>/<%= p[0] %>" class="qt-form qt-pic">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="file">
+        <p class="small"><b><%= p[1] %></b><br>
+          <% if (b.images[p[0]]) { %><img src="/quotations/settings/image/<%= code %>/<%= p[0] %>" alt="<%= p[1] %>" class="qt-sig"><% } else if (has) { %><span class="muted">Built-in WM footer</span><% } else { %><span class="muted">None yet<%= p[0] === 'signature' ? ' – PDFs are made without a signature' : p[0] === 'footer' ? ' – the typed address is used' : ' – the branch name is printed instead' %></span><% } %></p>
+        <label class="oo-label small">.jpg or .png <input type="file" accept="image/jpeg,image/png" data-dataurl-upload required></label>
+        <button class="button secondary small-button" type="submit">Upload</button>
+      </form>
+    <% }) %>
+    </div>
   </section>
+  <% }) %>
 </main>
-<script src="/js/quotation.js?v=1" defer></script>
+<script src="/js/quotation.js?v=2" defer></script>
 </body>
 </html>

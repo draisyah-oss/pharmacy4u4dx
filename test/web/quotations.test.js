@@ -30,7 +30,7 @@ test.before(async () => {
   await migrate(db);
   await loadSeed(db, readSeed(), { adminPassword: 'admin-pass-1' });
   const pw = (u) => db.query('UPDATE users SET password_hash = $1 WHERE username = $2', [bcrypt.hashSync('pass-word-1', 4), u]);
-  for (const u of ['hafizah', 'alia', 'afifah', 'hanin', 'admin']) await pw(u);
+  for (const u of ['hafizah', 'alia', 'afifah', 'amirah', 'aimi', 'hanin', 'admin']) await pw(u);
   await db.query('UPDATE users SET pin_hash = $1 WHERE username = $2', [bcrypt.hashSync('2468', 4), 'zawiyah']);
   await db.query('UPDATE users SET pin_hash = $1 WHERE username = $2', [bcrypt.hashSync('1357', 4), 'fariz']);
   server = createApp(db, { now }).listen(0);
@@ -83,12 +83,11 @@ test('the weekly stock export (.csv) uploads on the Product list, with balances;
   assert.match(products.parseCsv('Foo,Bar\n1,2').error, /no column Stock ID/);
 });
 
-test('who opens it: WM manager, HQ, admin – not branch staff or other branches', async () => {
-  for (const [u, s, pin] of [['zawiyah', '2468', true], ['afifah', 'pass-word-1']]) {
-    const c = await login(u, s, pin);
-    assert.equal((await c.get('/quotations')).status, 403, `${u} can't`);
-  }
-  for (const [u, s, pin] of [['hafizah', 'pass-word-1'], ['alia', 'pass-word-1'], ['hanin', 'pass-word-1'], ['fariz', '1357', true], ['admin', 'pass-word-1']]) {
+test('who opens it: branch managers (own branch), HQ, admin – not branch staff', async () => {
+  const st = await login('zawiyah', '2468', true);
+  assert.equal((await st.get('/quotations')).status, 403, 'branch staff can\'t');
+  assert.doesNotMatch((await st.get('/daily')).html, /href="\/quotations"/);
+  for (const [u, s, pin] of [['hafizah', 'pass-word-1'], ['afifah', 'pass-word-1'], ['alia', 'pass-word-1'], ['hanin', 'pass-word-1'], ['fariz', '1357', true], ['admin', 'pass-word-1']]) {
     const c = await login(u, s, pin);
     const r = await c.get('/quotations');
     assert.equal(r.status, 200, `${u} can`);
@@ -233,4 +232,71 @@ test('salary guard and drafts: pay words refused; a draft can be deleted by its 
   const a = await login('alia', 'pass-word-1');
   assert.match(decodeURIComponent((await a.post(`/quotations/${cid}/delete`, {})).location), /Only the person who started/);
   assert.match(decodeURIComponent((await h.post(`/quotations/${cid}/delete`, {})).location), /Draft deleted/);
+});
+
+test('every branch quotes with its own numbers; managers see only their branch', async () => {
+  const jh = await login('afifah', 'pass-word-1');
+  const list = await jh.get('/quotations');
+  assert.match(list.html, /Zakat quotation – Jenderam Hilir/);
+  assert.doesNotMatch(list.html, /QT-WM-2026-0403/, 'JH does not see WM quotes');
+  // a WM quote is not there for JH
+  const wmId = (await db.query("SELECT id FROM quotations WHERE ref = 'QT-WM-2026-0403'")).rows[0].id;
+  assert.equal((await jh.get(`/quotations/${wmId}`)).status, 404);
+  assert.equal((await jh.get(`/quotations/${wmId}/pdf`)).status, 404);
+  // JH asks for WM in the form – still a JH quote
+  const c = await jh.post('/quotations', { outlet: 'WM', items: 'Ensure Gold 850g ×2' });
+  const id = Number(c.location.split('/').pop());
+  const q = (await db.query('SELECT outlet, series FROM quotations WHERE id = $1', [id])).rows[0];
+  assert.deepEqual(q, { outlet: 'JH', series: 'QT-JH' });
+  const [l1] = await lineIds(id);
+  await jh.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
+  const r = await jh.post(`/quotations/${id}/generate`, {});
+  assert.match(decodeURIComponent(r.location), /QT-JH-2026-0073 is ready/, 'JH continues its own count (0072 was the last on paper)');
+  const pdf = await jh.get(`/quotations/${id}/pdf`);
+  assert.equal(pdf.buf.subarray(0, 5).toString(), '%PDF-');
+});
+
+test('BR: letterhead layout with From / Validity / terms; HQ picks the branch', async () => {
+  const a = await login('alia', 'pass-word-1');
+  let r = await a.post('/quotations/settings/branch/BR', { signer: 'nur amirah abd karim', title: '', validity: '30 days', delivery_term: '7 working days', payment_term: '30 days' });
+  assert.match(decodeURIComponent(r.location), /Bandar Rinching saved/);
+  const c = await a.post('/quotations', { outlet: 'BR', items: 'Underpad 75cm x 75cm 10\'s ×5' });
+  const id = Number(c.location.split('/').pop());
+  let q = (await db.query('SELECT outlet, from_name, validity, payment_term FROM quotations WHERE id = $1', [id])).rows[0];
+  assert.deepEqual(q, { outlet: 'BR', from_name: 'NUR AMIRAH ABD KARIM', validity: '30 days', payment_term: '30 days' });
+  const page = await a.get(`/quotations/${id}`);
+  assert.match(page.html, /name="delivery_term" value="7 working days"/);
+  const [l1] = await lineIds(id);
+  await a.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('PRIMES DISPOSABLE UNDERPAD 75X75 4PLY 10 SHEETS')), validity: '14 days', fax: '03-555' });
+  q = (await db.query('SELECT validity, fax FROM quotations WHERE id = $1', [id])).rows[0];
+  assert.deepEqual(q, { validity: '14 days', fax: '03-555' });
+  r = await a.post(`/quotations/${id}/generate`, {});
+  assert.match(decodeURIComponent(r.location), /QT-BR-2026-0034 is ready/);
+  // Amirah (BR manager) sees it; Hafizah (WM) doesn't
+  assert.equal((await (await login('amirah', 'pass-word-1')).get(`/quotations/${id}`)).status, 200);
+  assert.equal((await (await login('hafizah', 'pass-word-1')).get(`/quotations/${id}`)).status, 404);
+});
+
+test('Bangi: no signer set yet → no PDF until admin / Alia sets one; pictures per branch', async () => {
+  const bg = await login('aimi', 'pass-word-1');
+  const c = await bg.post('/quotations', { items: 'Ensure Gold 850g ×1' });
+  const id = Number(c.location.split('/').pop());
+  const [l1] = await lineIds(id);
+  await bg.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
+  assert.match((await bg.get(`/quotations/${id}`)).html, /Who signs Bangi’s quotations isn’t set yet/);
+  let r = await bg.post(`/quotations/${id}/generate`, {});
+  assert.match(decodeURIComponent(r.location), /Set who signs Bangi/);
+  assert.equal((await bg.post('/quotations/settings/branch/Bangi', { signer: 'X' })).status, 403, 'managers don\'t change settings');
+  const a = await login('alia', 'pass-word-1');
+  await a.post('/quotations/settings/branch/Bangi', { signer: 'Aimi Test', title: '(Pharmacist)', footer_lines: 'Bangi address line\nTel: 000' });
+  // a 1×1 PNG as the Bangi footer picture
+  const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  r = await a.post('/quotations/settings/image/Bangi/footer', { file: `data:image/png;base64,${png}` });
+  assert.match(decodeURIComponent(r.location), /Bangi: footer saved/);
+  assert.equal((await a.get('/quotations/settings/image/Bangi/footer')).type, 'image/png');
+  assert.match(decodeURIComponent((await a.post('/quotations/settings/image/Bangi/nonsense', { file: `data:image/png;base64,${png}` })).location), /Unknown picture/);
+  r = await bg.post(`/quotations/${id}/generate`, {});
+  assert.match(decodeURIComponent(r.location), /QT-BGI-2026-0001 is ready/);
+  const set = await a.get('/quotations/settings');
+  for (const s of ['QT-WM', 'QT-JH', 'QT-BR', 'QT-BGI', 'QT-AMP']) assert.match(set.html, new RegExp(s));
 });

@@ -83,7 +83,19 @@ function paginate(heights, shift = 0) {
   return pages;
 }
 
-function pageFrame(doc, q, pageNo, pageCount) {
+// The footer band: the branch's footer picture (WM's is built in), else its name and typed address.
+function footer(doc, opts) {
+  const b = opts.branch || {};
+  const pic = opts.footer || (!b.code || b.code === 'WM' ? files().footer : null);
+  if (pic) { try { doc.image(pic, 56.1, 693.1, { width: 477.7, height: 63.6 }); return; } catch (err) { /* fall back to text */ } }
+  doc.rect(56.1, 693.1, 477.7, 63.6).fill('#1d3b8f');
+  doc.fillColor('#ffffff');
+  at(doc, 'B', 10, `Pharmacy4u ${b.name || ''}`.trim(), 300, 710);
+  String(b.footer_lines || '').split('\n').filter(Boolean).slice(0, 3).forEach((t, i) => at(doc, 'R', 9, t, 300, 724 + i * 11));
+  doc.fillColor('#000000');
+}
+
+function pageFrame(doc, q, pageNo, pageCount, opts = {}) {
   const f = files();
   doc.addPage({ size: 'A4', margin: 0 });
   doc.image(f.header, 54, 28.35, { width: 443.4, height: 106.4 });
@@ -111,7 +123,7 @@ function pageFrame(doc, q, pageNo, pageCount) {
   at(doc, 'B', H, 'Qty', COL.qty, 278.0 + shift);
   at(doc, 'B', H, 'U/ Price (RM)', COL.price, 278.0 + shift);
   at(doc, 'B', H, 'Total (RM)', COL.total, 278.0 + shift);
-  doc.image(f.footer, 56.1, 693.1, { width: 477.7, height: 63.6 });
+  footer(doc, opts);
   return shift;
 }
 
@@ -122,7 +134,10 @@ function centres(doc) {
   return { item: c(COL.item, 'Item'), qty: c(COL.qty, 'Qty'), price: c(COL.price, 'U/ Price (RM)'), total: c(COL.total, 'Total (RM)') };
 }
 
-async function quotationPdf(q, { signature = null } = {}) {
+async function quotationPdf(q, opts = {}) {
+  if (opts.branch && opts.branch.layout === 'br') return brPdf(q, opts);
+  const signature = opts.signature || null;
+  const b = opts.branch || {};
   const doc = makeDoc();
   const chunks = [];
   doc.on('data', (c) => chunks.push(c));
@@ -136,7 +151,7 @@ async function quotationPdf(q, { signature = null } = {}) {
   const total = q.total !== undefined && q.total !== null ? Number(q.total) : lines.reduce((s, l) => s + Math.round(l.qty * l.unit_price * 100) / 100, 0);
 
   pagesFinal.forEach((idx, p) => {
-    const shift = pageFrame(doc, q, p + 1, pagesFinal.length);
+    const shift = pageFrame(doc, q, p + 1, pagesFinal.length, opts);
     const c = centres(doc);
     let y = ROW_TOP + shift;
     for (const i of idx) {
@@ -164,12 +179,98 @@ async function quotationPdf(q, { signature = null } = {}) {
     if (signature) {
       try { doc.image(signature, 160.4, 603.9, { fit: [37.1, 59.3], align: 'center', valign: 'center' }); } catch (err) { /* a bad picture never stops the quotation */ }
     }
-    at(doc, 'B', H, 'ALIA SURAYA BINTI ESA', INDENT, 675.1);
-    at(doc, 'R', 10.2, '(Pharmacist)', INDENT, 688.1);
+    at(doc, 'B', H, b.signer || 'ALIA SURAYA BINTI ESA', INDENT, 675.1);
+    const title = b.signer ? (b.title || '') : '(Pharmacist)';
+    if (title) at(doc, 'R', 10.2, title, INDENT, 688.1);
   });
   doc.end();
   await done;
   return Buffer.concat(chunks);
 }
 
-module.exports = { quotationPdf, paginate, rowHeight, ROW_TOP, ROW_GAP, PAGE_LIMIT, LAST_PAGE_LIMIT };
+// ---------- BR: Bandar Rinching letterhead layout (RFQ TEMPLATE-BR) ----------
+// Letterhead across the top; QUOTATION + No. on the right; To on the left, Your Ref. / From / C. C. /
+// Date / Page on the right; TEL / FAX; a ruled table; Total; Validity / Delivery Term / Payment Term;
+// the note; Yours faithfully, signature, name.
+async function brPdf(q, opts) {
+  const b = opts.branch || {};
+  const doc = makeDoc();
+  const chunks = []; doc.on('data', (c) => chunks.push(c));
+  const done = new Promise((resolve, reject) => { doc.on('end', resolve); doc.on('error', reject); });
+  const L0 = 48; const R0 = 547; const W = R0 - L0;
+  const cols = [{ k: 'no', x: L0, w: 34, al: 'center', h: 'Item' }, { k: 'desc', x: L0 + 34, w: 255, al: 'left', h: 'Description' },
+    { k: 'qty', x: L0 + 289, w: 50, al: 'center', h: 'Qty' }, { k: 'price', x: L0 + 339, w: 75, al: 'right', h: 'U/ Price (RM)' }, { k: 'total', x: L0 + 414, w: W - 414, al: 'right', h: 'Total (RM)' }];
+  const lines = q.lines.map((l) => ({ ...l, rows: null }));
+  doc.font('R').fontSize(9);
+  const wrap = (t) => { const out = []; let cur = ''; for (const w of String(t || '').split(/\s+/).filter(Boolean)) { const tr = cur ? `${cur} ${w}` : w; if (cur && doc.widthOfString(tr) > cols[1].w - 8) { out.push(cur); cur = w; } else cur = tr; } if (cur) out.push(cur); return out.length ? out : ['']; };
+  lines.forEach((l) => { l.rows = wrap(l.description); if (String(l.note || '').trim()) l.rows.push(`(${String(l.note).trim().replace(/^\(|\)$/g, '')})`); });
+  const rowH = (l) => 8 + l.rows.length * 11;
+  const TOP = 330; const LIMIT_LAST = 560; const LIMIT = 760;
+  const pages = [[]]; let y = TOP;
+  lines.forEach((l, i) => { if (pages[pages.length - 1].length && y + rowH(l) > LIMIT) { pages.push([]); y = TOP; } pages[pages.length - 1].push(i); y += rowH(l); });
+  const last = pages[pages.length - 1]; let end = TOP + last.reduce((t, i) => t + rowH(lines[i]), 0); const moved = [];
+  while (last.length > 1 && end > LIMIT_LAST) { const i = last.pop(); moved.unshift(i); end -= rowH(lines[i]); }
+  if (moved.length) pages.push(moved);
+  const total = q.total !== undefined && q.total !== null ? Number(q.total) : lines.reduce((t, l) => t + Math.round(l.qty * l.unit_price * 100) / 100, 0);
+  const cell = (c, t, yy, font = 'R', size = 9) => { doc.font(font).fontSize(size); const w = doc.widthOfString(t, NOLIG);
+    const x = c.al === 'center' ? c.x + (c.w - w) / 2 : c.al === 'right' ? c.x + c.w - 6 - w : c.x + 6; doc.text(t, x, yy, { lineBreak: false, ...NOLIG }); };
+
+  pages.forEach((idx, p) => {
+    doc.addPage({ size: 'A4', margin: 0 });
+    // letterhead
+    let top = 40;
+    if (opts.letterhead) {
+      try { doc.image(opts.letterhead, L0, 28, { fit: [W, 120], align: 'center' }); top = 150; } catch (err) { top = 40; }
+    }
+    if (top === 40) { at(doc, 'B', 16, `PHARMACY4U ${String(b.name || 'BANDAR RINCHING').toUpperCase()}`, L0, 60); String(b.footer_lines || '').split('\n').filter(Boolean).slice(0, 3).forEach((t, i) => at(doc, 'R', 9, t, L0, 75 + i * 11)); top = 120; }
+    // QUOTATION + No.
+    at(doc, 'B', 16, 'QUOTATION', R0, top + 18, { align: 'right' });
+    at(doc, 'R', 9.5, 'No.', 405, top + 36); at(doc, 'R', 9.5, ':', 445, top + 36); at(doc, 'B', 9.5, q.ref, 455, top + 36);
+    // To (left) / Your Ref., From, C. C., Date, Page (right)
+    const y0 = top + 62;
+    at(doc, 'B', 9.5, 'To', L0, y0);
+    String(q.recipient || '').split('\n').filter(Boolean).slice(0, 6).forEach((t, i) => at(doc, 'R', 9.5, t, L0 + 40, y0 + i * 13));
+    [['Your Ref.', ''], ['From', q.from_name || b.signer || ''], ['C. C.', q.cc || ''], ['Date', dmy(q.quote_date)], ['Page', `${p + 1} of ${pages.length}`]]
+      .forEach(([label, value], i) => { const yy = y0 + i * 13; at(doc, 'R', 9.5, label, 360, yy); at(doc, 'R', 9.5, ':', 420, yy); if (value) at(doc, 'R', 9.5, value, 430, yy); });
+    const y1 = y0 + 6 * 13 + 4;
+    at(doc, 'R', 9.5, 'TEL', L0, y1); at(doc, 'R', 9.5, ':', L0 + 32, y1); if (q.tel) at(doc, 'R', 9.5, q.tel, L0 + 40, y1);
+    at(doc, 'R', 9.5, 'FAX', 200, y1); at(doc, 'R', 9.5, ':', 228, y1); if (q.fax) at(doc, 'R', 9.5, q.fax, 236, y1);
+    at(doc, 'R', 9.5, 'Thank you for your inquiry. We are pleased to submit our quote as follows:', L0, y1 + 24);
+    // table
+    const th = y1 + 34;
+    doc.lineWidth(0.8).rect(L0, th, W, 18).stroke('#000000');
+    cols.forEach((c) => { cell({ ...c, al: 'center' }, c.h, th + 5, 'B', 9.5); if (c.x > L0) doc.moveTo(c.x, th).lineTo(c.x, th + 18).stroke(); });
+    let yy = th + 18;
+    for (const i of idx) {
+      const l = lines[i]; const h = rowH(l);
+      cell(cols[0], `${l.line_no || i + 1}.`, yy + 5);
+      l.rows.forEach((t, k) => cell(cols[1], t, yy + 5 + k * 11));
+      cell(cols[2], String(l.qty), yy + 5);
+      cell(cols[3], L.money(l.unit_price), yy + 5);
+      cell(cols[4], L.money(Math.round(l.qty * l.unit_price * 100) / 100), yy + 5);
+      yy += h;
+    }
+    const tableEnd = p < pages.length - 1 ? Math.max(yy, 700) : Math.max(yy + 10, LIMIT_LAST);
+    doc.rect(L0, th + 18, W, tableEnd - th - 18).stroke();
+    cols.forEach((c) => { if (c.x > L0) doc.moveTo(c.x, th + 18).lineTo(c.x, tableEnd).stroke(); });
+    if (p < pages.length - 1) { at(doc, 'R', 8.5, 'Continued on the next page …', R0, tableEnd + 14, { align: 'right' }); return; }
+    // Total + terms
+    const ty = tableEnd + 16;
+    at(doc, 'B', 10, 'Total', cols[3].x + 6, ty); at(doc, 'B', 10, `RM ${L.money(total)}`, R0 - 6, ty, { align: 'right' });
+    doc.lineWidth(0.8).moveTo(cols[3].x, ty + 5).lineTo(R0, ty + 5).stroke();
+    [['Validity', q.validity], ['Delivery Term', q.delivery_term], ['Payment Term', q.payment_term]].forEach(([label, v], i) => {
+      const y2 = ty + i * 15; at(doc, 'R', 9.5, label, L0 + 10, y2); at(doc, 'R', 9.5, ':', L0 + 95, y2); if (v) at(doc, 'R', 9.5, v, L0 + 105, y2); });
+    const ny = ty + 58;
+    at(doc, 'R', 8.5, 'Note : Prices are subjected to change without prior notice. We hope that our quotation is favourable to you and looking forward to', L0 + 10, ny);
+    at(doc, 'R', 8.5, 'receive your valued orders in due course. Thank and regards.', L0 + 10, ny + 11);
+    at(doc, 'R', 9.5, 'Yours faithfully,', L0 + 30, ny + 34);
+    if (opts.signature) { try { doc.image(opts.signature, L0 + 40, ny + 40, { fit: [90, 50] }); } catch (err) { /* no signature */ } }
+    at(doc, 'B', 9.5, b.signer || '', L0 + 40, ny + 104);
+    if (b.title) at(doc, 'R', 9.5, b.title, L0 + 40, ny + 117);
+  });
+  doc.end();
+  await done;
+  return Buffer.concat(chunks);
+}
+
+module.exports = { quotationPdf, brPdf, paginate, rowHeight, ROW_TOP, ROW_GAP, PAGE_LIMIT, LAST_PAGE_LIMIT };
