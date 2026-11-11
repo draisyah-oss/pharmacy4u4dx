@@ -14,11 +14,13 @@
      const inv = role === 'admin' || Boolean(user.inventory);
      // 3 Nov: Ordering & payments (/inventory) – also for the payments team (Azwani).
      const board = ['inventory', '/inventory', 'Ordering & payments', 'order payment supplier budget cash plan approve paid transfer mr eve daily plan'];
-     const inventory = inv ? [['Inventory', [board, ['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'],
+     // 11 Nov: Zakat quotation (WM) – WM's manager, every HQ login and admin.
+     const quote = ['quotations', '/quotations', 'Zakat quotation (WM)', 'quotation quote rfq zakat medkad price markup pdf'];
+     const inventory = inv ? [['Inventory', [board, quote, ['oosinbox', '/oos/inbox', 'Out-of-stock inbox', 'oos restock answer'],
        ['oostransfers', '/oos/transfers', 'Deliveries to send', 'oos transfer delivery send hq'],
        ['oosactivity', '/oos/activity', 'Activity log', 'oos seen question reply follow up whatsapp'],
        ['oosproducts', '/oos/products', 'Product list (Dynamod)', 'masterlist dynamod stock id barcode upload cost price margin']]]]
-       : (user.payments || role === 'hq' || role === 'hq_staff') ? [['Inventory', [board]]] : []; // 4 Nov: all HQ see Ordering & payments
+       : (user.payments || role === 'hq' || role === 'hq_staff') ? [['Inventory', [board, quote]]] : []; // 4 Nov: all HQ see Ordering & payments
      // Projects (HQ team only), with the wiki checklist as a sub-item (full HQ and admin open it).
      // Milestones with a step checklist (19 Oct, e.g. min/max top 300) are sub-items too, with done / total.
      const stepItems = (typeof stepMenu !== 'undefined' && stepMenu ? stepMenu : []).map(function (m) {
@@ -59,6 +61,8 @@
            ['hqupdate', '/hq/update', 'Weekly Branch Manager Meeting', 'managers monday 4pm branches actions update'],
            ['hqboard', '/hq/scoreboard', 'HQ scoreboard', 'kpi']]]);
          groups.push(...inventory, projects);
+       } else if (role === 'branch_manager' && user.branch_code === 'WM') {
+         groups.push(['Inventory', [quote]]); // 11 Nov: Hafizah makes the zakat quotations
        }
        if (role === 'admin') {
          quick.push(['/admin', '/admin', 'Admin']);

@@ -1,0 +1,125 @@
+<%- include('partials/head') %>
+<%- include('partials/topbar') %>
+<%- include('partials/nav', { navActive: 'quotations' }) %>
+<%
+  const rm = function (n) { return n === null || n === undefined ? '' : L.money(n); };
+  const bal = function (b) { return b === null || b === undefined ? '–' : String(Math.round(Number(b) * 100) / 100); };
+  const pctTxt = function (m) { return m === null || m === undefined ? '' : (Math.round(m * 1000) / 10) + '%'; };
+  const draft = q.status === 'draft';
+  const stockTxt = function (o) { return o === 'readystock' ? 'Readystock' : o === 'preorder' ? 'Pre-order' : ''; };
+  const dmy = function (d) { return d ? d.split('-').reverse().join('/') : ''; };
+  const badgeTxt = { ok: 'Margin OK', low: 'Below ' + Math.round(s.markup_floor * 100) + '%', nocost: 'No cost' };
+%>
+<main class="page qt-page">
+  <p class="small"><a href="/quotations">← All quotations</a></p>
+  <h1><%= q.ref ? q.ref : 'New zakat quotation' %> <span class="qt-chip qt-chip-<%= q.status %>"><%= draft ? 'Draft' : 'Issued' %></span></h1>
+  <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
+  <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
+
+  <% if (!draft) { %>
+    <section class="oo-card qt-card">
+      <p><b><%= q.ref %></b> · <%= dmy(q.quote_date) %> · <%= q.recipient.split('\n')[0] %> · total <b>RM<%= L.money(q.total) %></b> · made by <%= q.issued_name || q.by_name %></p>
+      <% if (q.rfq_description) { %><p class="muted small">RFQ: <%= q.rfq_description %></p><% } %>
+      <p class="qt-actions"><a class="button" href="/quotations/<%= q.id %>/pdf?download=1">⬇ Download the PDF</a> <a class="button secondary" href="/quotations/<%= q.id %>/pdf" target="_blank" rel="noopener">Open the PDF</a></p>
+      <form method="post" action="/quotations/<%= q.id %>/copy" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button class="button secondary small-button" type="submit">Make a copy to change it</button> <span class="muted small">(the copy gets a new number – <%= q.ref %> is never reused)</span></form>
+    </section>
+  <% } else { %>
+  <form method="post" action="/quotations/<%= q.id %>" id="qt-form" class="qt-form">
+    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+    <input type="hidden" name="goto" value="">
+
+    <section class="oo-card qt-card" id="step1">
+      <h2><span class="qt-step">1</span> The RFQ</h2>
+      <div class="qt-grid2">
+        <label class="oo-label">To <span class="muted small">(one line each, as on the PDF)</span>
+          <textarea name="recipient" rows="5" maxlength="600"><%= q.recipient %></textarea></label>
+        <div>
+          <label class="oo-label">TEL <input type="text" name="tel" value="<%= q.tel %>" maxlength="80"></label>
+          <label class="oo-label">C. C. <input type="text" name="cc" value="<%= q.cc %>" maxlength="120"></label>
+          <label class="oo-label">RFQ description <textarea name="rfq_description" rows="2" maxlength="2000"><%= q.rfq_description %></textarea></label>
+        </div>
+      </div>
+      <label class="oo-label">Add more items <span class="muted small">– paste or type, one per line, qty at the end</span>
+        <textarea name="add" rows="2" placeholder="Item name ×qty"></textarea></label>
+    </section>
+
+    <section class="oo-card qt-card" id="step2">
+      <h2><span class="qt-step">2</span> Match each item <span class="qt-step">3</span> price &amp; stock</h2>
+      <p class="muted small">Pick the item from the Dynamod item master (best 5 matches; change the search words to look again). Nothing fits? Choose <b>Need cost – ask Alia</b> and type the description and price.
+        Price = cost + <%= Math.round(s.markup_default * 100) %>%, rounded up to the next 10 sen; type a price to change it. Below <%= Math.round(s.markup_floor * 100) %>% shows amber.</p>
+      <% if (!q.lines.length) { %><p class="muted">No items yet – paste them in “Add more items” above and Save.</p><% } %>
+      <% q.lines.forEach(function (l) { const k = 'l[i' + l.id + ']'; const picked = l.need_cost ? 'need' : (l.product_id ? String(l.product_id) : '');
+           const matches = (l.matches || []).slice(); const inList = matches.some(function (m) { return String(m.id) === picked; }); %>
+        <div class="qt-line" id="l<%= l.id %>">
+          <div class="qt-line-head">
+            <span class="qt-no"><%= l.line_no %></span>
+            <label class="qt-portal">Portal item <input type="text" name="<%= k %>[portal]" value="<%= l.portal_text %>" maxlength="300"></label>
+            <label class="qt-qty">Qty <input type="number" name="<%= k %>[qty]" value="<%= l.qty || '' %>" min="1" step="1" inputmode="numeric"></label>
+            <label class="qt-remove"><input type="checkbox" name="<%= k %>[remove]" value="1"> Remove</label>
+          </div>
+          <fieldset class="qt-matches">
+            <legend class="small">Item master <label class="qt-search">search words <input type="search" name="<%= k %>[search]" value="<%= l.search_text %>" maxlength="300"></label></legend>
+            <% if (picked && !l.need_cost && !inList) { %>
+              <label class="qt-match is-picked"><input type="radio" name="<%= k %>[pick]" value="<%= picked %>" checked data-qt-pick>
+                <span class="qt-m-desc"><%= l.description %></span><span class="qt-m-meta"><%= l.uom || '' %> · stock <%= bal(l.balance_at_quote) %> · <%= l.stock_id %></span></label>
+            <% } %>
+            <% matches.forEach(function (m) { %>
+              <label class="qt-match<%= String(m.id) === picked ? ' is-picked' : '' %>"><input type="radio" name="<%= k %>[pick]" value="<%= m.id %>"<%= String(m.id) === picked ? ' checked' : '' %> data-qt-pick>
+                <span class="qt-m-desc"><%= m.description %></span>
+                <span class="qt-m-meta"><%= m.uom || '' %> · stock <b class="<%= m.balance !== null && l.qty && m.balance >= l.qty ? 'qt-ok' : 'qt-low' %>"><%= bal(m.balance) %></b> · <%= m.stock_id %>
+                  · <%= m.price ? 'RM' + L.money(m.price) : 'no cost' %><% if (seeCost && m.cost !== null) { %> <span class="qt-cost">(cost <%= Number(m.cost).toFixed(2) %>)</span><% } %></span></label>
+            <% }) %>
+            <% if (!matches.length) { %><p class="muted small">No match for these words – try fewer or other words.</p><% } %>
+            <label class="qt-match qt-need<%= l.need_cost ? ' is-picked' : '' %>"><input type="radio" name="<%= k %>[pick]" value="need"<%= l.need_cost ? ' checked' : '' %> data-qt-pick> <b>Need cost – ask Alia</b> <span class="muted small">(not in the item master: type the description and price)</span></label>
+            <label class="qt-match"><input type="radio" name="<%= k %>[pick]" value=""<%= picked === '' ? ' checked' : '' %> data-qt-pick> Not chosen yet</label>
+          </fieldset>
+          <div class="qt-price">
+            <label class="qt-desc">Description on the quotation <input type="text" name="<%= k %>[desc]" value="<%= l.description %>" maxlength="200" placeholder="filled in when you pick an item"></label>
+            <label>Price per unit (RM) <input type="text" name="<%= k %>[price]" value="<%= l.unit_price !== null ? L.money(l.unit_price).replace(/,/g, '') : '' %>" inputmode="decimal" placeholder="<%= l.auto_price ? l.auto_price.toFixed(2) : (l.need_cost ? 'ask Alia' : '') %>"></label>
+            <div class="qt-badge-wrap">
+              <% if (l.badge) { %><span class="qt-badge qt-badge-<%= l.badge %>"><%= badgeTxt[l.badge] %><%= seeCost && l.markupPct !== null ? ' · ' + pctTxt(l.markupPct) + ' on cost' : '' %></span><% } %>
+              <% if (l.price_source === 'override') { %><span class="small muted">typed (auto RM<%= rm(l.auto_price) %>)</span><% } %>
+              <% if (seeCost && l.cost_at_quote) { %><span class="small muted">cost RM<%= Number(l.cost_at_quote).toFixed(2) %></span><% } %>
+            </div>
+            <% if (l.badge === 'low') { %><p class="qt-warn small">⚠ Price is below the <%= Math.round(s.markup_floor * 100) %>% floor – check before sending.</p><% } %>
+            <label>Stock option <select name="<%= k %>[stock]">
+              <option value="readystock"<%= l.stock_option === 'readystock' ? ' selected' : '' %>>Readystock</option>
+              <option value="preorder"<%= l.stock_option === 'preorder' ? ' selected' : '' %>>Pre-order</option></select></label>
+            <label class="qt-note">Notes <input type="text" name="<%= k %>[note]" value="<%= l.note %>" maxlength="120" placeholder="e.g. Pre-order - 7 days"></label>
+          </div>
+        </div>
+      <% }) %>
+      <p class="qt-actions"><button class="button" type="submit">Save and update prices</button></p>
+    </section>
+  <% } %>
+
+    <section class="oo-card qt-card" id="step4">
+      <h2><span class="qt-step">4</span> Fill in the zakat form</h2>
+      <p class="muted small">Copy each line (or one box) into the zakat portal. <%= draft ? 'Save first so the table shows your latest changes.' : '' %></p>
+      <div class="table-wrap"><table class="admin-table qt-form-table">
+        <thead><tr><th>Brand</th><th class="n">Qty</th><th class="n">Price per unit</th><th>Stock option</th><th>Notes</th><th></th></tr></thead>
+        <tbody>
+        <% q.lines.forEach(function (l) { const brand = String(l.description || '').toUpperCase(); const price = l.unit_price !== null ? Number(l.unit_price).toFixed(2) : '';
+             const cells = [brand, String(l.qty || ''), price, stockTxt(l.stock_option), l.note || '']; %>
+          <tr>
+            <% cells.forEach(function (c, i) { %><td class="<%= i === 1 || i === 2 ? 'n' : '' %>"><span class="qt-cell"><%= c || '–' %></span><% if (c) { %> <button type="button" class="qt-copy" data-copy-text="<%= c %>" aria-label="Copy <%= c %>">⧉</button><% } %></td><% }) %>
+            <td><button type="button" class="qt-copy qt-copy-row" data-copy-text="<%= cells.join('\t') %>">Copy row</button></td>
+          </tr>
+        <% }) %>
+        </tbody>
+        <tfoot><tr><th colspan="2">Total</th><th class="n">RM<%= L.money(draft ? total : q.total) %></th><th colspan="3"></th></tr></tfoot>
+      </table></div>
+      <% if (draft) { %>
+        <% if (missing.length) { %><div class="alert alert-info small"><b>Before the PDF:</b><ul><% missing.forEach(function (m) { %><li><%= m %></li><% }) %></ul></div><% } %>
+        <p class="qt-actions"><button class="button" type="submit" form="qt-form" formaction="/quotations/<%= q.id %>/generate"<%= missing.length ? ' disabled' : '' %>>Generate quotation (PDF)</button>
+          <span class="muted small">takes the next <%= q.series %> number – it can’t be changed afterwards</span></p>
+      <% } %>
+    </section>
+  <% if (draft) { %></form>
+    <% if (canDelete) { %><form method="post" action="/quotations/<%= q.id %>/delete" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><button class="button secondary small-button" type="submit">Delete this draft</button></form><% } %>
+  <% } %>
+</main>
+<script src="/js/quotation.js?v=1" defer></script>
+</body>
+</html>

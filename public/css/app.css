@@ -1699,3 +1699,52 @@ body.sc-open { overflow: hidden; }
 .sc-btns { display: flex; gap: 10px; align-items: center; justify-content: space-between; }
 .sc-btns .button { flex: 0 0 auto; }
 .sc-busy { margin: 0; font-size: 0.85rem; color: var(--ink-soft, #555); min-height: 1em; }
+
+/* 11 Nov: Zakat quotation (WM) – /quotations */
+.qt-page { max-width: 1100px; }
+.qt-card { margin-bottom: 18px; }
+.qt-step { display: inline-flex; align-items: center; justify-content: center; width: 1.6em; height: 1.6em; border-radius: 50%; background: var(--brand); color: #fff; font-size: 0.8em; margin-right: 6px; vertical-align: 2px; }
+.qt-form textarea, .qt-form input[type="text"], .qt-form input[type="number"], .qt-form input[type="search"], .qt-form select { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius-input); background: #fff; color: var(--ink); }
+.qt-form .oo-label { display: block; margin-bottom: 12px; }
+.qt-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+.qt-grid3 { display: grid; grid-template-columns: 1fr 1fr auto; gap: 0 12px; align-items: end; }
+@media (max-width: 700px) { .qt-grid2, .qt-grid3 { grid-template-columns: 1fr; } }
+.qt-chip { font-size: 0.55em; vertical-align: middle; padding: 3px 10px; border-radius: 999px; background: var(--brand-tint); color: var(--brand-deep); }
+.qt-chip-issued { background: var(--good-tint); color: var(--good); }
+.qt-line { border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin: 12px 0; background: #fff; }
+.qt-line-head { display: grid; grid-template-columns: auto 1fr 90px auto; gap: 10px; align-items: end; }
+.qt-line-head label { font-size: 0.85rem; color: var(--ink-soft); }
+.qt-no { display: inline-flex; width: 2em; height: 2em; align-items: center; justify-content: center; border-radius: 50%; background: var(--page); font-weight: 700; }
+.qt-remove { white-space: nowrap; padding-bottom: 10px; }
+@media (max-width: 600px) { .qt-line-head { grid-template-columns: auto 1fr; } .qt-qty, .qt-remove { grid-column: 2; } }
+.qt-matches { border: 0; padding: 0; margin: 10px 0; }
+.qt-matches legend { width: 100%; padding: 0; }
+.qt-search { display: flex; gap: 8px; align-items: center; color: var(--ink-soft); }
+.qt-search input { flex: 1; }
+.qt-match { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; margin: 6px 0; cursor: pointer; }
+.qt-match input { margin: 0 4px 0 0; }
+.qt-match.is-picked { border-color: var(--brand); background: var(--brand-tint); }
+.qt-m-desc { font-weight: 700; }
+.qt-m-meta { font-size: 0.85rem; color: var(--ink-soft); }
+.qt-ok { color: var(--good); }
+.qt-low { color: #9a5b00; }
+.qt-cost { color: var(--ink-soft); }
+.qt-need { background: #fff8e8; }
+.qt-price { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 6px 12px; align-items: end; font-size: 0.9rem; }
+.qt-price .qt-desc { grid-column: 1 / -1; }
+.qt-price .qt-note { grid-column: span 2; }
+@media (max-width: 600px) { .qt-price { grid-template-columns: 1fr 1fr; } .qt-price .qt-note { grid-column: 1 / -1; } }
+.qt-badge-wrap { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; padding-bottom: 8px; }
+.qt-badge { padding: 3px 10px; border-radius: 999px; font-weight: 700; font-size: 0.85rem; }
+.qt-badge-ok { background: var(--good-tint); color: var(--good); }
+.qt-badge-low, .qt-badge-nocost { background: #fff1d6; color: #8a5300; }
+.qt-warn { grid-column: 1 / -1; margin: 0; color: #8a5300; }
+.qt-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.qt-inline { display: inline-block; margin: 6px 0; }
+.qt-form-table td { vertical-align: top; }
+.qt-form-table td.n, .qt-form-table td:nth-child(4) { white-space: nowrap; }
+.qt-copy { border: 1px solid var(--line); background: #fff; color: var(--brand); border-radius: 8px; padding: 2px 8px; font: inherit; font-size: 0.85rem; cursor: pointer; min-height: 30px; }
+.qt-copy.is-copied { background: var(--good-tint); color: var(--good); border-color: var(--good); }
+.qt-copy-row { white-space: nowrap; }
+.qt-draft td { color: var(--ink-soft); }
+.qt-sig { max-height: 90px; border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 4px; }

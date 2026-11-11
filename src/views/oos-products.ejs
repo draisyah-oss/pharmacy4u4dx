@@ -24,10 +24,10 @@
   </section>
   <section class="oo-card">
     <h2>Update from a new Dynamod export</h2>
-    <p class="muted small">Export the stock masterlist from Dynamod as Excel (.xlsx, same columns: Active, Stock ID, Barcode, Description 1, UOM ID, Cost, Price 1, Price 2 …) and upload it. Products are matched by barcode; new ones are added, changed names updated.</p>
+    <p class="muted small">Export the stock masterlist from Dynamod as Excel (.xlsx) or .csv (same columns: Active, Stock ID, Barcode, Description 1, UOM ID, Balance Quantity (UOM), Cost, Price 1, Price 2 …) and upload it. The stock balance is used for zakat quotations (Readystock / Pre-order); for the weekly stock export, tick “no longer listed” so the list matches the file. Products are matched by barcode; new ones are added, changed names updated.</p>
     <form method="post" action="/oos/products" class="oo-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="file"><input type="hidden" name="name">
-      <label class="oo-label">Masterlist file<input type="file" accept=".xlsx" data-xlsx-upload required></label>
+      <label class="oo-label">Masterlist file<input type="file" accept=".xlsx,.csv" data-xlsx-upload required></label>
       <label><input type="checkbox" name="replace" value="1"> Products not in this file are no longer listed (full export)</label>
       <button class="button" type="submit">Upload</button>
     </form>

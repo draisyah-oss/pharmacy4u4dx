@@ -184,10 +184,12 @@ function oosRoutes(db, { now, trackerStart }) {
     try {
       if (!oos.canAnswer(req.user)) return forbid(res, 'The product list is kept by the inventory team and admin.');
       const m = /^data:[^;]*;base64,([A-Za-z0-9+/=]+)$/.exec(String(req.body.file || ''));
-      if (!m) return back(res, '/oos/products', 'Choose the Dynamod masterlist (.xlsx) first.', 'err');
+      if (!m) return back(res, '/oos/products', 'Choose the Dynamod masterlist (.xlsx or .csv) first.', 'err');
       const buf = Buffer.from(m[1], 'base64');
-      if (buf.subarray(0, 2).toString() !== 'PK') return back(res, '/oos/products', 'That isn’t an Excel (.xlsx) file.', 'err');
-      const parsed = await products.parseXlsx(buf);
+      // 11 Nov: the weekly stock export as .csv works too (zakat quotations need its stock balance).
+      const isCsv = /\.csv$/i.test(String(req.body.name || '')) || /stock id/i.test(buf.subarray(0, 300).toString('utf8'));
+      if (!isCsv && buf.subarray(0, 2).toString() !== 'PK') return back(res, '/oos/products', 'That isn’t an Excel (.xlsx) or .csv file.', 'err');
+      const parsed = isCsv ? products.parseCsv(buf.toString('utf8')) : await products.parseXlsx(buf);
       if (parsed.error) return back(res, '/oos/products', parsed.error, 'err');
       const r = await products.upsertProducts(db, parsed.rows, { deactivateMissing: req.body.replace === '1' });
       const info = { source: String(req.body.name || 'upload').slice(0, 120), at: now().toISOString(), by: req.user.display_name, ...r };
