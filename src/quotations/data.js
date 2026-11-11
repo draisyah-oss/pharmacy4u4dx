@@ -414,15 +414,41 @@ async function copy(db, user, id, { now }) {
   return { id: nid };
 }
 
-async function removeDraft(db, user, id) {
+// Who deletes: a draft – the person who started it or admin; an issued quotation (12 Nov, CEO: "have
+// option delete so it's easier", e.g. a test quote) – admin and Alia (the people who own the numbers).
+const canDeleteIssued = (u) => canSettings(u);
+function canDelete(user, q) {
+  if (!q) return false;
+  return q.status === 'draft' ? (user.role === 'admin' || q.created_by === user.id) : canDeleteIssued(user);
+}
+
+// Delete a quotation for good (the audit log keeps what it was). An issued one needs confirm = '1'.
+// If it was the latest number of its series and year, the number is given back (the next quotation
+// gets it); an older number is not reused.
+async function removeQuote(db, user, id, { confirm = false } = {}) {
   const q = await loadOne(db, id);
   if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
-  if (q.status !== 'draft') return { error: 'An issued quotation is kept (its number is used).' };
-  if (!(user.role === 'admin' || q.created_by === user.id)) return { error: 'Only the person who started this draft (or admin) can delete it.' };
-  await db.query('DELETE FROM quotations WHERE id = $1', [id]);
-  await audit(db, user, 'delete', `quotation ${id}`, { rfq: q.rfq_description, lines: q.lines.length }, null);
-  return { ok: 'Draft deleted.' };
+  if (!canDelete(user, q)) {
+    return { error: q.status === 'draft' ? 'Only the person who started this draft (or admin) can delete it.' : 'Only admin and Alia delete an issued quotation.' };
+  }
+  if (q.status === 'draft') {
+    await db.query('DELETE FROM quotations WHERE id = $1', [id]);
+    await audit(db, user, 'delete', `quotation ${id}`, { rfq: q.rfq_description, lines: q.lines.length }, null);
+    return { ok: 'Draft deleted.' };
+  }
+  if (!confirm) return { error: `Tick “Yes, delete ${q.ref}” first.` };
+  let back = false;
+  await db.transaction(async (tx) => {
+    await tx.query('DELETE FROM quotations WHERE id = $1', [id]);
+    const r = await tx.query('UPDATE quotation_series SET next_no = $3, updated_at = now() WHERE series = $1 AND year = $2 AND next_no = $3 + 1', [q.series, q.ref_year, q.ref_no]);
+    back = Boolean(r.rowCount || r.affectedRows);
+    await tx.query('INSERT INTO audit_log (user_id, action, table_name, record_key, old_value, new_value) VALUES ($1, $2, $3, $4, $5, $6)',
+      [user.id, 'delete', 'quotations', q.ref, JSON.stringify({ id, outlet: q.outlet, quote_date: q.quote_date, total: q.total, recipient: q.recipient.split('\n')[0], rfq: q.rfq_description,
+        lines: q.lines.map((l) => ({ description: l.description, qty: l.qty, unit_price: l.unit_price })) }), JSON.stringify({ number_given_back: back })]);
+  });
+  return { ok: `${q.ref} deleted.${back ? ` The next ${q.series} quotation gets ${q.ref} again.` : ` ${q.ref} won’t be used again (newer numbers were already given out).`}` };
 }
+const removeDraft = (db, user, id) => removeQuote(db, user, id);
 
 async function itemMasterInfo(db) {
   const r = (await db.query(`SELECT count(*) FILTER (WHERE active)::int AS active, count(*) FILTER (WHERE active AND balance IS NOT NULL)::int AS with_balance,
@@ -435,5 +461,5 @@ async function itemMasterInfo(db) {
 module.exports = {
   SERIES, DEFAULTS, MAX_LINES, BRANCHES, CODES, SERIES_LIST, IMAGE_KINDS, outletsFor, canMake, canOpen, canSeeCost, canSettings, settings, saveSettings,
   branchConfigs, branchConfig, saveBranch, saveImage, image, saveSignature, signature, seriesRows, setNextNo,
-  list, loadOne, lineTotal, totalOf, createDraft, candidates, saveDraft, missing, issue, pdfOf, copy, removeDraft, itemMasterInfo,
+  list, loadOne, lineTotal, totalOf, createDraft, candidates, saveDraft, missing, issue, pdfOf, copy, removeDraft, removeQuote, canDelete, canDeleteIssued, itemMasterInfo,
 };

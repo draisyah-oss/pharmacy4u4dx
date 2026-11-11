@@ -6,7 +6,7 @@
 //   POST /quotations/:id/generate        take the next QT-WM-YYYY-#### and make the PDF
 //   GET  /quotations/:id/pdf             the PDF as issued
 //   POST /quotations/:id/copy            new draft from this one
-//   POST /quotations/:id/delete          delete a draft
+//   POST /quotations/:id/delete          delete a draft, or an issued quotation (admin / Alia, confirm=1)
 //   GET  /quotations/settings, POST /quotations/settings (+ /signature, /series)  admin & Alia
 
 const express = require('express');
@@ -103,7 +103,7 @@ function quotationRoutes(db, { now }) {
         if (!seeCost) { l.cost_at_quote = null; l.product_cost = null; l.markupPct = null; for (const m of l.matches || []) m.cost = null; }
       }
       res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, missing: q.status === 'draft' ? D.missing(q) : [],
-        lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: q.status === 'draft' && (req.user.role === 'admin' || q.created_by === req.user.id),
+        lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: D.canDelete(req.user, q),
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'quotations' });
     } catch (err) { next(err); }
   });
@@ -154,7 +154,7 @@ function quotationRoutes(db, { now }) {
 
   router.post('/quotations/:id/delete', gate, async (req, res, next) => {
     try {
-      const r = await D.removeDraft(db, req.user, id(req));
+      const r = await D.removeQuote(db, req.user, id(req), { confirm: req.body.confirm === '1' });
       back(res, r.error ? `/quotations/${id(req)}` : '/quotations', r.error || r.ok, r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });

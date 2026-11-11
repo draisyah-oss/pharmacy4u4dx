@@ -297,3 +297,42 @@ test('Bangi: no signer set yet → no PDF until admin / Alia sets one; pictures 
   const set = await a.get('/quotations/settings');
   for (const s of ['QT-WM', 'QT-JH', 'QT-BR', 'QT-BGI', 'QT-AMP']) assert.match(set.html, new RegExp(s));
 });
+
+test('delete an issued quotation: admin / Alia only, ticked to confirm; the newest number is given back', async () => {
+  const idOf = async (ref) => (await db.query('SELECT id FROM quotations WHERE ref = $1', [ref])).rows[0].id;
+  const next = async (series) => (await db.query('SELECT next_no FROM quotation_series WHERE series = $1 AND year = 2026', [series])).rows[0].next_no;
+  const h = await login('hafizah', 'pass-word-1');
+  const id403 = await idOf('QT-WM-2026-0403'); const id404 = await idOf('QT-WM-2026-0404');
+  assert.doesNotMatch((await h.get(`/quotations/${id404}`)).html, /Delete this quotation/, 'the branch manager has no delete button');
+  assert.match(decodeURIComponent((await h.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /Only admin and Alia delete an issued quotation/);
+  const a = await login('alia', 'pass-word-1');
+  assert.match((await a.get(`/quotations/${id404}`)).html, /Yes, delete QT-WM-2026-0404/);
+  assert.match(decodeURIComponent((await a.post(`/quotations/${id404}/delete`, {})).location), /Tick “Yes, delete QT-WM-2026-0404” first/);
+  assert.equal(await next('QT-WM'), 405);
+  // 0404 is the newest → deleted and the number comes back
+  let r = await a.post(`/quotations/${id404}/delete`, { confirm: '1' });
+  assert.match(decodeURIComponent(r.location), /QT-WM-2026-0404 deleted\. The next QT-WM quotation gets QT-WM-2026-0404 again/);
+  assert.equal(await next('QT-WM'), 404);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM quotations WHERE id = $1', [id404])).rows[0].n, 0);
+  assert.equal((await db.query('SELECT count(*)::int AS n FROM quotation_lines WHERE quotation_id = $1', [id404])).rows[0].n, 0);
+  // now 0403 is the newest → also given back
+  r = await a.post(`/quotations/${id403}/delete`, { confirm: '1' });
+  assert.match(decodeURIComponent(r.location), /gets QT-WM-2026-0403 again/);
+  assert.equal(await next('QT-WM'), 403);
+  const log = (await db.query("SELECT old_value FROM audit_log WHERE table_name = 'quotations' AND action = 'delete' AND record_key = 'QT-WM-2026-0403'")).rows[0];
+  assert.equal(Number(JSON.parse(typeof log.old_value === 'string' ? log.old_value : JSON.stringify(log.old_value)).total), 7264.2, 'the audit log keeps what was deleted');
+  // an older number is not given back: make two JH quotes, delete the older one
+  const jh = await login('afifah', 'pass-word-1');
+  const mk = async () => {
+    const c = await jh.post('/quotations', { items: 'Ensure Gold 850g ×1' });
+    const qid = Number(c.location.split('/').pop()); const [l1] = await lineIds(qid);
+    await jh.post(`/quotations/${qid}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
+    await jh.post(`/quotations/${qid}/generate`, {});
+    return qid;
+  };
+  const older = await mk(); await mk();
+  const before = await next('QT-JH');
+  r = await a.post(`/quotations/${older}/delete`, { confirm: '1' });
+  assert.match(decodeURIComponent(r.location), /won’t be used again/);
+  assert.equal(await next('QT-JH'), before);
+});

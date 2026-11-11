@@ -1756,3 +1756,5 @@ body.sc-open { overflow: hidden; }
 .qt-pics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 @media (max-width: 700px) { .qt-pics { grid-template-columns: 1fr; } }
 .qt-pic { border: 1px dashed var(--line); border-radius: 12px; padding: 10px; }
+.qt-delete { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.qt-danger { color: var(--short); box-shadow: inset 0 0 0 2px var(--short); }
