@@ -59,7 +59,7 @@
       var den = valueOf(h.den);
       if (v === null) return { state: '', text: '', fill: 0 };
       if (den === null || isNaN(den) || den === 0) {
-        return { state: '', text: 'Fill in “' + h.denLabel + '” to see the %.', fill: 0 };
+        return { state: '', text: 'Counted. The % shows once “' + h.denLabel + '” is in.', fill: 0 };
       }
       var r = v / den;
       return {

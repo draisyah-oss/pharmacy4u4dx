@@ -79,7 +79,7 @@
             <label class="qt-desc">Description on the quotation <input type="text" name="<%= k %>[desc]" value="<%= l.description %>" maxlength="200" placeholder="filled in when you pick an item"></label>
             <label>Price per unit (RM) <input type="text" name="<%= k %>[price]" value="<%= l.unit_price !== null ? L.money(l.unit_price).replace(/,/g, '') : '' %>" inputmode="decimal" placeholder="<%= l.auto_price ? l.auto_price.toFixed(2) : (l.need_cost ? 'ask Alia' : '') %>"></label>
             <div class="qt-badge-wrap">
-              <% if (l.badge) { %><span class="qt-badge qt-badge-<%= l.badge %>"><%= badgeTxt[l.badge] %><%= seeCost && l.markupPct !== null ? ' · ' + pctTxt(l.markupPct) + ' on cost' : '' %></span><% } %>
+              <% if (l.badge) { %><span class="qt-badge qt-badge-<%= l.badge %>"><%= badgeTxt[l.badge] %><%= l.markupPct !== null ? ' · ' + pctTxt(l.markupPct) + ' on cost' : '' %></span><% } %>
               <% if (l.price_source === 'override') { %><span class="small muted">typed (auto RM<%= rm(l.auto_price) %>)</span><% } %>
               <% if (seeCost && l.cost_at_quote) { %><span class="small muted">cost RM<%= Number(l.cost_at_quote).toFixed(2) %></span><% } %>
             </div>

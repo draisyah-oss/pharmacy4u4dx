@@ -217,6 +217,14 @@ test('"…within 7 days" bigger than its total is refused, and nothing on the pa
   assert.equal(await entry('WM', '2026-10-18', 'walkin'), null);
 });
 
+test('12 Nov (CEO): "…within 7 days" can be counted before its total is in', async () => {
+  const b = await pinLogin('hazera', '1111');
+  const csrf = await b.csrf();
+  const r = await b.post('/daily', { _csrf: csrf, date: '2026-10-17', 'f[zkc7d]': '2' });
+  assert.match(r.location, /saved=1/);
+  assert.equal(await entry('WM', '2026-10-17', 'zkc7d'), 2);
+});
+
 test('text, negative numbers and bad yes/no values are refused', async () => {
   const b = await pinLogin('hazera', '1111');
   const csrf = await b.csrf();

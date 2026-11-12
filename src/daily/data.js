@@ -165,8 +165,10 @@ function parseEntries(fields, input, maxOf) {
     if (errors[num] || values[num] === null || values[num] === undefined) continue;
     const parent = values[den];
     const parentLabel = fields.find((f) => f.key === den)?.label || den;
-    if (parent === null || parent === undefined) errors[num] = `Fill in “${parentLabel}” too.`;
-    else if (values[num] > parent) errors[num] = `Can’t be more than “${parentLabel}” (${parent}).`;
+    // 12 Nov (CEO): the part can be counted before its total is in (POS transactions only arrive
+    // from the sales sheet at closing) – the "can't be more than" check runs once the total is there.
+    if (parent === null || parent === undefined) continue;
+    if (values[num] > parent) errors[num] = `Can’t be more than “${parentLabel}” (${parent}).`;
   }
   return { values, errors };
 }
