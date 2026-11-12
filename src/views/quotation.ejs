@@ -28,6 +28,7 @@
           <form method="post" action="/quotations/<%= q.id %>/outcome" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="outcome" value="won"><button class="button small-button qt-won" type="submit">✔ Won</button></form>
           <form method="post" action="/quotations/<%= q.id %>/outcome" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="outcome" value="cancelled"><button class="button secondary small-button" type="submit">✕ Cancelled</button></form>
           <span class="muted small"><%= zakatLinked ? 'Won counts as a contract won in Zakat claims.' : '' %></span>
+          <% if (canDeleteLater) { %><p class="muted small qt-hint">To delete this quotation, mark it <b>✕ Cancelled</b> first – the Delete box then appears here.</p><% } %>
         <% } else { %>
           <span class="qt-chip qt-chip-<%= q.status %>"><%= q.status === 'won' ? '✔ Won' : '✕ Cancelled' %></span>
           <span class="muted small"><%= q.outcome_name ? 'by ' + q.outcome_name : '' %><%= q.outcome_on ? ', ' + dmy(q.outcome_on) : '' %></span>

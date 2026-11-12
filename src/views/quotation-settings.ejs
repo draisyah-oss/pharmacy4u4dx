@@ -52,7 +52,7 @@
         <label class="oo-label">Name under the signature <input type="text" name="signer" value="<%= b.signer %>" maxlength="80" placeholder="FULL NAME AS ON THE QUOTATION"></label>
         <label class="oo-label">Title under the name <input type="text" name="title" value="<%= b.title %>" maxlength="60" placeholder="(Pharmacist)"></label>
       </div>
-      <% if (code !== 'WM') { %><label class="oo-label">Address in the footer <span class="muted small">(under “Pharmacy4u <%= b.name %>” in WM’s footer band – up to 3 lines, e.g. street, town, Tel)</span><textarea name="footer_lines" rows="3" maxlength="400"><%= b.footer_lines %></textarea></label><% } %>
+      <% if (true) { %><label class="oo-label">Address in the footer <span class="muted small">(under “Pharmacy4u <%= b.name %>” in the letterhead’s footer – up to 3 lines: street, town, Tel)</span><textarea name="footer_lines" rows="3" maxlength="400"><%= b.footer_lines %></textarea></label><% } %>
       <button class="button secondary" type="submit">Save <%= code %></button>
     </form>
     <div class="qt-pics">

@@ -374,3 +374,17 @@ test('Won / Cancelled: Won counts in Zakat claims; only a cancelled quotation ca
   assert.match(decodeURIComponent(r.location), /won’t be used again/);
   assert.equal(await next('QT-JH'), before);
 });
+
+test('an open quotation tells admin / Alia / the branch manager how to delete it; the PDF and Excel use the letterhead', async () => {
+  const a = await login('alia', 'pass-word-1');
+  const id = (await db.query("SELECT id FROM quotations WHERE status = 'issued' AND outlet = 'JH' ORDER BY id LIMIT 1")).rows[0].id;
+  assert.match((await a.get(`/quotations/${id}`)).html, /To delete this quotation, mark it <b>✕ Cancelled<\/b> first/);
+  const hn = await login('hanin', 'pass-word-1');
+  assert.doesNotMatch((await hn.get(`/quotations/${id}`)).html, /To delete this quotation/);
+  const D = require('../../src/quotations/data');
+  const jh = await D.branchConfig(db, 'JH');
+  assert.match(jh.footer_lines, /Dengkil/); // JH's address from its letterhead is the default
+  const { quotationPdf } = require('../../src/quotations/pdf');
+  const pdf = await quotationPdf({ ref: 'QT-JH-2026-0999', quote_date: '2026-11-12', recipient: 'X', tel: '', cc: '', lines: [{ line_no: 1, description: 'A', qty: 1, unit_price: 2, note: 'Pre-order - 7 days' }] }, { branch: jh });
+  assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+});

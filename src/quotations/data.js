@@ -17,8 +17,8 @@ const MAX_LINES = 60;
 // ("use same letterhead with WM"): same banner and title; the footer band carries the branch's own
 // name and address. Names, titles and footer address can be changed on Quotation settings.
 const BRANCHES = {
-  WM: { series: 'QT-WM', layout: 'p4u', name: 'Wangsa Maju', signer: 'ALIA SURAYA BINTI ESA', title: '(Pharmacist)', footer_lines: '' },
-  JH: { series: 'QT-JH', layout: 'p4u', name: 'Jenderam Hilir', signer: 'NURUL AFIFAH BINTI ADDNAN', title: '(Pharmacist)', footer_lines: '' },
+  WM: { series: 'QT-WM', layout: 'p4u', name: 'Wangsa Maju', signer: 'ALIA SURAYA BINTI ESA', title: '(Pharmacist)', footer_lines: 'G-1, Seasons Garden, Seksyen 10,\nJalan 1/27e, 53300 Kuala Lumpur\nTel: 019-878 9126' },
+  JH: { series: 'QT-JH', layout: 'p4u', name: 'Jenderam Hilir', signer: 'NURUL AFIFAH BINTI ADDNAN', title: '(Pharmacist)', footer_lines: 'No 11 (A), Jalan W/P 1, Taman Warisan\nPutra, 43800 Dengkil, Selangor\nTel: 011-58982885' },
   BR: { series: 'QT-BR', layout: 'p4u', name: 'Bandar Rinching', signer: 'NUR AMIRAH ABD KARIM', title: '(Pharmacist)', footer_lines: '' },
   Bangi: { series: 'QT-BGI', layout: 'p4u', name: 'Bangi', signer: '', title: '(Pharmacist)', footer_lines: '' },
   Ampang: { series: 'QT-AMP', layout: 'p4u', name: 'Ampang', signer: '', title: '(Pharmacist)', footer_lines: '' },
@@ -97,7 +97,7 @@ async function saveBranch(db, user, code, body) {
   let all = {}; try { all = r ? JSON.parse(r.value) : {}; } catch { all = {}; }
   const t = (v, n) => String(v || '').trim().slice(0, n);
   const next = { signer: t(body.signer, 80).toUpperCase(), title: t(body.title, 60),
-    footer_lines: String(body.footer_lines || '').replace(/\r/g, '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 4).join('\n') };
+    footer_lines: String(body.footer_lines || '').replace(/\r/g, '').split('\n').map((x) => x.trim()).filter(Boolean).slice(0, 3).join('\n') };
   if (mentionsSalary(...Object.values(next))) return { error: SALARY_MESSAGE };
   const old = all[code] || null;
   all[code] = next;

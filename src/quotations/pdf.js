@@ -1,4 +1,7 @@
 // The quotation PDF (11 Nov 2026) – laid out like quotation_template_QT-WM-2026-0224.pdf (A4 portrait).
+// 12 Nov (CEO): on the Pharmacy4U letterhead ("0. LETTERHEAD JH") for every branch – the banner across the
+// top and the footer band across the bottom, edge to edge; the footer's address panel shows the branch's own
+// name, address and phone. The body is the template's, moved down DY (top) / DB (bottom) to fit inside.
 // Positions are the template's own (points from the top-left; text placed by its baseline), font
 // Carlito (free, same shape and widths as Calibri) – 9.3 pt headers, 8.4 pt table.
 // More lines than fit → page 2 …; every page repeats the header, "Page x of y" and the footer;
@@ -14,19 +17,24 @@ const asset = (f) => fs.readFileSync(path.join(ASSETS, f));
 let cache = null;
 const files = () => (cache = cache || {
   regular: asset('Carlito.ttf'), bold: asset('Carlito-Bold.ttf'),
-  header: asset('header_banner.png'), title: asset('title_quotation.png'), footer: asset('footer_wm.png'),
+  letterhead: asset('letterhead_header.png'), letterfoot: asset('letterhead_footer.png'), title: asset('title_quotation.png'),
 });
 
 const H = 9.28; // header / body text (template 13 × 0.714)
 const T = 8.35; // table text (11.7 × 0.714)
 const LEFT = 56.1; const INDENT = 86.1; const VALUE_X = 441.0;
 const LINE = 14.28; // 20 × 0.714
-const ROW_TOP = 294.24; // first table row baseline
+const PAGE_W = 595.28;
+const HEAD_H = PAGE_W * 481 / 1653; // letterhead banner (1653 × 481 px) across the top → 173 pt
+const FOOT_Y = 764.5; const FOOT_H = PAGE_W * 212 / 1653; // footer band (1653 × 212 px) to the bottom edge
+const DY = 72; // the template's body moved down below the taller banner
+const DB = 70; // TOTAL / note / signature moved down to just above the footer band
+const ROW_TOP = 294.24 + DY; // first table row baseline
 const ROW_GAP = 17.1; // single-line row pitch
 const SUB_LINE = 10.7; // second line (pre-order note) under the description; a 2-line row is 27.8 pt
 const DESC_W = 228; // description column width (86 → 314)
-const LAST_PAGE_LIMIT = 545; // rows must end above TOTAL (thick rule at 554)
-const PAGE_LIMIT = 680; // other pages: rows end above the footer (693)
+const LAST_PAGE_LIMIT = 545 + DB; // rows must end above TOTAL (thick rule)
+const PAGE_LIMIT = 750; // other pages: rows end above the footer band
 const COL = { item: 59.7, desc: 178.25, qty: 329.6, price: 370.3, total: 456.7 };
 
 const dmy = (iso) => { const [y, m, d] = String(iso).split('-'); return `${d}/${m}/${y}`; };
@@ -82,49 +90,52 @@ function paginate(heights, shift = 0) {
   return pages;
 }
 
-// The footer band: the branch's own footer picture if uploaded; else WM's footer picture, and for the
-// other branches WM's address panel (navy #28326e) is covered and the branch's name and typed address
-// are printed in the same place and style (CEO 11 Nov: same letterhead as WM for every branch).
+// The footer band: the branch's own footer picture if one was uploaded (a full replacement); else the
+// letterhead's footer with its address panel (navy #2a326a, right of the pin / phone icons) painted over
+// and "Pharmacy4u <branch>" + the branch's address printed there in white bold, as on the letterhead.
 function footer(doc, opts) {
   const b = opts.branch || {};
-  if (opts.footer) { try { doc.image(opts.footer, 56.1, 693.1, { width: 477.7, height: 63.6 }); return; } catch (err) { /* use WM's */ } }
-  doc.image(files().footer, 56.1, 693.1, { width: 477.7, height: 63.6 });
-  if (!b.code || b.code === 'WM') return;
-  doc.rect(352.4, 701.6, 178.5, 43).fill('#28326e');
+  if (opts.footer) { try { doc.image(opts.footer, 0, FOOT_Y, { width: PAGE_W, height: FOOT_H }); return; } catch (err) { /* use the letterhead's */ } }
+  doc.image(files().letterfoot, 0, FOOT_Y, { width: PAGE_W, height: FOOT_H });
+  doc.rect(369.6, 778.9, 211.3, 55.2).fill('#2a326a');
   doc.fillColor('#ffffff');
   const lines = [`Pharmacy4u ${b.name || ''}`.trim(), ...String(b.footer_lines || '').split('\n').filter(Boolean)].slice(0, 4);
-  lines.forEach((t, i) => { doc.font('B').fontSize(8.6); let size = 8.6; while (size > 6 && doc.widthOfString(t, NOLIG) > 172) { size -= 0.2; doc.fontSize(size); } at(doc, 'B', size, t, 355.3, 708.8 + i * 11.2); });
+  lines.forEach((t, i) => {
+    let size = 9.5; doc.font('Helvetica-Bold').fontSize(size);
+    while (size > 6.5 && doc.widthOfString(t) > 207) { size -= 0.25; doc.fontSize(size); }
+    doc.text(t, 371.6, 788.5 + i * 14 - (doc._font.ascender / 1000) * size, { lineBreak: false });
+  });
   doc.fillColor('#000000');
 }
 
 function pageFrame(doc, q, pageNo, pageCount, opts = {}) {
   const f = files();
   doc.addPage({ size: 'A4', margin: 0 });
-  doc.image(f.header, 54, 28.35, { width: 443.4, height: 106.4 });
-  doc.image(f.title, 204.7, 108.3, { width: 132.1, height: 34.3 });
+  doc.image(f.letterhead, 0, 0, { width: PAGE_W, height: HEAD_H });
+  doc.image(f.title, (PAGE_W - 132.1) / 2, 108.3 + DY, { width: 132.1, height: 34.3 });
   // To:
-  at(doc, 'B', H, 'To:', LEFT, 154.47);
+  at(doc, 'B', H, 'To:', LEFT, 154.47 + DY);
   const rec = String(q.recipient || '').split('\n').filter(Boolean).slice(0, 7);
-  rec.forEach((t, i) => at(doc, 'R', H, t, INDENT, 154.47 + i * LINE));
-  at(doc, 'R', H, `TEL :${q.tel ? ` ${q.tel}` : ''}`, LEFT, 154.47 + Math.max(5, rec.length) * LINE);
+  rec.forEach((t, i) => at(doc, 'R', H, t, INDENT, 154.47 + DY + i * LINE));
+  at(doc, 'R', H, `TEL :${q.tel ? ` ${q.tel}` : ''}`, LEFT, 154.47 + DY + Math.max(5, rec.length) * LINE);
   // Your Ref / C. C. / Date / Page – labels right-aligned to the end of "Your Ref :"
   doc.font('B').fontSize(H);
   const right = 399.3 + doc.widthOfString('Your Ref :');
   [['Your Ref :', q.ref], ['C. C. :', q.cc || ''], ['Date :', dmy(q.quote_date)], ['Page :', `${pageNo} of ${pageCount}`]].forEach(([label, value], i) => {
-    const y = 154.47 + i * LINE;
+    const y = 154.47 + DY + i * LINE;
     at(doc, 'B', H, label, right, y, { align: 'right' });
     if (value) at(doc, 'R', H, value, VALUE_X, y);
   });
   const shift = Math.max(0, rec.length - 5) * LINE; // a longer address pushes the table down
-  at(doc, 'R', H, 'Thank you for your inquiry. We are pleased to submit our quote as follows:', LEFT, 255.15 + shift);
+  at(doc, 'R', H, 'Thank you for your inquiry. We are pleased to submit our quote as follows:', LEFT, 255.15 + DY + shift);
   // Table header – grey band
-  doc.rect(53.3, 265.4 + shift, 462.7, 19.3).fill('#d9d9d9');
+  doc.rect(53.3, 265.4 + DY + shift, 462.7, 19.3).fill('#d9d9d9');
   doc.fillColor('#000000');
-  at(doc, 'B', H, 'Item', COL.item, 278.0 + shift);
-  at(doc, 'B', H, 'Description', COL.desc, 278.0 + shift);
-  at(doc, 'B', H, 'Qty', COL.qty, 278.0 + shift);
-  at(doc, 'B', H, 'U/ Price (RM)', COL.price, 278.0 + shift);
-  at(doc, 'B', H, 'Total (RM)', COL.total, 278.0 + shift);
+  at(doc, 'B', H, 'Item', COL.item, 278.0 + DY + shift);
+  at(doc, 'B', H, 'Description', COL.desc, 278.0 + DY + shift);
+  at(doc, 'B', H, 'Qty', COL.qty, 278.0 + DY + shift);
+  at(doc, 'B', H, 'U/ Price (RM)', COL.price, 278.0 + DY + shift);
+  at(doc, 'B', H, 'Total (RM)', COL.total, 278.0 + DY + shift);
   footer(doc, opts);
   return shift;
 }
@@ -165,24 +176,24 @@ async function quotationPdf(q, opts = {}) {
       y += heights[i];
     }
     if (p < pagesFinal.length - 1) {
-      at(doc, 'R', T, 'Continued on the next page …', 516, Math.min(y + 4, 685), { align: 'right' });
+      at(doc, 'R', T, 'Continued on the next page …', 516, Math.min(y + 4, 755), { align: 'right' });
       return;
     }
     // TOTAL: thick rule, total, double rule
-    doc.lineWidth(2.14).moveTo(355.3, 554.3).lineTo(516.0, 554.3).stroke('#000000');
-    at(doc, 'B', H, 'TOTAL', 348.4, 565.06, { align: 'right' });
-    at(doc, 'B', H, `RM${L.money(total)}`, 435.6, 565.06, { align: 'center' });
-    doc.lineWidth(0.71).moveTo(355.3, 568.6).lineTo(516.0, 568.6).stroke('#000000');
-    doc.lineWidth(0.71).moveTo(355.3, 570.0).lineTo(516.0, 570.0).stroke('#000000');
-    at(doc, 'R', T, 'Note : Prices are subjected to change without prior notice. We hope that our quotation is favourable to you and looking forward to', LEFT, 589.1);
-    at(doc, 'R', T, 'receive your valued orders in due course. Thank and regards.', LEFT, 599.3);
-    at(doc, 'R', H, 'Yours faithfully,', INDENT, 624.3);
+    doc.lineWidth(2.14).moveTo(355.3, 554.3 + DB).lineTo(516.0, 554.3 + DB).stroke('#000000');
+    at(doc, 'B', H, 'TOTAL', 348.4, 565.06 + DB, { align: 'right' });
+    at(doc, 'B', H, `RM${L.money(total)}`, 435.6, 565.06 + DB, { align: 'center' });
+    doc.lineWidth(0.71).moveTo(355.3, 568.6 + DB).lineTo(516.0, 568.6 + DB).stroke('#000000');
+    doc.lineWidth(0.71).moveTo(355.3, 570.0 + DB).lineTo(516.0, 570.0 + DB).stroke('#000000');
+    at(doc, 'R', T, 'Note : Prices are subjected to change without prior notice. We hope that our quotation is favourable to you and looking forward to', LEFT, 589.1 + DB);
+    at(doc, 'R', T, 'receive your valued orders in due course. Thank and regards.', LEFT, 599.3 + DB);
+    at(doc, 'R', H, 'Yours faithfully,', INDENT, 624.3 + DB);
     if (signature) {
-      try { doc.image(signature, 160.4, 603.9, { fit: [37.1, 59.3], align: 'center', valign: 'center' }); } catch (err) { /* a bad picture never stops the quotation */ }
+      try { doc.image(signature, 160.4, 603.9 + DB, { fit: [37.1, 59.3], align: 'center', valign: 'center' }); } catch (err) { /* a bad picture never stops the quotation */ }
     }
-    at(doc, 'B', H, b.signer || 'ALIA SURAYA BINTI ESA', INDENT, 675.1);
+    at(doc, 'B', H, b.signer || 'ALIA SURAYA BINTI ESA', INDENT, 675.1 + DB);
     const title = b.signer ? (b.title || '') : '(Pharmacist)';
-    if (title) at(doc, 'R', 10.2, title, INDENT, 688.1);
+    if (title) at(doc, 'R', 10.2, title, INDENT, 688.1 + DB);
   });
   doc.end();
   await done;
