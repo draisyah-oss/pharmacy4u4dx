@@ -94,13 +94,13 @@ function quotationRoutes(db, { now }) {
       if (q.status === 'draft') {
         for (const l of q.lines) l.matches = await D.candidates(db, l.search_text || l.portal_text);
       }
-      const seeCost = D.canSeeCost(req.user);
-      // Badges and auto prices are worked out here, then cost is taken off for people who don't see it.
+      // 12 Nov (CEO): everyone who can open a quotation sees the cost and the margin % on it.
+      // Cost never goes on the customer PDF.
+      const seeCost = true;
       for (const l of q.lines) {
         l.badge = l.unit_price > 0 ? L.badge(l.unit_price, l.cost_at_quote, s.markup_floor) : null;
         l.markupPct = L.markupOf(l.unit_price, l.cost_at_quote);
         for (const m of l.matches || []) { m.price = L.autoPrice(m.cost, s.markup_default); }
-        if (!seeCost) { l.cost_at_quote = null; l.product_cost = null; l.markupPct = null; for (const m of l.matches || []) m.cost = null; }
       }
       res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, missing: q.status === 'draft' ? D.missing(q) : [],
         lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: D.canDelete(req.user, q),

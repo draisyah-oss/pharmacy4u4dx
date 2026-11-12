@@ -18,6 +18,7 @@
   </header>
   <%- include('partials/hd-needs') %>
   <%- include('partials/hd-company', { H: hl, branches: null, links: false }) %>
+  <% if (hl.hqMove) { %><%- include('partials/hqmove', { M: hl.hqMove, canOpen: hl.hqMoveOpen }) %><% } %>
   <%- include('partials/hd-news-line', { H: hl }) %>
 </main>
 </body>

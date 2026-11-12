@@ -132,7 +132,7 @@ function createApp(db, { now = () => new Date(), salesSheet = null, inventoryDri
     } catch (err) { console.error('Needs you:', err.message); }
     // Side menu (19 Oct): milestones with a step checklist, as sub-items under Projects.
     try {
-      if (req.method === 'GET' && ['admin', 'hq', 'hq_staff'].includes(req.user.role)) {
+      if (req.method === 'GET' && ['admin', 'hq', 'hq_staff', 'branch_manager'].includes(req.user.role)) {
         res.locals.stepMenu = await require('./hq/team').stepMenu(db, req.user);
       }
     } catch (err) { console.error('Menu steps:', err.message); }

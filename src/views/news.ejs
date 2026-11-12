@@ -15,9 +15,10 @@
     <div class="hd-col">
       <section class="mh-card" aria-labelledby="hl-news">
   <h2 id="hl-news">📣 News</h2>
+  <% if (H.hqMove) { %><%- include('partials/hqmove', { M: H.hqMove, canOpen: H.hqMoveOpen }) %><% } %>
   <% if (H.rally) { %><%- include('partials/rally', { R: H.rally, myCode: H.myCode }) %><% } %>
   <% if (H.achievers) { %><%- include('partials/achievers', { A: H.achievers }) %><% } %>
-  <% if (!H.news.length && !H.achievers && !H.rally) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
+  <% if (!H.news.length && !H.achievers && !H.rally && !H.hqMove) { %><p class="muted"><%= H.canPost ? 'No news yet – share something good below.' : 'No news yet.' %></p><% } %>
   <ul class="hl-news">
     <% H.news.forEach(function (n) { %>
       <li class="<%= n.pinned ? 'is-pinned' : '' %>"><span class="hl-emoji" aria-hidden="true"><%= n.emoji || '📌' %></span>

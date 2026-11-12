@@ -213,10 +213,15 @@ async function buildHighlights(db, { user, now, trackerStart }) {
   const tip = require('./tazkirah').tipFor(today);
   const achievers = require('./achievers').current(today);
   const rally = require('./rally').current(today);
+  // 12 Nov: HQ move to Ampang – key dates and live step count for everyone; HQ, admin and Mazlina open the checklist.
+  let hqMove = null;
+  try { hqMove = await require('../hq/move').card(db, today); } catch (err) { console.error('HQ move card:', err.message); }
+  const hqMoveOpen = Boolean(hqMove) && (['admin', 'hq', 'hq_staff'].includes(user.role)
+    || (user.role === 'branch_manager' && require('../hq/move').STEPS.some((st) => require('../hq/team').ownsStep(st, user.display_name))));
   const targets = user.branch_code && ['branch_staff', 'branch_manager'].includes(user.role)
     ? await branchTargets(db, { branchCode: user.branch_code, today, trackerStart }) : null;
   const branchRow = user.branch_code && shared.wins.company && shared.wins.company.rows ? shared.wins.company.rows.find((r) => r.code === user.branch_code) : null;
-  return { today, ...shared, news, tazkirah, tip, achievers, rally, myCode: user.branch_code || null, targets, canPost: canPost(user), myBranch: branchRow };
+  return { today, ...shared, news, tazkirah, tip, achievers, rally, hqMove, hqMoveOpen, myCode: user.branch_code || null, targets, canPost: canPost(user), myBranch: branchRow };
 }
 const clearCache = () => cache.clear();
 

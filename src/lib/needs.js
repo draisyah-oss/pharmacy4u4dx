@@ -62,7 +62,12 @@ async function forHqPerson(db, user, today, add) {
   }
   const wikiLate = await one(db, "SELECT count(*) AS n FROM hq_wiki_items WHERE person_id = $1 AND status <> 'Approved' AND due_date < $2", [pid, today]);
   if (wikiLate) add('late', wikiLate, 'Wiki pages past their date', 'your checklist pages', '/hq/wiki?show=mine');
-  // Project steps (19 Oct) named on this person (or on a milestone they own when the step has no owner).
+  await forSteps(db, user, today, add);
+}
+
+// Project steps (19 Oct) named on this person (or on a milestone they own when the step has no owner).
+// 12 Nov: branch managers too (Mazlina's Ampang steps on the HQ move).
+async function forSteps(db, user, today, add) {
   const team = require('../hq/team');
   const steps = (await db.query(`SELECT s.project_id, s.step, s.owner, s.due_date, p.owner AS project_owner
     FROM hq_project_steps s JOIN hq_projects p ON p.id = s.project_id
@@ -215,6 +220,7 @@ async function buildNeeds(db, user, { at }) {
   if (user.role === 'admin' && user.is_super) await forCeo(db, today, add);
   if ((user.role === 'hq' || user.role === 'hq_staff') && user.person_id) await forHqPerson(db, user, today, add);
   if ((user.role === 'branch_manager' || user.role === 'branch_staff') && user.branch_id) await forBranch(db, user, today, at, add);
+  if (user.role === 'branch_manager') await forSteps(db, user, today, add);
   try { await forReview(db, user, today, add); } catch (err) { console.error('Needs you – review:', err.message); }
   // 8 Nov: Meetings module – my actions overdue / no update, my update for today's meeting, minutes to approve (CEO).
   try { await forMeetings(db, user, today, add); } catch (err) { console.error('Needs you – meetings:', err.message); }

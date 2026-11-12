@@ -106,7 +106,7 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
   assert.match(page.html, /DR\. P PREMIUM ADULT WIPES 40S/);
   assert.match(page.html, /PRIMES DISPOSABLE UNDERPAD 75X75 4PLY 10 SHEETS/);
   assert.match(page.html, /Need cost – ask Alia/);
-  assert.doesNotMatch(page.html, /111\.11|8\.91|7\.77|cost RM|\(cost /, 'no cost for Hafizah');
+  assert.match(page.html, /\(cost 111\.11\)/, '12 Nov (CEO): Hafizah sees the cost');
   assert.match(page.html, /RM133\.40/, 'auto price shown (111.11 × 1.2 = 133.332 → 133.40)');
 
   const [l1, l2, l3, l4] = await lineIds(qid);
@@ -146,6 +146,9 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
   page = await h.get(`/quotations/${qid}`);
   assert.match(page.html, /Below 15%/, 'amber badge for 125.00 on 111.11 (12.5%)');
   assert.match(page.html, /No cost/);
+  // 12 Nov (CEO): Hafizah sees the cost and the margin %
+  assert.match(page.html, /12\.5% on cost/);
+  assert.match(page.html, /cost RM111\.11/);
   // step 4: Brand | Qty | Price per unit | Stock option | Notes with copy buttons
   assert.match(page.html, /<th>Brand<\/th><th class="n">Qty<\/th><th class="n">Price per unit<\/th><th>Stock option<\/th><th>Notes<\/th>/);
   assert.match(page.html, /data-copy-text="ENSURE GOLD POWDER \(VANILLA\) 800G\t30\t125\.00\tPre-order\tPre-order - 7 days"/);
