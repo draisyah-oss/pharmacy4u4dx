@@ -6,7 +6,7 @@
 //   POST /quotations/:id/generate        take the next QT-WM-YYYY-#### and make the PDF
 //   GET  /quotations/:id/pdf             the PDF as issued
 //   POST /quotations/:id/copy            new draft from this one
-//   POST /quotations/:id/delete          delete a draft
+//   POST /quotations/:id/delete          delete a draft, or an issued quotation (admin / Alia, confirm=1)
 //   GET  /quotations/settings, POST /quotations/settings (+ /signature, /series)  admin & Alia
 
 const express = require('express');
@@ -102,8 +102,8 @@ function quotationRoutes(db, { now }) {
         l.markupPct = L.markupOf(l.unit_price, l.cost_at_quote);
         for (const m of l.matches || []) { m.price = L.autoPrice(m.cost, s.markup_default); }
       }
-      res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, missing: q.status === 'draft' ? D.missing(q) : [],
-        lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: q.status === 'draft' && (req.user.role === 'admin' || q.created_by === req.user.id),
+      res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, zakatLinked: D.ZAKAT_BRANCHES.includes(q.outlet), missing: q.status === 'draft' ? D.missing(q) : [],
+        lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: D.canDelete(req.user, q),
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'quotations' });
     } catch (err) { next(err); }
   });
@@ -144,6 +144,27 @@ function quotationRoutes(db, { now }) {
     } catch (err) { next(err); }
   });
 
+  router.post('/quotations/:id/outcome', gate, async (req, res, next) => {
+    try {
+      const r = await D.setOutcome(db, req.user, id(req), String(req.body.outcome || ''), { now });
+      back(res, `/quotations/${id(req)}`, r.error || r.ok, r.error ? 'err' : 'ok');
+    } catch (err) { next(err); }
+  });
+
+  // 12 Nov (CEO): the quotation as an Excel file (like the QT-2026-00xx.xlsx files the branches keep).
+  router.get('/quotations/:id/xlsx', gate, async (req, res, next) => {
+    try {
+      const q = await D.loadOne(db, id(req));
+      if (!D.canOpen(req.user, q) || q.status === 'draft') return msg(res, 404, 'That quotation isn’t in the list (or isn’t generated yet).');
+      const branch = await D.branchConfig(db, q.outlet);
+      const buf = await require('./xlsx').quotationXlsx(q, { branch, signature: await D.image(db, q.outlet, 'signature'), footer: await D.image(db, q.outlet, 'footer') });
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${q.ref}.xlsx"`);
+      res.setHeader('Cache-Control', 'private, no-store');
+      res.send(buf);
+    } catch (err) { next(err); }
+  });
+
   router.post('/quotations/:id/copy', gate, async (req, res, next) => {
     try {
       const r = await D.copy(db, req.user, id(req), { now });
@@ -154,7 +175,7 @@ function quotationRoutes(db, { now }) {
 
   router.post('/quotations/:id/delete', gate, async (req, res, next) => {
     try {
-      const r = await D.removeDraft(db, req.user, id(req));
+      const r = await D.removeQuote(db, req.user, id(req), { confirm: req.body.confirm === '1' });
       back(res, r.error ? `/quotations/${id(req)}` : '/quotations', r.error || r.ok, r.error ? 'err' : 'ok');
     } catch (err) { next(err); }
   });

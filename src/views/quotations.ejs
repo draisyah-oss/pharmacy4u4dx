@@ -35,11 +35,12 @@
     <h2>Quotations</h2>
     <% if (!rows.length) { %><p class="muted">No quotations yet.</p><% } else { %>
     <div class="table-wrap"><table class="admin-table qt-list">
-      <thead><tr><th>Ref</th><th>Branch</th><th>Date</th><th>To</th><th>RFQ</th><th class="n">Items</th><th class="n">Total</th><th>By</th><th></th></tr></thead>
+      <thead><tr><th>Ref</th><th>Status</th><th>Branch</th><th>Date</th><th>To</th><th>RFQ</th><th class="n">Items</th><th class="n">Total</th><th>By</th><th></th></tr></thead>
       <tbody>
       <% rows.forEach(function (r) { %>
-        <tr<%= r.status === 'draft' ? ' class="qt-draft"' : '' %>>
+        <tr<%= r.status === 'draft' || r.status === 'cancelled' ? ' class="qt-draft"' : '' %>>
           <td><a href="/quotations/<%= r.id %>"><%= r.ref || 'Draft' %></a></td>
+          <td><span class="qt-chip qt-chip-<%= r.status %>"><%= ({ draft: 'Draft', issued: 'Open', won: '✔ Won', cancelled: '✕ Cancelled' })[r.status] %></span></td>
           <td><%= r.outlet %></td>
           <td><%= r.quote_date ? dmy(r.quote_date) : when(r.created_at) %></td>
           <td><%= r.customer %></td>

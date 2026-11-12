@@ -1756,6 +1756,8 @@ body.sc-open { overflow: hidden; }
 .qt-pics { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
 @media (max-width: 700px) { .qt-pics { grid-template-columns: 1fr; } }
 .qt-pic { border: 1px dashed var(--line); border-radius: 12px; padding: 10px; }
+.qt-delete { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.qt-danger { color: var(--short); box-shadow: inset 0 0 0 2px var(--short); }
 
 /* 12 Nov: HQ move to Ampang – News card + layout on the checklist */
 .mv { margin: 0 0 16px; padding: 18px; border-radius: 16px; background: #eef5ff; border: 2px solid var(--brand-light, #308eff); color: #1f2937; display: flex; flex-direction: column; gap: 10px; }
@@ -1772,3 +1774,7 @@ body.sc-open { overflow: hidden; }
 .mv-bar { flex: 1 1 120px; height: 8px; background: #fff; border-radius: 4px; overflow: hidden; }
 .mv-bar span { display: block; height: 100%; background: var(--brand, #004aad); }
 .mv-layout img { display: block; max-width: 100%; height: auto; margin-top: 10px; border-radius: 8px; }
+.qt-outcome { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 10px 0 4px; }
+.qt-won { background: var(--good); }
+.qt-chip-won { background: var(--good-tint); color: var(--good); }
+.qt-chip-cancelled { background: var(--short-tint); color: var(--short); }

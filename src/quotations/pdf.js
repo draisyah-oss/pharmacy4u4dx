@@ -50,7 +50,8 @@ function at(doc, font, size, text, x, baseline, opts = {}) {
   doc.text(text, left, top, { lineBreak: false, ...NOLIG });
 }
 
-// Description lines (wrapped to the column) + the note line under it.
+// Description lines (wrapped to the column). 12 Nov (CEO): no stock option / pre-order line on the PDF –
+// Readystock / Pre-order stays in the "Fill in the zakat form" table for the portal.
 function rowLines(doc, line) {
   doc.font('R').fontSize(T);
   const words = String(line.description || '').split(/\s+/).filter(Boolean);
@@ -60,8 +61,6 @@ function rowLines(doc, line) {
     if (cur && doc.widthOfString(tryLine) > DESC_W) { out.push(cur); cur = w; } else cur = tryLine;
   }
   if (cur) out.push(cur);
-  const note = String(line.note || '').trim();
-  if (note) out.push(`(${note.replace(/^\(|\)$/g, '')})`);
   return out.length ? out : [''];
 }
 const rowHeight = (n) => ROW_GAP + (n - 1) * SUB_LINE;

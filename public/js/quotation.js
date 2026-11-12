@@ -16,6 +16,10 @@
     btn.addEventListener('click', function () { copyText(btn.getAttribute('data-copy-text'), btn); });
   });
 
+  document.querySelectorAll('form[data-qt-confirm]').forEach(function (f) {
+    f.addEventListener('submit', function (e) { if (!window.confirm(f.getAttribute('data-qt-confirm'))) e.preventDefault(); });
+  });
+
   // Picking an item (or "Need cost") saves at once and comes back to the same line.
   var form = document.getElementById('qt-form');
   if (form) {
