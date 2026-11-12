@@ -284,9 +284,9 @@ test('Bangi: no signer set yet → no PDF until admin / Alia sets one; pictures 
   const id = Number(c.location.split('/').pop());
   const [l1] = await lineIds(id);
   await bg.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
-  assert.match((await bg.get(`/quotations/${id}`)).html, /Who signs Bangi’s quotations isn’t set yet/);
-  let r = await bg.post(`/quotations/${id}/generate`, {});
-  assert.match(decodeURIComponent(r.location), /Set who signs Bangi/);
+  assert.doesNotMatch((await bg.get(`/quotations/${id}`)).html, /Who signs Bangi’s quotations isn’t set yet/, 'Bangi\'s manager signs (branch directory)');
+  assert.equal((await require('../../src/quotations/data').branchConfig(db, 'Bangi')).signer, 'NUR AIMI ATHIRAH BINTI MOHD RASLI');
+  let r;
   assert.equal((await bg.post('/quotations/settings/branch/Bangi', { signer: 'X' })).status, 403, 'managers don\'t change settings');
   const a = await login('alia', 'pass-word-1');
   await a.post('/quotations/settings/branch/Bangi', { signer: 'Aimi Test', title: '(Pharmacist)', footer_lines: 'Bangi address line\nTel: 000' });
@@ -373,4 +373,18 @@ test('Won / Cancelled: Won counts in Zakat claims; only a cancelled quotation ca
   r = await a.post(`/quotations/${older}/delete`, { confirm: '1' });
   assert.match(decodeURIComponent(r.location), /won’t be used again/);
   assert.equal(await next('QT-JH'), before);
+});
+
+test('an open quotation tells admin / Alia / the branch manager how to delete it; the PDF and Excel use the letterhead', async () => {
+  const a = await login('alia', 'pass-word-1');
+  const id = (await db.query("SELECT id FROM quotations WHERE status = 'issued' AND outlet = 'JH' ORDER BY id LIMIT 1")).rows[0].id;
+  assert.match((await a.get(`/quotations/${id}`)).html, /To delete this quotation, mark it <b>✕ Cancelled<\/b> first/);
+  const hn = await login('hanin', 'pass-word-1');
+  assert.doesNotMatch((await hn.get(`/quotations/${id}`)).html, /To delete this quotation/);
+  const D = require('../../src/quotations/data');
+  const jh = await D.branchConfig(db, 'JH');
+  assert.match(jh.footer_lines, /Dengkil/); // JH's address from its letterhead is the default
+  const { quotationPdf } = require('../../src/quotations/pdf');
+  const pdf = await quotationPdf({ ref: 'QT-JH-2026-0999', quote_date: '2026-11-12', recipient: 'X', tel: '', cc: '', lines: [{ line_no: 1, description: 'A', qty: 1, unit_price: 2, note: 'Pre-order - 7 days' }] }, { branch: jh });
+  assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
 });

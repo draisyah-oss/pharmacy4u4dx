@@ -102,7 +102,7 @@ function quotationRoutes(db, { now }) {
         l.markupPct = L.markupOf(l.unit_price, l.cost_at_quote);
         for (const m of l.matches || []) { m.price = L.autoPrice(m.cost, s.markup_default); }
       }
-      res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, zakatLinked: D.ZAKAT_BRANCHES.includes(q.outlet), missing: q.status === 'draft' ? D.missing(q) : [],
+      res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, zakatLinked: D.ZAKAT_BRANCHES.includes(q.outlet), canDeleteLater: D.canDeleteIssued(req.user, q), missing: q.status === 'draft' ? D.missing(q) : [],
         lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: D.canDelete(req.user, q),
         ok: req.query.ok || null, err: req.query.err || null, navActive: 'quotations' });
     } catch (err) { next(err); }

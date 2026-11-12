@@ -25,15 +25,15 @@ async function quotationXlsx(q, { branch = {}, signature = null, footer = null, 
   const bold = { ...font, bold: true };
   const set = (addr, value, f = font, align) => { const c = ws.getCell(addr); c.value = value; c.font = f; if (align) c.alignment = align; return c; };
 
-  // Banner + title (header picture: the branch letterhead if one is given, else Pharmacy4U's banner)
-  const banner = wb.addImage({ buffer: header || asset('header_banner.png'), extension: kind(header || asset('header_banner.png')) });
-  ws.addImage(banner, { tl: { col: 1, row: 0 }, ext: { width: 600, height: 165 } });
+  // Letterhead banner (12 Nov: the Pharmacy4U letterhead, same for every branch) + QUOTATION title
+  const top = header || asset('letterhead_header.png');
+  ws.addImage(wb.addImage({ buffer: top, extension: kind(top) }), { tl: { col: 0, row: 0 }, ext: { width: 660, height: 192 } });
   const title = wb.addImage({ buffer: asset('title_quotation.png'), extension: 'png' });
-  ws.addImage(title, { tl: { col: 2.45, row: 8.3 }, ext: { width: 150, height: 38 } });
-  for (let r = 1; r <= 10; r++) ws.getRow(r).height = 17;
+  ws.addImage(title, { tl: { col: 2.45, row: 9.6 }, ext: { width: 150, height: 38 } });
+  for (let r = 1; r <= 11; r++) ws.getRow(r).height = 17;
 
   // To / Your Ref, C. C., Date, Page
-  let r = 12;
+  let r = 13;
   const rec = String(q.recipient || '').split('\n').filter(Boolean);
   set(`B${r}`, 'To:', bold);
   rec.forEach((t, i) => set(`C${r + i}`, t));
@@ -86,8 +86,8 @@ async function quotationXlsx(q, { branch = {}, signature = null, footer = null, 
   if (branch.title) set(`C${r + 1}`, branch.title);
   r += 3;
 
-  // Footer: the branch's own picture, else WM's built-in footer (WM), else the branch name + address
-  const pic = footer || (!branch.code || branch.code === 'WM' ? asset('footer_wm.png') : null);
+  // Footer: the branch's own footer picture if uploaded, else a navy band with the branch name + address
+  const pic = footer;
   if (pic) {
     ws.addImage(wb.addImage({ buffer: pic, extension: kind(pic) }), { tl: { col: 1, row: r - 1 }, ext: { width: 640, height: 85 } });
   } else {

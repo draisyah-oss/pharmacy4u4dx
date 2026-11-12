@@ -1778,3 +1778,4 @@ body.sc-open { overflow: hidden; }
 .qt-won { background: var(--good); }
 .qt-chip-won { background: var(--good-tint); color: var(--good); }
 .qt-chip-cancelled { background: var(--short-tint); color: var(--short); }
+.qt-hint { flex-basis: 100%; margin: 2px 0 0; }
