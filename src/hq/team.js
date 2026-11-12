@@ -351,7 +351,8 @@ async function loadSteps(db, projectIds) {
 const ownsStep = (s, name) => Boolean(s.owner) && ownsProject({ owner: s.owner }, name);
 
 function canTickStep(user, project, step) {
-  return canEditProject(user, project) || (user.role === 'hq_staff' && ownsStep(step, user.display_name));
+  // 12 Nov: a branch manager named on a step (Mazlina on the HQ move) can change it too.
+  return canEditProject(user, project) || (['hq_staff', 'branch_manager'].includes(user.role) && ownsStep(step, user.display_name));
 }
 
 const STEP_STATUSES = ['Not started', 'In progress', 'Done'];
@@ -464,7 +465,8 @@ async function stepMenu(db, user) {
             array_agg(s.owner) AS step_owners
      FROM hq_projects p JOIN hq_project_steps s ON s.project_id = p.id AND s.active
      WHERE p.active AND p.status <> 'Done' GROUP BY p.id ORDER BY p.sort_order, p.id`)).rows;
-  return rows.filter((r) => user.role !== 'hq_staff' || ownsProject(r, user.display_name)
+  const ownOnly = user.role === 'hq_staff' || user.role === 'branch_manager';
+  return rows.filter((r) => !ownOnly || (user.role === 'hq_staff' && ownsProject(r, user.display_name))
     || (r.step_owners || []).some((o) => o && ownsStep({ owner: o }, user.display_name)))
     .map(({ id, milestone, total, done }) => ({ id, milestone, total, done }));
 }

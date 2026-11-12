@@ -16,6 +16,10 @@
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
+  <% if (typeof layout !== 'undefined' && layout) { %>
+    <details class="oo-card mv-layout"><summary><b>Ampang layout</b> – where HQ goes (office, fulfilment, tagging, Fariz’s desk)</summary>
+      <a href="<%= layout %>" target="_blank" rel="noopener"><img src="<%= layout %>" alt="Hand-drawn layout of the Ampang office and shop: return and parent room, office, tagging and fulfilment area, Fariz’s desk, shop floor" loading="lazy"></a></details>
+  <% } %>
   <div class="oo-kpis">
     <div class="oo-kpi"><span>Steps done</span><b><%= summary.done %> of <%= summary.total %></b>
       <div class="bar" aria-hidden="true"><span class="s-<%= summary.total && summary.done >= summary.total ? 'on_track' : summary.overdue ? 'off_track' : 'watch' %>" style="width:<%= bar(summary.done, summary.total) %>%"></span></div><small>milestone due <%= p.due_date ? due(p.due_date) : '–' %></small></div>

@@ -122,6 +122,7 @@
   </section>
   <% } %>
 
+  <% if (H.hqMove) { %><%- include('partials/hqmove', { M: H.hqMove, canOpen: H.hqMoveOpen }) %><% } %>
   <%- include('partials/hd-news-line', { H: H }) %>
 </main>
 </body>

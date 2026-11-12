@@ -255,13 +255,14 @@ function hqTeamRoutes(db, { now, trackerStart }) {
   // Project steps (19 Oct): each milestone's checklist on its own page, opened from the side menu.
   router.get('/hq/projects/:id/steps', async (req, res, next) => {
     try {
-      if (!isHqUser(req.user)) return deny(res);
+      if (!isHqUser(req.user) && req.user.role !== 'branch_manager') return deny(res);
       const today = calc.todayInMalaysia(now());
       const project = /^\d{1,9}$/.test(req.params.id)
         ? (await db.query('SELECT * FROM hq_projects WHERE id = $1 AND active', [req.params.id])).rows[0] : null;
       if (!project) return res.status(404).render('message', { title: 'Not found', message: 'That milestone doesn’t exist.' });
       const rows = await team.loadSteps(db, [project.id]);
-      if (req.user.role === 'hq_staff' && !team.ownsProject(project, req.user.display_name)
+      // HQ staff: milestones they own or have a step on. 12 Nov: branch managers only with a step of their own.
+      if (((req.user.role === 'hq_staff' && !team.ownsProject(project, req.user.display_name)) || req.user.role === 'branch_manager')
         && !rows.some((s) => team.ownsStep(s, req.user.display_name))) {
         return res.status(403).render('message', { title: 'Not yours', message: 'You can see the checklists of the milestones you own.' });
       }
@@ -273,7 +274,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
       for (const ph of view.phases) for (const st of ph.steps) st.canTick = team.canTickStep(req.user, project, st);
       res.render('hq-steps', {
         title: project.milestone, p: { ...project, canEdit }, summary: team.stepSummary(rows, today), view, show,
-        statuses: team.STEP_STATUSES, ...flash(req),
+        statuses: team.STEP_STATUSES, layout: project.milestone === require('./move').MILESTONE ? require('./move').LAYOUT : null, ...flash(req),
       });
     } catch (err) { next(err); }
   });
@@ -293,7 +294,7 @@ function hqTeamRoutes(db, { now, trackerStart }) {
 
   router.post('/hq/projects/steps/:sid', async (req, res, next) => {
     try {
-      if (!isHqUser(req.user)) return deny(res);
+      if (!isHqUser(req.user) && req.user.role !== 'branch_manager') return deny(res);
       const step = /^\d{1,9}$/.test(req.params.sid)
         ? (await db.query('SELECT * FROM hq_project_steps WHERE id = $1 AND active', [req.params.sid])).rows[0] : null;
       const project = step ? (await db.query('SELECT * FROM hq_projects WHERE id = $1 AND active', [step.project_id])).rows[0] : null;

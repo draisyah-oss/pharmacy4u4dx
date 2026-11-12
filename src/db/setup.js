@@ -45,6 +45,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     await ampangNov5Once(db, log);
     await hafizNov8Once(db, log);
     await wmNov9Once(db, log);
+    await require('../hq/move').setupOnce(db, log);
     await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
     // 3 Nov: zakat claims tracker for BR, WM, JH (replaces the old zakat lead measures).
     await require('../zakat/data').setupOnce(db, log);
@@ -72,6 +73,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   await ampangNov5Once(db, log);
   await hafizNov8Once(db, log);
   await wmNov9Once(db, log);
+  await require('../hq/move').setupOnce(db, log);
   await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
   log(
     `Loaded seed.json: ${summary.branches} branches, ${summary.people} people, ` +

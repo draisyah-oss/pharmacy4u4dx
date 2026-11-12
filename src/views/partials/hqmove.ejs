@@ -1,0 +1,15 @@
+<%# 12 Nov: HQ moves to Ampang – key dates, countdown, steps done (src/hq/move.js card). Input: M, canOpen %>
+<article class="mv" aria-labelledby="mv-h">
+  <p class="mv-k">🚚 HQ is moving · from Dr Aisyah</p>
+  <h3 id="mv-h" class="mv-t">HQ moves from Wangsa Maju to Pharmacy4U Ampang</h3>
+  <% if (M.headline) { %><p class="mv-count"><%= M.headline %></p><% } %>
+  <ol class="mv-dates">
+    <% M.dates.forEach(function (d) { const day = new Date(d.date + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'short', day: 'numeric', month: 'short' }); %>
+      <li class="<%= d.past ? 'is-past' : d.today ? 'is-today' : '' %>"><b><%= day %></b> <span><%= d.text %></span></li>
+    <% }) %>
+  </ol>
+  <p class="mv-prog"><b><%= M.done %> of <%= M.total %></b> move steps done<%= M.late ? ' · ' + M.late + ' past their date' : '' %>
+    <span class="mv-bar" aria-hidden="true"><span style="width:<%= M.total ? Math.round(M.done / M.total * 100) : 0 %>%"></span></span></p>
+  <p>From <b>Fri 20 Nov</b> HQ works from the Ampang branch. If you need something from HQ during the move (17–19 Nov), ask early.</p>
+  <% if (canOpen) { %><p><a class="button" href="/hq/projects/<%= M.id %>/steps">Open the move checklist</a></p><% } %>
+</article>

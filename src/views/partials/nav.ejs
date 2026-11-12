@@ -56,6 +56,8 @@
          ['Company', [['group', '/group', 'Group scoreboard', 'branches'], ['sales', '/sales', 'Sales', 'ytd daily year b2b grab zakat'],
            ['oosboard', '/oos/scoreboard', 'Out-of-stock scoreboard', 'oos restock']]],
        ];
+       // 12 Nov: a branch manager with project steps (HQ move) sees them under Projects.
+       if (role === 'branch_manager' && stepItems.length) groups.push(['Projects', stepItems.map(function (x) { return [x[0], x[1], x[2], x[3], undefined, x[5]]; })]);
        if (many) {
          groups.push(['HQ', [['hqtoday', '/hq/today', 'HQ weekly check-in', 'tasks weekly day'],
            ['hqcommit', '/hq', 'HQ WIG session', 'hq input kpi numbers b2b weekly commitments focus monday 10am'],
