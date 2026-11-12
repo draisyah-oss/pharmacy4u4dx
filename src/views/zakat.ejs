@@ -104,6 +104,17 @@
     <a class="button secondary" href="<%= link({ tab: 'suppliers' }) %>">Update supplier list</a>
   </section>
 
+  <section class="oo-card" id="won">
+    <% const wonSum = wonQuotes.reduce(function (s, x) { return s + x.total; }, 0); %>
+    <div class="zk-head"><h2>Won quotations – to claim (<%= ml %>)</h2><span class="iv-pill <%= wonQuotes.length ? 'g-open' : '' %>"><%= wonQuotes.length %> won · <%= money(wonSum) %></span></div>
+    <% if (!wonQuotes.length) { %><p class="muted small">No zakat quotation marked ✔ Won in <%= ml %> yet. Mark a quotation Won on its page<%= canQuote ? '' : ' (branch manager / HQ)' %>.</p>
+    <% } else { %><div class="mo-scroll"><table class="mo-t">
+      <thead><tr><th>Quotation</th><th>Won on</th><th>Customer</th><th class="mo-c">Total</th></tr></thead>
+      <tbody><% wonQuotes.forEach(function (x) { %><tr><th><% if (canQuote) { %><a href="/quotations/<%= x.id %>"><%= x.ref %></a><% } else { %><%= x.ref %><% } %></th><td><%= wkLabel(x.won_on) %></td><td><%= x.customer %></td><td class="mo-c"><%= digits(x.total) %></td></tr><% }) %></tbody>
+    </table></div><% } %>
+    <p class="muted small">Every quotation issued counts as a contract bid on in its week, and every Won one as a contract won (Weekly and Bids tabs).</p>
+  </section>
+
   <section class="oo-card">
     <h2>Month by month</h2>
     <% if (!t.tl.rows.length) { %><p class="muted">Month totals appear here once you set an amount to claim or save a week.</p>
@@ -118,7 +129,7 @@
   </section>
   <% } %>
 
-  <% if (tab === 'weekly') { const w = weekVals; %>
+  <% if (tab === 'weekly') { const w = weekVals; const qw = qWeeks[week] || null; const typedBids = w && (w.zbid || w.zwon); %>
   <form method="post" action="/zakat/week" class="oo-card zk-form" id="weekly"><%- csrf %>
     <h2>Add or update a week</h2>
     <label class="oo-label">Week starting (Monday)<input type="date" name="week" value="<%= week %>" max="<%= today %>" required></label>
@@ -130,9 +141,10 @@
       </div></fieldset>
     <fieldset><legend>Contract bids</legend>
       <div class="zk-grid2">
-        <label class="oo-label">Contracts bid on<input name="bids" inputmode="numeric" value="<%= w && w.zbid ? w.zbid : '' %>" placeholder="0"></label>
-        <label class="oo-label">Contracts won<input name="won" inputmode="numeric" value="<%= w && w.zwon ? w.zwon : '' %>" placeholder="0"></label>
-      </div></fieldset>
+        <label class="oo-label">Contracts bid on<input name="bids" inputmode="numeric" value="<%= typedBids ? (w.zbid || '') : (qw ? qw.bids : '') %>" placeholder="0"></label>
+        <label class="oo-label">Contracts won<input name="won" inputmode="numeric" value="<%= typedBids ? (w.zwon || '') : (qw ? qw.won : '') %>" placeholder="0"></label>
+      </div>
+      <p class="muted small">From zakat quotations this week: <b><%= qw ? qw.bids : 0 %></b> issued, <b><%= qw ? qw.won : 0 %></b> won<%= qw && qw.won ? ' (' + money(qw.wonTotal) + ')' : '' %>.<%= !typedBids && qw ? ' Filled in for you – check and save.' : '' %></p></fieldset>
     <div class="zk-row"><button class="button"><%= w ? 'Update week' : 'Save week' %></button>
       <% const nxt = addDays(week, 7); if (nxt <= today) { %><a class="button secondary" href="<%= link({ tab: 'weekly', week: nxt, month: nxt.slice(0, 7) }) %>#weekly">Next week</a><% } %>
       <a class="button secondary" href="<%= link({ tab: 'weekly', week: addDays(week, -7), month: addDays(week, -7).slice(0, 7) }) %>#weekly">Week before</a></div>
@@ -156,7 +168,7 @@
   <section class="oo-card"><h2>Week by week</h2>
     <% if (!allWeeks.length) { %><p class="muted">Bids appear here once you save a week. Enter them under Weekly.</p><% } %>
     <% allWeeks.slice(0, 26).forEach(function (k) { const x = t.weeks[k]; const pc = pctOf(x.zwon, x.zbid); %><div class="zk-bid">
-      <div><b>Week of <%= wkLabel(k) %></b><span><%= x.zwon %> won of <%= x.zbid %><%= x.zbid > 0 ? ' · ' + pc + '%' : '' %></span></div>
+      <div><b>Week of <%= wkLabel(k) %></b><span><%= x.zwon %> won of <%= x.zbid %><%= x.zbid > 0 ? ' · ' + pc + '%' : '' %></span><% if (qWeeks[k]) { %><span class="muted small">Quotations: <%= qWeeks[k].bids %> issued · <%= qWeeks[k].won %> won</span><% } %></div>
       <div class="zk-meter is-thin" role="progressbar" aria-label="Win rate for week of <%= wkLabel(k) %>" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<%= pc %>"><i style="width: <%= pc %>%"></i></div></div><% }) %>
     <% if (allWeeks.length > 26) { %><p class="muted small">Showing the latest 26 weeks.</p><% } %>
   </section>

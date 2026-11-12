@@ -105,7 +105,8 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
   assert.match(page.html, /ENSURE GOLD POWDER \(VANILLA\) 800G/);
   assert.match(page.html, /DR\. P PREMIUM ADULT WIPES 40S/);
   assert.match(page.html, /PRIMES DISPOSABLE UNDERPAD 75X75 4PLY 10 SHEETS/);
-  assert.match(page.html, /Need cost – ask Alia/);
+  assert.match(page.html, /Not in the list – I’ll type it/);
+  assert.doesNotMatch(page.html, /ask Alia/i, 'no "ask Alia" option any more');
   assert.match(page.html, /\(cost 111\.11\)/, '12 Nov (CEO): Hafizah sees the cost');
   assert.match(page.html, /RM133\.40/, 'auto price shown (111.11 × 1.2 = 133.332 → 133.40)');
 
@@ -128,7 +129,7 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
 
   // Generate is refused while line 2 has no price
   const no = await h.post(`/quotations/${qid}/generate`, {});
-  assert.match(decodeURIComponent(no.location), /Line 2: needs a price \(ask Alia/);
+  assert.match(decodeURIComponent(no.location), /Line 2: needs a price/);
 
   // override line 1 (amber under the floor), type line 2 by hand, line 3 readystock, tidy descriptions
   await h.post(`/quotations/${qid}`, {
@@ -301,45 +302,74 @@ test('Bangi: no signer set yet → no PDF until admin / Alia sets one; pictures 
   for (const s of ['QT-WM', 'QT-JH', 'QT-BR', 'QT-BGI', 'QT-AMP']) assert.match(set.html, new RegExp(s));
 });
 
-test('delete an issued quotation: admin / Alia / that branch\'s manager, ticked to confirm; the newest number is given back', async () => {
+test('Won / Cancelled: Won counts in Zakat claims; only a cancelled quotation can be deleted; the newest number is given back', async () => {
   const idOf = async (ref) => (await db.query('SELECT id FROM quotations WHERE ref = $1', [ref])).rows[0].id;
   const next = async (series) => (await db.query('SELECT next_no FROM quotation_series WHERE series = $1 AND year = 2026', [series])).rows[0].next_no;
   const h = await login('hafizah', 'pass-word-1');
   const id403 = await idOf('QT-WM-2026-0403'); const id404 = await idOf('QT-WM-2026-0404');
-  assert.match((await h.get(`/quotations/${id404}`)).html, /Delete this quotation/, 'WM\'s manager has the delete button');
-  // another branch's manager can't even open it; HQ staff (not Alia) can open but not delete
+  // an issued (open) quotation can't be deleted – cancel it first
+  let page = (await h.get(`/quotations/${id404}`)).html;
+  assert.match(page, /✔ Won/); assert.match(page, /✕ Cancelled/);
+  assert.doesNotMatch(page, /Delete this quotation/);
+  assert.match(decodeURIComponent((await h.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /mark QT-WM-2026-0404 Cancelled first/);
+
+  // Excel copy of a quotation
+  const x = await h.get(`/quotations/${id403}/xlsx`);
+  assert.equal(x.status, 200);
+  assert.match(x.type, /spreadsheetml/);
+  const ExcelJS = require('exceljs'); const wb = new ExcelJS.Workbook(); await wb.xlsx.load(x.buf);
+  const cells = []; wb.worksheets[0].eachRow((row) => row.eachCell((c) => cells.push(String(c.value))));
+  assert.ok(cells.includes('QT-WM-2026-0403')); assert.ok(cells.includes('ENSURE GOLD POWDER (VANILLA) 800G')); assert.ok(cells.includes('TOTAL'));
+  assert.ok(!cells.some((c) => /pre-order/i.test(c)), 'no pre-order line on the customer\'s copy');
+  assert.ok(cells.includes('ALIA SURAYA BINTI ESA'));
+
+  // Won → listed on Zakat claims (WM) and counted as a contract won in its week
+  let r = await h.post(`/quotations/${id403}/outcome`, { outcome: 'won' });
+  assert.match(decodeURIComponent(r.location), /QT-WM-2026-0403: Won\. It counts as a contract won in Zakat claims/);
+  const zk = await h.get('/zakat?branch=WM&month=2026-11&tab=overview');
+  assert.match(zk.html, /Won quotations – to claim/);
+  assert.match(zk.html, /QT-WM-2026-0403/);
+  const wk = await h.get('/zakat?branch=WM&month=2026-11&tab=weekly&week=2026-11-09');
+  assert.match(wk.html, /From zakat quotations this week: <b>2<\/b> issued, <b>1<\/b> won/);
+  assert.match(wk.html, /name="bids" inputmode="numeric" value="2"/, 'filled in for the PIC when nothing is typed yet');
+  const Q = require('../../src/quotations/data');
+  assert.deepEqual((await Q.zakatWeeks(db, 'WM'))['2026-11-09'], { bids: 2, won: 1, wonTotal: 7264.2 });
+  // a Won quotation can't be deleted either; Undo brings it back to open
+  assert.match(decodeURIComponent((await h.post(`/quotations/${id403}/delete`, { confirm: '1' })).location), /Cancelled first/);
+  r = await h.post(`/quotations/${id403}/outcome`, { outcome: 'issued' });
+  assert.match(decodeURIComponent(r.location), /Open/);
+
+  // another branch's manager can't touch it; HQ staff (not Alia) can't delete a cancelled one
   const jhm = await login('afifah', 'pass-word-1');
-  assert.match(decodeURIComponent((await jhm.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /isn’t in the list/);
+  assert.match(decodeURIComponent((await jhm.post(`/quotations/${id404}/outcome`, { outcome: 'cancelled' })).location), /isn’t in the list/);
+  // Cancelled → delete (Hafizah, WM's manager); 0404 is the newest so the number comes back
+  r = await h.post(`/quotations/${id404}/outcome`, { outcome: 'cancelled' });
+  assert.match(decodeURIComponent(r.location), /Cancelled\. You can delete it now/);
+  page = (await h.get(`/quotations/${id404}`)).html;
+  assert.match(page, /Yes, delete QT-WM-2026-0404/);
   const hn = await login('hanin', 'pass-word-1');
-  assert.doesNotMatch((await hn.get(`/quotations/${id404}`)).html, /Delete this quotation/);
   assert.match(decodeURIComponent((await hn.post(`/quotations/${id404}/delete`, { confirm: '1' })).location), /Only admin, Alia and the branch manager/);
-  const a = await login('alia', 'pass-word-1');
-  assert.match((await a.get(`/quotations/${id404}`)).html, /Yes, delete QT-WM-2026-0404/);
-  assert.match(decodeURIComponent((await a.post(`/quotations/${id404}/delete`, {})).location), /Tick “Yes, delete QT-WM-2026-0404” first/);
+  assert.match(decodeURIComponent((await h.post(`/quotations/${id404}/delete`, {})).location), /Tick “Yes, delete QT-WM-2026-0404” first/);
   assert.equal(await next('QT-WM'), 405);
-  // 0404 is the newest → Hafizah (WM manager) deletes it and the number comes back
-  let r = await h.post(`/quotations/${id404}/delete`, { confirm: '1' });
+  r = await h.post(`/quotations/${id404}/delete`, { confirm: '1' });
   assert.match(decodeURIComponent(r.location), /QT-WM-2026-0404 deleted\. The next QT-WM quotation gets QT-WM-2026-0404 again/);
   assert.equal(await next('QT-WM'), 404);
-  assert.equal((await db.query('SELECT count(*)::int AS n FROM quotations WHERE id = $1', [id404])).rows[0].n, 0);
   assert.equal((await db.query('SELECT count(*)::int AS n FROM quotation_lines WHERE quotation_id = $1', [id404])).rows[0].n, 0);
-  // now 0403 is the newest → also given back
-  r = await a.post(`/quotations/${id403}/delete`, { confirm: '1' });
-  assert.match(decodeURIComponent(r.location), /gets QT-WM-2026-0403 again/);
-  assert.equal(await next('QT-WM'), 403);
-  const log = (await db.query("SELECT old_value FROM audit_log WHERE table_name = 'quotations' AND action = 'delete' AND record_key = 'QT-WM-2026-0403'")).rows[0];
-  assert.equal(Number(JSON.parse(typeof log.old_value === 'string' ? log.old_value : JSON.stringify(log.old_value)).total), 7264.2, 'the audit log keeps what was deleted');
-  // an older number is not given back: make two JH quotes, delete the older one
-  const jh = await login('afifah', 'pass-word-1');
+  const log = (await db.query("SELECT old_value FROM audit_log WHERE table_name = 'quotations' AND action = 'delete' AND record_key = 'QT-WM-2026-0404'")).rows[0];
+  assert.ok(log, 'the audit log keeps what was deleted');
+
+  // an older number is not given back: two JH quotes, cancel and delete the older one (Alia)
+  const a = await login('alia', 'pass-word-1');
   const mk = async () => {
-    const c = await jh.post('/quotations', { items: 'Ensure Gold 850g ×1' });
+    const c = await jhm.post('/quotations', { items: 'Ensure Gold 850g ×1' });
     const qid = Number(c.location.split('/').pop()); const [l1] = await lineIds(qid);
-    await jh.post(`/quotations/${qid}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
-    await jh.post(`/quotations/${qid}/generate`, {});
+    await jhm.post(`/quotations/${qid}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
+    await jhm.post(`/quotations/${qid}/generate`, {});
     return qid;
   };
   const older = await mk(); await mk();
   const before = await next('QT-JH');
+  await a.post(`/quotations/${older}/outcome`, { outcome: 'cancelled' });
   r = await a.post(`/quotations/${older}/delete`, { confirm: '1' });
   assert.match(decodeURIComponent(r.location), /won’t be used again/);
   assert.equal(await next('QT-JH'), before);

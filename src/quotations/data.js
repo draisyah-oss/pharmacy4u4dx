@@ -165,13 +165,14 @@ async function list(db, { outlets = CODES, limit = 100 } = {}) {
       split_part(q.recipient, E'\\n', 1) AS customer, u.display_name AS by_name,
       (SELECT count(*)::int FROM quotation_lines l WHERE l.quotation_id = q.id) AS lines
     FROM quotations q LEFT JOIN users u ON u.id = q.created_by
-    WHERE q.status <> 'cancelled' AND q.outlet = ANY($1::text[])
+    WHERE q.outlet = ANY($1::text[])
     ORDER BY (q.status = 'draft') DESC, coalesce(q.issued_at, q.created_at) DESC LIMIT ${Number(limit) || 100}`, [outlets])).rows;
 }
 
 async function loadOne(db, id) {
-  const q = (await db.query(`SELECT q.*, q.quote_date::text AS quote_date, u.display_name AS by_name, i.display_name AS issued_name
-    FROM quotations q LEFT JOIN users u ON u.id = q.created_by LEFT JOIN users i ON i.id = q.issued_by WHERE q.id = $1`, [id])).rows[0];
+  const q = (await db.query(`SELECT q.*, q.quote_date::text AS quote_date, u.display_name AS by_name, i.display_name AS issued_name,
+      o.display_name AS outcome_name, to_char(q.outcome_at AT TIME ZONE 'Asia/Kuala_Lumpur', 'YYYY-MM-DD') AS outcome_on
+    FROM quotations q LEFT JOIN users u ON u.id = q.created_by LEFT JOIN users i ON i.id = q.issued_by LEFT JOIN users o ON o.id = q.outcome_by WHERE q.id = $1`, [id])).rows[0];
   if (!q) return null;
   q.lines = (await db.query(`SELECT l.*, p.active AS product_active, p.balance AS product_balance, p.cost AS product_cost
     FROM quotation_lines l LEFT JOIN products p ON p.id = l.product_id WHERE l.quotation_id = $1 ORDER BY l.line_no`, [id])).rows;
@@ -252,7 +253,7 @@ async function saveDraft(db, user, id, body, { now }) {
     const qty = String(f.qty === undefined ? (l.qty || '') : f.qty).trim();
     n.qty = qty === '' ? null : Number(qty);
     if (n.qty !== null && !(Number.isInteger(n.qty) && n.qty > 0 && n.qty <= 1000000)) { problems.push(`Line ${l.line_no}: qty must be a whole number.`); n.qty = l.qty; }
-    // Item picked: a product id, 'need' (Need cost – ask Alia) or nothing.
+    // Item picked: a product id, 'need' (not in the list – description and price typed) or nothing.
     const pick = String(f.pick === undefined ? (l.need_cost ? 'need' : (l.product_id || '')) : f.pick);
     let productChanged = false;
     if (pick === 'need') {
@@ -345,8 +346,8 @@ function missing(q) {
   for (const l of q.lines) {
     const what = [];
     if (!l.qty) what.push('qty');
-    if (!l.description) what.push('an item (pick one, or "Need cost – ask Alia" and type the description)');
-    if (!(l.unit_price > 0)) what.push(l.need_cost ? 'a price (ask Alia for the cost)' : 'a price');
+    if (!l.description) what.push('an item (pick one, or "Not in the list – I\'ll type it" and type the description)');
+    if (!(l.unit_price > 0)) what.push('a price');
     if (!l.stock_option) what.push('stock option');
     if (what.length) out.push(`Line ${l.line_no}: needs ${what.join(', ')}.`);
   }
@@ -419,9 +420,53 @@ async function copy(db, user, id, { now }) {
 // also by the person who started it.
 const isBranchManagerOf = (u, q) => Boolean(u && q) && u.role === 'branch_manager' && u.branch_code === q.outlet;
 const canDeleteIssued = (u, q) => canSettings(u) || isBranchManagerOf(u, q);
+// 12 Nov (CEO): only a draft or a quotation marked Cancelled can be deleted – issued and Won ones are kept.
 function canDelete(user, q) {
   if (!q) return false;
-  return q.status === 'draft' ? (user.role === 'admin' || q.created_by === user.id || isBranchManagerOf(user, q)) : canDeleteIssued(user, q);
+  if (q.status === 'draft') return user.role === 'admin' || q.created_by === user.id || isBranchManagerOf(user, q);
+  return q.status === 'cancelled' && canDeleteIssued(user, q);
+}
+
+// Outcome of an issued quotation (12 Nov, CEO): 'won' (counts as a contract won in the zakat claims
+// tracker), 'cancelled' (can then be deleted), or back to 'issued' (undo). Anyone who can open it.
+const OUTCOMES = { won: 'Won', cancelled: 'Cancelled', issued: 'Open (no answer yet)' };
+async function setOutcome(db, user, id, outcome, { now }) {
+  const q = await loadOne(db, id);
+  if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
+  if (q.status === 'draft') return { error: 'Generate the quotation first.' };
+  if (!OUTCOMES[outcome]) return { error: 'Choose Won or Cancelled.' };
+  if (q.status === outcome) return { ok: `${q.ref} is already ${OUTCOMES[outcome].toLowerCase()}.` };
+  const at = now();
+  await db.query('UPDATE quotations SET status = $2, outcome_at = $3, outcome_by = $4, updated_at = $5 WHERE id = $1',
+    [id, outcome, outcome === 'issued' ? null : at, outcome === 'issued' ? null : user.id, at]);
+  await audit(db, user, 'update', q.ref, { status: q.status }, { status: outcome });
+  const tail = outcome === 'won' ? (ZAKAT_BRANCHES.includes(q.outlet) ? ' It counts as a contract won in Zakat claims.' : '')
+    : outcome === 'cancelled' ? ' You can delete it now if it isn’t needed.' : '';
+  return { ok: `${q.ref}: ${OUTCOMES[outcome]}.${tail}` };
+}
+
+// ---------- link to the zakat claims tracker (BR, WM, JH) ----------
+const ZAKAT_BRANCHES = ['BR', 'WM', 'JH'];
+// Per week (Monday): quotations issued that week = contracts bid on; those marked Won = contracts won.
+async function zakatWeeks(db, outlet) {
+  const rows = (await db.query(`SELECT quote_date::text AS d, status, total FROM quotations
+    WHERE outlet = $1 AND status IN ('issued', 'won', 'cancelled') AND quote_date IS NOT NULL`, [outlet])).rows;
+  const calcLib = require('../calc');
+  const out = {};
+  for (const r of rows) {
+    const k = calcLib.weekStart(r.d);
+    const w = out[k] || (out[k] = { bids: 0, won: 0, wonTotal: 0 });
+    w.bids++;
+    if (r.status === 'won') { w.won++; w.wonTotal += Number(r.total) || 0; }
+  }
+  return out;
+}
+// Won quotations in a month (by the day they were marked Won, Malaysia time) – the "to claim" list.
+async function wonInMonth(db, outlet, month) {
+  return (await db.query(`SELECT id, ref, quote_date::text AS quote_date, total, split_part(recipient, E'\\n', 1) AS customer,
+      to_char(outcome_at AT TIME ZONE 'Asia/Kuala_Lumpur', 'YYYY-MM-DD') AS won_on
+    FROM quotations WHERE outlet = $1 AND status = 'won' AND to_char(outcome_at AT TIME ZONE 'Asia/Kuala_Lumpur', 'YYYY-MM') = $2
+    ORDER BY outcome_at`, [outlet, month])).rows.map((r) => ({ ...r, total: Number(r.total) || 0 }));
 }
 
 // Delete a quotation for good (the audit log keeps what it was). An issued one needs confirm = '1'.
@@ -431,7 +476,8 @@ async function removeQuote(db, user, id, { confirm = false } = {}) {
   const q = await loadOne(db, id);
   if (!canOpen(user, q)) return { error: 'That quotation isn’t in the list.' };
   if (!canDelete(user, q)) {
-    return { error: q.status === 'draft' ? 'Only the person who started this draft, the branch manager or admin can delete it.' : 'Only admin, Alia and the branch manager delete an issued quotation.' };
+    if (q.status === 'issued' || q.status === 'won') return { error: `Only a cancelled quotation can be deleted – mark ${q.ref} Cancelled first.` };
+    return { error: q.status === 'draft' ? 'Only the person who started this draft, the branch manager or admin can delete it.' : 'Only admin, Alia and the branch manager delete a cancelled quotation.' };
   }
   if (q.status === 'draft') {
     await db.query('DELETE FROM quotations WHERE id = $1', [id]);
@@ -463,5 +509,5 @@ async function itemMasterInfo(db) {
 module.exports = {
   SERIES, DEFAULTS, MAX_LINES, BRANCHES, CODES, SERIES_LIST, IMAGE_KINDS, outletsFor, canMake, canOpen, canSeeCost, canSettings, settings, saveSettings,
   branchConfigs, branchConfig, saveBranch, saveImage, image, saveSignature, signature, seriesRows, setNextNo,
-  list, loadOne, lineTotal, totalOf, createDraft, candidates, saveDraft, missing, issue, pdfOf, copy, removeDraft, removeQuote, canDelete, canDeleteIssued, itemMasterInfo,
+  list, loadOne, lineTotal, totalOf, createDraft, candidates, saveDraft, missing, issue, pdfOf, copy, removeDraft, removeQuote, canDelete, canDeleteIssued, OUTCOMES, setOutcome, ZAKAT_BRANCHES, zakatWeeks, wonInMonth, itemMasterInfo,
 };

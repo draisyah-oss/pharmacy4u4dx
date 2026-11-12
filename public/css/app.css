@@ -1774,3 +1774,7 @@ body.sc-open { overflow: hidden; }
 .mv-bar { flex: 1 1 120px; height: 8px; background: #fff; border-radius: 4px; overflow: hidden; }
 .mv-bar span { display: block; height: 100%; background: var(--brand, #004aad); }
 .mv-layout img { display: block; max-width: 100%; height: auto; margin-top: 10px; border-radius: 8px; }
+.qt-outcome { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; margin: 10px 0 4px; }
+.qt-won { background: var(--good); }
+.qt-chip-won { background: var(--good-tint); color: var(--good); }
+.qt-chip-cancelled { background: var(--short-tint); color: var(--short); }

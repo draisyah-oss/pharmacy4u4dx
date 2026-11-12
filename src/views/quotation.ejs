@@ -12,7 +12,7 @@
 %>
 <main class="page qt-page">
   <p class="small"><a href="/quotations">← All quotations</a></p>
-  <h1><%= q.ref ? q.ref : 'New zakat quotation' %> <span class="qt-chip"><%= q.outlet %><%= branchCfg ? ' – ' + branchCfg.name : '' %></span> <span class="qt-chip qt-chip-<%= q.status %>"><%= draft ? 'Draft' : 'Issued' %></span></h1>
+  <h1><%= q.ref ? q.ref : 'New zakat quotation' %> <span class="qt-chip"><%= q.outlet %><%= branchCfg ? ' – ' + branchCfg.name : '' %></span> <span class="qt-chip qt-chip-<%= q.status %>"><%= ({ draft: 'Draft', issued: 'Issued', won: '✔ Won', cancelled: '✕ Cancelled' })[q.status] %></span></h1>
   <% if (ok) { %><p class="alert alert-good" role="status"><%= ok %></p><% } %>
   <% if (err) { %><p class="alert alert-bad" role="alert"><%= err %></p><% } %>
 
@@ -20,7 +20,21 @@
     <section class="oo-card qt-card">
       <p><b><%= q.ref %></b> · <%= dmy(q.quote_date) %> · <%= q.recipient.split('\n')[0] %> · total <b>RM<%= L.money(q.total) %></b> · made by <%= q.issued_name || q.by_name %></p>
       <% if (q.rfq_description) { %><p class="muted small">RFQ: <%= q.rfq_description %></p><% } %>
-      <p class="qt-actions"><a class="button" href="/quotations/<%= q.id %>/pdf?download=1">⬇ Download the PDF</a> <a class="button secondary" href="/quotations/<%= q.id %>/pdf" target="_blank" rel="noopener">Open the PDF</a></p>
+      <p class="qt-actions"><a class="button" href="/quotations/<%= q.id %>/pdf?download=1">⬇ Download the PDF</a> <a class="button secondary" href="/quotations/<%= q.id %>/pdf" target="_blank" rel="noopener">Open the PDF</a>
+        <a class="button secondary" href="/quotations/<%= q.id %>/xlsx">⬇ Download Excel</a></p>
+      <div class="qt-outcome">
+        <b>Outcome:</b>
+        <% if (q.status === 'issued') { %>
+          <form method="post" action="/quotations/<%= q.id %>/outcome" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="outcome" value="won"><button class="button small-button qt-won" type="submit">✔ Won</button></form>
+          <form method="post" action="/quotations/<%= q.id %>/outcome" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="outcome" value="cancelled"><button class="button secondary small-button" type="submit">✕ Cancelled</button></form>
+          <span class="muted small"><%= zakatLinked ? 'Won counts as a contract won in Zakat claims.' : '' %></span>
+        <% } else { %>
+          <span class="qt-chip qt-chip-<%= q.status %>"><%= q.status === 'won' ? '✔ Won' : '✕ Cancelled' %></span>
+          <span class="muted small"><%= q.outcome_name ? 'by ' + q.outcome_name : '' %><%= q.outcome_on ? ', ' + dmy(q.outcome_on) : '' %></span>
+          <form method="post" action="/quotations/<%= q.id %>/outcome" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>"><input type="hidden" name="outcome" value="issued"><button class="button secondary small-button" type="submit">Undo</button></form>
+          <% if (q.status === 'won' && zakatLinked) { %><a class="small" href="/zakat?branch=<%= q.outlet %>&tab=overview">See it in Zakat claims</a><% } %>
+        <% } %>
+      </div>
       <form method="post" action="/quotations/<%= q.id %>/copy" class="qt-inline"><input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <button class="button secondary small-button" type="submit">Make a copy to change it</button> <span class="muted small">(the copy gets a new number)</span></form>
       <% if (canDelete) { %>
@@ -28,7 +42,7 @@
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <label><input type="checkbox" name="confirm" value="1" required> Yes, delete <%= q.ref %></label>
         <button class="button secondary small-button qt-danger" type="submit">🗑 Delete this quotation</button>
-        <span class="muted small">For mistakes and tests. If it is the branch’s newest number, the next quotation gets <%= q.ref %> again.</span>
+        <span class="muted small">Only cancelled quotations can be deleted. If it is the branch’s newest number, the next quotation gets <%= q.ref %> again.</span>
       </form>
       <% } %>
     </section>
@@ -55,7 +69,7 @@
 
     <section class="oo-card qt-card" id="step2">
       <h2><span class="qt-step">2</span> Match each item <span class="qt-step">3</span> price &amp; stock</h2>
-      <p class="muted small">Pick the item from the Dynamod item master (best 5 matches; change the search words to look again). Nothing fits? Choose <b>Need cost – ask Alia</b> and type the description and price.
+      <p class="muted small">Pick the item from the Dynamod item master (best 5 matches; change the search words to look again). Nothing fits? Choose <b>Not in the list – I’ll type it</b> and type the description and price.
         Price = cost + <%= Math.round(s.markup_default * 100) %>%, rounded up to the next 10 sen; type a price to change it. Below <%= Math.round(s.markup_floor * 100) %>% shows amber.</p>
       <% if (!q.lines.length) { %><p class="muted">No items yet – paste them in “Add more items” above and Save.</p><% } %>
       <% q.lines.forEach(function (l) { const k = 'l[i' + l.id + ']'; const picked = l.need_cost ? 'need' : (l.product_id ? String(l.product_id) : '');
@@ -80,12 +94,12 @@
                   · <%= m.price ? 'RM' + L.money(m.price) : 'no cost' %><% if (seeCost && m.cost !== null) { %> <span class="qt-cost">(cost <%= Number(m.cost).toFixed(2) %>)</span><% } %></span></label>
             <% }) %>
             <% if (!matches.length) { %><p class="muted small">No match for these words – try fewer or other words.</p><% } %>
-            <label class="qt-match qt-need<%= l.need_cost ? ' is-picked' : '' %>"><input type="radio" name="<%= k %>[pick]" value="need"<%= l.need_cost ? ' checked' : '' %> data-qt-pick> <b>Need cost – ask Alia</b> <span class="muted small">(not in the item master: type the description and price)</span></label>
+            <label class="qt-match qt-need<%= l.need_cost ? ' is-picked' : '' %>"><input type="radio" name="<%= k %>[pick]" value="need"<%= l.need_cost ? ' checked' : '' %> data-qt-pick> <b>Not in the list – I’ll type it</b> <span class="muted small">(type the description and the price below)</span></label>
             <label class="qt-match"><input type="radio" name="<%= k %>[pick]" value=""<%= picked === '' ? ' checked' : '' %> data-qt-pick> Not chosen yet</label>
           </fieldset>
           <div class="qt-price">
             <label class="qt-desc">Description on the quotation <input type="text" name="<%= k %>[desc]" value="<%= l.description %>" maxlength="200" placeholder="filled in when you pick an item"></label>
-            <label>Price per unit (RM) <input type="text" name="<%= k %>[price]" value="<%= l.unit_price !== null ? L.money(l.unit_price).replace(/,/g, '') : '' %>" inputmode="decimal" placeholder="<%= l.auto_price ? l.auto_price.toFixed(2) : (l.need_cost ? 'ask Alia' : '') %>"></label>
+            <label>Price per unit (RM) <input type="text" name="<%= k %>[price]" value="<%= l.unit_price !== null ? L.money(l.unit_price).replace(/,/g, '') : '' %>" inputmode="decimal" placeholder="<%= l.auto_price ? l.auto_price.toFixed(2) : (l.need_cost ? 'type the price' : '') %>"></label>
             <div class="qt-badge-wrap">
               <% if (l.badge) { %><span class="qt-badge qt-badge-<%= l.badge %>"><%= badgeTxt[l.badge] %><%= l.markupPct !== null ? ' · ' + pctTxt(l.markupPct) + ' on cost' : '' %></span><% } %>
               <% if (l.price_source === 'override') { %><span class="small muted">typed (auto RM<%= rm(l.auto_price) %>)</span><% } %>
