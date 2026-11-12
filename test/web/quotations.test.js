@@ -284,9 +284,9 @@ test('Bangi: no signer set yet → no PDF until admin / Alia sets one; pictures 
   const id = Number(c.location.split('/').pop());
   const [l1] = await lineIds(id);
   await bg.post(`/quotations/${id}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
-  assert.match((await bg.get(`/quotations/${id}`)).html, /Who signs Bangi’s quotations isn’t set yet/);
-  let r = await bg.post(`/quotations/${id}/generate`, {});
-  assert.match(decodeURIComponent(r.location), /Set who signs Bangi/);
+  assert.doesNotMatch((await bg.get(`/quotations/${id}`)).html, /Who signs Bangi’s quotations isn’t set yet/, 'Bangi\'s manager signs (branch directory)');
+  assert.equal((await require('../../src/quotations/data').branchConfig(db, 'Bangi')).signer, 'NUR AIMI ATHIRAH BINTI MOHD RASLI');
+  let r;
   assert.equal((await bg.post('/quotations/settings/branch/Bangi', { signer: 'X' })).status, 403, 'managers don\'t change settings');
   const a = await login('alia', 'pass-word-1');
   await a.post('/quotations/settings/branch/Bangi', { signer: 'Aimi Test', title: '(Pharmacist)', footer_lines: 'Bangi address line\nTel: 000' });

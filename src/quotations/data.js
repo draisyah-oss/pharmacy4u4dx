@@ -16,12 +16,18 @@ const MAX_LINES = 60;
 // 11 Nov (CEO): every branch quotes, each with its own series and signer, all on the WM layout
 // ("use same letterhead with WM"): same banner and title; the footer band carries the branch's own
 // name and address. Names, titles and footer address can be changed on Quotation settings.
+// Addresses, phones and managers from the Pharmacy4U branch directory (CEO 12 Nov, section 3.0).
 const BRANCHES = {
-  WM: { series: 'QT-WM', layout: 'p4u', name: 'Wangsa Maju', signer: 'ALIA SURAYA BINTI ESA', title: '(Pharmacist)', footer_lines: 'G-1, Seasons Garden, Seksyen 10,\nJalan 1/27e, 53300 Kuala Lumpur\nTel: 019-878 9126' },
-  JH: { series: 'QT-JH', layout: 'p4u', name: 'Jenderam Hilir', signer: 'NURUL AFIFAH BINTI ADDNAN', title: '(Pharmacist)', footer_lines: 'No 11 (A), Jalan W/P 1, Taman Warisan\nPutra, 43800 Dengkil, Selangor\nTel: 011-58982885' },
-  BR: { series: 'QT-BR', layout: 'p4u', name: 'Bandar Rinching', signer: 'NUR AMIRAH ABD KARIM', title: '(Pharmacist)', footer_lines: '' },
-  Bangi: { series: 'QT-BGI', layout: 'p4u', name: 'Bangi', signer: '', title: '(Pharmacist)', footer_lines: '' },
-  Ampang: { series: 'QT-AMP', layout: 'p4u', name: 'Ampang', signer: '', title: '(Pharmacist)', footer_lines: '' },
+  WM: { series: 'QT-WM', layout: 'p4u', name: 'Wangsa Maju', signer: 'ALIA SURAYA BINTI ESA', title: '(Pharmacist)',
+    footer_lines: 'G-1, Seasons Garden, Seksyen 10, Jln 1/27e,\nWangsa Maju, 53300 Kuala Lumpur\nTel: 011-2938 2423' },
+  JH: { series: 'QT-JH', layout: 'p4u', name: 'Jenderam Hilir', signer: 'NURUL AFIFAH BINTI ADDNAN', title: '(Pharmacist)',
+    footer_lines: 'No 11(A), Jalan W/P 1, Taman Warisan Putra,\nKg Jenderam Hilir, 43800 Dengkil, Selangor\nTel: 011-5898 2885' },
+  BR: { series: 'QT-BR', layout: 'p4u', name: 'Bandar Rinching', signer: 'NUR AMIRAH ABD KARIM', title: '(Pharmacist)',
+    footer_lines: '6, Jalan 5/12, Seksyen 5 Bandar Rinching,\n43500 Semenyih, Selangor\nTel: 016-902 8046' },
+  Bangi: { series: 'QT-BGI', layout: 'p4u', name: 'Bangi', signer: 'NUR AIMI ATHIRAH BINTI MOHD RASLI', title: '(Pharmacist)',
+    footer_lines: '20, Jalan 3/69, Seksyen 3 Bandar Baru Bangi,\n43650 Bandar Baru Bangi, Selangor\nTel: 010-307 1677' },
+  Ampang: { series: 'QT-AMP', layout: 'p4u', name: 'Ampang', signer: 'NOOR MAZLINA BINTI IBRAHIM', title: '(Pharmacist)',
+    footer_lines: '12G, Jalan Medan Bukit Indah 4, Taman Bukit\nIndah, 68000 Ampang, Selangor\nTel: 011-6944 5707' },
 };
 const CODES = Object.keys(BRANCHES);
 const SERIES_LIST = CODES.map((c) => BRANCHES[c].series);
@@ -83,7 +89,8 @@ async function branchConfigs(db) {
   const keys = (await db.query("SELECT key FROM app_settings WHERE key LIKE 'quote_img_%' OR key = 'quote_signature'")).rows.map((x) => x.key);
   const out = {};
   for (const c of CODES) {
-    out[c] = { code: c, ...BRANCHES[c], ...(v[c] || {}), series: BRANCHES[c].series, layout: BRANCHES[c].layout };
+    const saved = Object.fromEntries(Object.entries(v[c] || {}).filter(([k, x]) => x !== '' || k === 'title')); // an empty box = the directory value
+    out[c] = { code: c, ...BRANCHES[c], ...saved, series: BRANCHES[c].series, layout: BRANCHES[c].layout };
     out[c].images = Object.fromEntries(IMAGE_KINDS.map((k) => [k, keys.includes(imageKey(c, k)) || (c === 'WM' && k === 'signature' && keys.includes('quote_signature'))]));
   }
   return out;
