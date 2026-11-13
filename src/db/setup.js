@@ -44,6 +44,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
     // 5 Nov: change request #2 (CEO approved).
     await ampangNov5Once(db, log);
     await hafizNov8Once(db, log);
+    await hafizNov13Once(db, log);
     await wmNov9Once(db, log);
     await require('../hq/move').setupOnce(db, log);
     await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
@@ -72,6 +73,7 @@ async function prepareDatabase(db, { log = console.log } = {}) {
   await require('../meetings/setup').branchOneOnOnesOnce(db, log);
   await ampangNov5Once(db, log);
   await hafizNov8Once(db, log);
+  await hafizNov13Once(db, log);
   await wmNov9Once(db, log);
   await require('../hq/move').setupOnce(db, log);
   await retireBranchItemsOnce(db, 'BR', { fields: ['neuro'], measures: ['NP'] }, 'br_neuro_off_v1', 'BR: New neuropathy customers (NP) removed – change request #2, approved by the CEO 5 Nov (no device yet; tracked in POCT incl. Vibrasense)', log);
@@ -624,6 +626,47 @@ async function hafizNov8Once(db, log) {
   });
 }
 
+// 13 Nov (CEO): Hafiz's BN focus is two numbers only – 1 total BN sales in e-commerce (box bnec / H3, relabelled,
+// history kept) and 2 total BN sales in all branches (new box bnall / H8, RM, track only – no target given).
+// Off (history kept): Bangi counter (bn, H0), sold to other branches (bnbr, H2), B2B / bulk (bulk, H6), pieces (bnpcs, H7).
+const HAFIZ_NOV13 = {
+  branches: [{ code: 'Bangi', daily_fields: [
+    { key: 'bnall', label: 'Total BN sales – all branches (RM)', owner: 'Hafiz', type: 'money' },
+  ], measures: [
+    { id: 'H8', owner: 'Hafiz', label: 'Total BN sales – all branches', kind: 'Stream', unit: 'RM', target_per: 'month', calc: 'sum',
+      targets: { '2026-10': null, '2026-11': null, '2026-12': null }, numerator_field: 'bnall', denominator_field: null,
+      note: '13 Nov (CEO): BN focus 2 of 2 – BN sold at every branch in total. Not added to Bangi’s sales (each branch’s till already has it).' },
+  ] }],
+};
+async function hafizNov13Once(db, log) {
+  const flag = 'bangi_hafiz_nov13_v1';
+  if ((await db.query('SELECT 1 FROM app_settings WHERE key = $1', [flag])).rows.length) return;
+  await db.transaction(async (tx) => {
+    const b = (await tx.query("SELECT id FROM branches WHERE code = 'Bangi'")).rows[0];
+    if (b) {
+      const fo = Object.fromEntries((await tx.query("SELECT key, sort_order FROM daily_fields WHERE branch_id = $1 AND key = ANY($2)", [b.id, ['bn', 'bnbr']])).rows.map((r) => [r.key, r.sort_order]));
+      const mo = Object.fromEntries((await tx.query("SELECT code, sort_order FROM measures WHERE branch_id = $1 AND code = ANY($2)", [b.id, ['H0', 'H2']])).rows.map((r) => [r.code, r.sort_order]));
+      await tx.query('UPDATE daily_fields SET active = false WHERE branch_id = $1 AND key = ANY($2)', [b.id, ['bn', 'bnbr', 'bulk', 'bnpcs']]);
+      await tx.query('UPDATE measures SET active = false WHERE branch_id = $1 AND code = ANY($2)', [b.id, ['H0', 'H2', 'H6', 'H7']]);
+      await tx.query("UPDATE daily_fields SET label = 'Total BN sales – e-commerce (RM)' WHERE branch_id = $1 AND key = 'bnec'", [b.id]);
+      await tx.query("UPDATE measures SET label = 'Total BN sales – e-commerce' WHERE branch_id = $1 AND code = 'H3'", [b.id]);
+      await addSeedItems(tx, HAFIZ_NOV13, 'Bangi', { fields: ['bnall'], measures: ['H8'] });
+      // First on his card: e-commerce, then all branches.
+      const f1 = fo.bn; const f2 = fo.bnbr;
+      if (f1 != null) await tx.query("UPDATE daily_fields SET sort_order = $2 WHERE branch_id = $1 AND key = 'bnec'", [b.id, f1]);
+      if (f2 != null) await tx.query("UPDATE daily_fields SET sort_order = $2 WHERE branch_id = $1 AND key = 'bnall'", [b.id, f2]);
+      const m1 = mo.H0; const m2 = mo.H2;
+      if (m1 != null) await tx.query("UPDATE measures SET sort_order = $2 WHERE branch_id = $1 AND code = 'H3'", [b.id, m1]);
+      if (m2 != null) await tx.query("UPDATE measures SET sort_order = $2 WHERE branch_id = $1 AND code = 'H8'", [b.id, m2]);
+      await tx.query(`UPDATE measures m SET person_id = o.person_id FROM measures o
+        WHERE m.branch_id = $1 AND m.code = 'H8' AND o.branch_id = $1 AND o.code = 'H3'`, [b.id]);
+      await tx.query("INSERT INTO audit_log (action, table_name, record_key, new_value) VALUES ('seed', 'measures', 'Bangi Hafiz (CEO, 13 Nov): BN focus = total BN e-commerce sales + total BN sales all branches; H0, H2, H6, H7 off', NULL)");
+      log('Bangi Hafiz 13 Nov change applied.');
+    }
+    await tx.query('INSERT INTO app_settings (key, value) VALUES ($1, $2)', [flag, new Date().toISOString()]);
+  });
+}
+
 // 9 Nov (CEO, from Hafizah's list): WM target products from November – 1 Proponeem soap (P1 relabelled, box p1),
 // 2 Beecrobes (P5), 3 Biorelief (P2), 4 Digezmune (new P6, box p6), 5 RM10 health screening promo (new P7, box p7);
 // Oat (P3) and Neem facial (P4) retired (history kept). 2 a day each (same as before); October unchanged.
@@ -984,4 +1027,4 @@ async function syncBranchFromSeed(db, seed, code, flag, log) {
   log(`Updated ${code}'s fields and measures from seed.json.`);
 }
 
-module.exports = { ampangNov5Once, hafizNov8Once, wmNov9Once, brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };
+module.exports = { ampangNov5Once, hafizNov8Once, hafizNov13Once, wmNov9Once, brNov3Once, bangiNov2Once, tallyAllOnce, ampangOct29Once, brOct29Once, bangiOct27Once, addSeedItems, grabInventoryOnce, retireBranchItemsOnce, wmWalkinUpOnce, wmTiktokOffOnce, importDailyOnce, addAdminLoginsOnce, projectStepsOnce, wigOnMonday, wigWeekOnce, addBranchPersonOnce, renameBranchPersonOnce, threeItems, addHqTaskOnce, prepareDatabase, backfillNewSettings, backfillHqTeam, backfillHqAccess, backfillHqTasks, updateSalesSheetColumns, syncBranchFromSeed };

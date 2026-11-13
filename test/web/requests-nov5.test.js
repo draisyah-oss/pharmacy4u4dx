@@ -122,7 +122,8 @@ test('8 Nov (CEO): Hafiz – BN lead measures off, one box for BN pieces sold (n
   const ms = await q(`SELECT m.code, m.active, m.label, m.owner_name FROM measures m JOIN branches b ON b.id = m.branch_id
     WHERE b.code = 'Bangi' AND m.code IN ('H0','H2','H3','H4','H5','H6','H7') ORDER BY m.code`);
   const act = Object.fromEntries(ms.map((m) => [m.code, m.active]));
-  assert.deepEqual(act, { H0: true, H2: true, H3: true, H4: false, H5: false, H6: true, H7: true });
+  // 13 Nov: H0, H2, H6, H7 off too (see the next test)
+  assert.deepEqual(act, { H0: false, H2: false, H3: true, H4: false, H5: false, H6: false, H7: false });
   const h7 = ms.find((m) => m.code === 'H7');
   assert.equal(h7.label, 'BN products sold (pieces)'); assert.equal(h7.owner_name, 'Hafiz');
   const t = await q(`SELECT t.target FROM measure_targets t JOIN measures m ON m.id = t.measure_id JOIN branches b ON b.id = m.branch_id
@@ -130,7 +131,17 @@ test('8 Nov (CEO): Hafiz – BN lead measures off, one box for BN pieces sold (n
   assert.ok(!t.length || t[0].target == null, 'track only');
   const f = await q(`SELECT f.key, f.active, p.name FROM daily_fields f JOIN branches b ON b.id = f.branch_id LEFT JOIN people p ON p.id = f.person_id
     WHERE b.code = 'Bangi' AND f.key IN ('biop','bnchk','bnpcs')`);
-  assert.deepEqual(Object.fromEntries(f.map((r) => [r.key, [r.active, r.name]])), { biop: [false, 'Hafiz'], bnchk: [false, 'Hafiz'], bnpcs: [true, 'Hafiz'] });
+  assert.deepEqual(Object.fromEntries(f.map((r) => [r.key, [r.active, r.name]])), { biop: [false, 'Hafiz'], bnchk: [false, 'Hafiz'], bnpcs: [false, 'Hafiz'] });
+});
+
+test('13 Nov (CEO): Hafiz – BN focus = total BN e-commerce sales + total BN sales in all branches, nothing else', async () => {
+  const f = (await db.query(`SELECT f.key, f.label FROM daily_fields f JOIN branches b ON b.id = f.branch_id LEFT JOIN people p ON p.id = f.person_id
+    WHERE b.code = 'Bangi' AND f.active AND p.name = 'Hafiz' ORDER BY f.sort_order`)).rows;
+  assert.deepEqual(f.map((r) => [r.key, r.label]), [['bnec', 'Total BN sales – e-commerce (RM)'], ['bnall', 'Total BN sales – all branches (RM)']]);
+  const m = (await db.query(`SELECT m.code, m.label, m.owner_name FROM measures m JOIN branches b ON b.id = m.branch_id
+    WHERE b.code = 'Bangi' AND m.active AND m.code LIKE 'H%' ORDER BY m.sort_order`)).rows;
+  assert.deepEqual(m.map((r) => r.code), ['H3', 'H8']);
+  assert.ok(m.every((r) => r.owner_name === 'Hafiz'));
 });
 
 test('9 Nov (CEO, Hafizah’s list): WM target products – Proponeem soap, Beecrobes, Biorelief, Digezmune, RM10 health screening, 2 a day', async () => {
