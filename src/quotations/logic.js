@@ -107,6 +107,13 @@ function autoPrice(cost, markup) {
   const tenSen = Math.ceil(Math.round(c * (1 + m) * 1e6) / 1e5 - 1e-9); // in units of RM0.10
   return Math.round(tenSen) / 10;
 }
+// 14 Nov (CEO): the quotation price is Dynamod Price 1 – the normal price, not the member price (Price 2).
+// Only an item with no Price 1 falls back to cost × (1 + markup), rounded up to the next RM0.10.
+function quotePrice(price1, cost, markup) {
+  const p = num(price1);
+  if (p > 0) return Math.round(p * 100) / 100;
+  return autoPrice(cost, markup);
+}
 function markupOf(price, cost) {
   const p = num(price); const c = num(cost);
   if (!(p > 0) || !(c > 0)) return null;
@@ -127,4 +134,4 @@ function stockDefault(balance, qty) {
 const money = (n) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const formatRef = (series, year, no) => `${series}-${year}-${String(no).padStart(4, '0')}`;
 
-module.exports = { PREORDER_NOTE, splitLine, splitPaste, normalise, tokens, score, searchWords, rank, autoPrice, markupOf, badge, stockDefault, money, formatRef };
+module.exports = { PREORDER_NOTE, splitLine, splitPaste, normalise, tokens, score, searchWords, rank, autoPrice, quotePrice, markupOf, badge, stockDefault, money, formatRef };

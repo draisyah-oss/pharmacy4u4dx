@@ -108,7 +108,8 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
   assert.match(page.html, /Not in the list – I’ll type it/);
   assert.doesNotMatch(page.html, /ask Alia/i, 'no "ask Alia" option any more');
   assert.match(page.html, /\(cost 111\.11\)/, '12 Nov (CEO): Hafizah sees the cost');
-  assert.match(page.html, /RM133\.40/, 'auto price shown (111.11 × 1.2 = 133.332 → 133.40)');
+  assert.match(page.html, /RM127\.00/, 'suggested price = Dynamod Price 1 (the normal price), not cost + markup');
+  assert.doesNotMatch(page.html, /RM122\.00/, 'never the member price (Price 2)');
 
   const [l1, l2, l3, l4] = await lineIds(qid);
   const k = (id, f) => `l[i${id}][${f}]`;
@@ -120,10 +121,10 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
   });
   let lines = (await db.query('SELECT * FROM quotation_lines WHERE quotation_id = $1 ORDER BY line_no', [qid])).rows;
   assert.deepEqual(lines.map((l) => [l.unit_price === null ? null : Number(l.unit_price), l.stock_option, l.note]), [
-    [133.4, 'preorder', 'Pre-order - 7 days'], // balance 13 < 30
+    [127, 'preorder', 'Pre-order - 7 days'], // Price 1; balance 13 < 30
     [null, 'preorder', 'Pre-order - 7 days'], // need cost
-    [9.4, 'preorder', 'Pre-order - 7 days'], // 7.77 × 1.2 = 9.324 → 9.40; balance 5 < 60
-    [10.7, 'readystock', ''], // 39 ≥ 36
+    [9.9, 'preorder', 'Pre-order - 7 days'], // Price 1 9.90; balance 5 < 60
+    [12.5, 'readystock', ''], // Price 1 12.50; 39 ≥ 36
   ]);
   assert.equal(Number(lines[0].cost_at_quote), 111.11);
 
@@ -142,7 +143,8 @@ test('Hafizah pastes the 0401 RFQ, picks items, gets the zakat form table – no
   assert.equal(lines[0].price_source, 'override');
   assert.equal(lines[1].price_source, 'manual'); assert.equal(lines[1].description, "DR. P PREMIUM PANTS SIZE L 8'S"); assert.equal(lines[1].need_cost, true);
   assert.equal(lines[2].stock_option, 'readystock'); assert.equal(lines[2].note, '', 'the pre-order note goes with Readystock');
-  assert.equal(lines[3].price_source, 'auto');
+  assert.equal(lines[3].price_source, 'override', '10.70 typed instead of Price 1 12.50');
+  assert.equal(Number(lines[3].price1_at_quote), 12.5);
 
   page = await h.get(`/quotations/${qid}`);
   assert.match(page.html, /Below 15%/, 'amber badge for 125.00 on 111.11 (12.5%)');
@@ -211,7 +213,7 @@ test('settings: admin and Alia only; markup / floor; next number never below a u
   const [l1] = await lineIds(cid);
   await h.post(`/quotations/${cid}`, { [`l[i${l1}][pick]`]: String(await pid('ENSURE GOLD POWDER (VANILLA) 800G')) });
   const line = (await db.query('SELECT unit_price, stock_option FROM quotation_lines WHERE id = $1', [l1])).rows[0];
-  assert.equal(Number(line.unit_price), 138.9, '25% markup now: 111.11 × 1.25 = 138.8875 → 138.90');
+  assert.equal(Number(line.unit_price), 127, 'Price 1 – the markup is only for items with no Price 1');
   assert.equal(line.stock_option, 'readystock');
   r = await h.post(`/quotations/${cid}/generate`, {});
   assert.match(decodeURIComponent(r.location), /no QT-WM number for 2027 yet/);

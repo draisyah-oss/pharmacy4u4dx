@@ -13,7 +13,7 @@
     <form method="post" action="/quotations/settings" class="qt-form">
       <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <div class="qt-grid2">
-        <label class="oo-label">Markup (%) <span class="muted small">price = cost × (1 + markup), rounded up to the next 10 sen</span>
+        <label class="oo-label">Markup (%) <span class="muted small">only for items with no Price 1 in Dynamod: price = cost × (1 + markup), rounded up to the next 10 sen (others use Price 1)</span>
           <input type="text" name="markup_default" value="<%= Math.round(settings.markup_default * 10000) / 100 %>" inputmode="decimal" required></label>
         <label class="oo-label">Floor (%) <span class="muted small">a price under cost + this shows amber</span>
           <input type="text" name="markup_floor" value="<%= Math.round(settings.markup_floor * 10000) / 100 %>" inputmode="decimal" required></label>

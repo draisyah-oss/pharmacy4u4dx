@@ -83,3 +83,11 @@ test('PDF pages: about 20 single lines fit one page; more go to page 2 with the 
   assert.ok(p.length >= 2);
   assert.deepEqual(p.flat(), [...Array(30).keys()], 'every line once, in order');
 });
+
+test('quotation price = Price 1 (normal price); cost + markup only when there is no Price 1', () => {
+  assert.equal(L.quotePrice(127, 111.11, 0.2), 127);
+  assert.equal(L.quotePrice('9.9', 7.77, 0.2), 9.9);
+  assert.equal(L.quotePrice(null, 8.91, 0.2), 10.7);
+  assert.equal(L.quotePrice(0, 10, 0.2), 12);
+  assert.equal(L.quotePrice(null, null, 0.2), null);
+});
