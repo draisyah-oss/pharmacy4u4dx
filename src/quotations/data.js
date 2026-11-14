@@ -184,7 +184,7 @@ async function loadOne(db, id) {
   q.lines = (await db.query(`SELECT l.*, p.active AS product_active, p.balance AS product_balance, p.cost AS product_cost
     FROM quotation_lines l LEFT JOIN products p ON p.id = l.product_id WHERE l.quotation_id = $1 ORDER BY l.line_no`, [id])).rows;
   for (const l of q.lines) {
-    for (const k of ['qty', 'unit_price', 'auto_price', 'cost_at_quote', 'balance_at_quote', 'product_balance', 'product_cost']) l[k] = l[k] === null ? null : Number(l[k]);
+    for (const k of ['qty', 'unit_price', 'auto_price', 'cost_at_quote', 'price1_at_quote', 'balance_at_quote', 'product_balance', 'product_cost']) l[k] = l[k] === null ? null : Number(l[k]);
   }
   q.markup = Number(q.markup); q.total = q.total === null ? null : Number(q.total);
   return q;
@@ -226,10 +226,10 @@ async function candidates(db, text, { limit = 5 } = {}) {
   const words = L.searchWords(text);
   if (!words.length) return [];
   const hits = words.map((_, i) => `(CASE WHEN search LIKE $${i + 1} THEN 1 ELSE 0 END)`).join(' + ');
-  const { rows } = await db.query(`SELECT id, stock_id, barcode, description, uom, balance, cost FROM products
+  const { rows } = await db.query(`SELECT id, stock_id, barcode, description, uom, balance, cost, price1 FROM products
     WHERE active AND (${words.map((_, i) => `search LIKE $${i + 1}`).join(' OR ')})
     ORDER BY ${hits} DESC, length(description) LIMIT 400`, words.map((w) => `%${w.replace(/[%_\\]/g, '')}%`));
-  return L.rank(text, rows.map((r) => ({ ...r, balance: r.balance === null ? null : Number(r.balance), cost: r.cost === null ? null : Number(r.cost) })), limit);
+  return L.rank(text, rows.map((r) => ({ ...r, balance: r.balance === null ? null : Number(r.balance), cost: r.cost === null ? null : Number(r.cost), price1: r.price1 === null ? null : Number(r.price1) })), limit);
 }
 
 const money = (v) => { const s = String(v === undefined || v === null ? '' : v).replace(/[^0-9.]/g, ''); if (!s) return null; const n = Number(s); return Number.isFinite(n) ? Math.round(n * 100) / 100 : NaN; };
@@ -265,26 +265,27 @@ async function saveDraft(db, user, id, body, { now }) {
     let productChanged = false;
     if (pick === 'need') {
       if (!l.need_cost || l.product_id) productChanged = true;
-      Object.assign(n, { need_cost: true, product_id: null, stock_id: null, barcode: null, uom: null, cost_at_quote: null, balance_at_quote: null, auto_price: null });
+      Object.assign(n, { need_cost: true, product_id: null, stock_id: null, barcode: null, uom: null, cost_at_quote: null, balance_at_quote: null, price1_at_quote: null, auto_price: null });
     } else if (/^\d+$/.test(pick) && Number(pick) !== l.product_id) {
-      const p = (await db.query('SELECT id, stock_id, barcode, description, uom, balance, cost FROM products WHERE id = $1 AND active', [Number(pick)])).rows[0];
+      const p = (await db.query('SELECT id, stock_id, barcode, description, uom, balance, cost, price1 FROM products WHERE id = $1 AND active', [Number(pick)])).rows[0];
       if (!p) problems.push(`Line ${l.line_no}: that item isn’t in the item master any more – pick another.`);
       else {
         productChanged = true;
         Object.assign(n, { need_cost: false, product_id: p.id, stock_id: p.stock_id, barcode: p.barcode, uom: p.uom, description: p.description.toUpperCase(),
-          cost_at_quote: p.cost === null ? null : Number(p.cost), balance_at_quote: p.balance === null ? null : Number(p.balance) });
+          cost_at_quote: p.cost === null ? null : Number(p.cost), balance_at_quote: p.balance === null ? null : Number(p.balance), price1_at_quote: p.price1 === null ? null : Number(p.price1) });
       }
     } else if (pick === '' && (l.product_id || l.need_cost)) {
       productChanged = true;
-      Object.assign(n, { need_cost: false, product_id: null, stock_id: null, barcode: null, uom: null, cost_at_quote: null, balance_at_quote: null, auto_price: null });
+      Object.assign(n, { need_cost: false, product_id: null, stock_id: null, barcode: null, uom: null, cost_at_quote: null, balance_at_quote: null, price1_at_quote: null, auto_price: null });
     }
     // Description printed on the quote / brand in the zakat form (upper case). Typed text wins unless the item just changed.
     const typedDesc = String(f.desc === undefined ? '' : f.desc).trim().slice(0, 200).toUpperCase();
     if (!productChanged && typedDesc) n.description = typedDesc;
     if (productChanged && n.need_cost) n.description = typedDesc && typedDesc !== (l.description || '') ? typedDesc : n.portal_text.toUpperCase();
     if (productChanged && !n.need_cost && !n.product_id) n.description = '';
-    // Price: auto from cost, or typed (override / manual). A new item resets the price to auto.
-    n.auto_price = n.cost_at_quote ? L.autoPrice(n.cost_at_quote, s.markup_default) : null;
+    // Price: Dynamod Price 1 (14 Nov, CEO – the normal price; cost + markup only without a Price 1), or typed
+    // (override / manual). A new item resets the price to the suggested one.
+    n.auto_price = n.product_id ? L.quotePrice(n.price1_at_quote, n.cost_at_quote, s.markup_default) : null;
     const typed = productChanged ? null : money(f.price);
     if (Number.isNaN(typed)) { problems.push(`Line ${l.line_no}: the price must be a number (RM).`); n.unit_price = l.unit_price; }
     else if (typed === null || typed === n.auto_price) {
@@ -293,7 +294,7 @@ async function saveDraft(db, user, id, body, { now }) {
       n.price_source = n.unit_price === null ? null : 'auto';
     } else {
       n.unit_price = typed;
-      n.price_source = n.cost_at_quote ? 'override' : 'manual';
+      n.price_source = n.auto_price !== null ? 'override' : 'manual';
     }
     // Stock option: Readystock when the balance covers the qty, else Pre-order – unless staff chose.
     const qtyChanged = n.qty !== l.qty;
@@ -326,9 +327,9 @@ async function saveDraft(db, user, id, body, { now }) {
     if (removes.length) await tx.query('DELETE FROM quotation_lines WHERE quotation_id = $1 AND id = ANY($2::int[])', [id, removes]);
     for (const n of updates) {
       await tx.query(`UPDATE quotation_lines SET portal_text = $2, search_text = $3, product_id = $4, stock_id = $5, barcode = $6, description = $7, uom = $8,
-        qty = $9, unit_price = $10, auto_price = $11, cost_at_quote = $12, balance_at_quote = $13, price_source = $14, need_cost = $15, stock_option = $16, note = $17 WHERE id = $1`,
+        qty = $9, unit_price = $10, auto_price = $11, cost_at_quote = $12, balance_at_quote = $13, price_source = $14, need_cost = $15, stock_option = $16, note = $17, price1_at_quote = $18 WHERE id = $1`,
       [n.id, n.portal_text, n.search_text, n.product_id, n.stock_id, n.barcode, n.description || '', n.uom, n.qty, n.unit_price, n.auto_price, n.cost_at_quote,
-        n.balance_at_quote, n.price_source, n.need_cost, n.stock_option, n.note || '']);
+        n.balance_at_quote, n.price_source, n.need_cost, n.stock_option, n.note || '', n.price1_at_quote === undefined ? null : n.price1_at_quote]);
     }
     let no = (await tx.query('SELECT coalesce(max(line_no), 0)::int AS n FROM quotation_lines WHERE quotation_id = $1', [id])).rows[0].n;
     for (const r of more) {
@@ -412,9 +413,9 @@ async function copy(db, user, id, { now }) {
       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $10) RETURNING id`, [q.series, q.outlet, q.customer_kind, q.recipient, q.tel, q.cc, q.rfq_description, s.markup_default, user.id, now()])).rows[0].id;
     for (const l of q.lines) {
       await tx.query(`INSERT INTO quotation_lines (quotation_id, line_no, portal_text, search_text, product_id, stock_id, barcode, description, uom, qty, unit_price, auto_price,
-        cost_at_quote, balance_at_quote, price_source, need_cost, stock_option, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18)`,
+        cost_at_quote, balance_at_quote, price_source, need_cost, stock_option, note, price1_at_quote) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19)`,
       [qid, l.line_no, l.portal_text, l.search_text, l.product_id, l.stock_id, l.barcode, l.description, l.uom, l.qty, l.unit_price, l.auto_price,
-        l.cost_at_quote, l.balance_at_quote, l.price_source, l.need_cost, l.stock_option, l.note]);
+        l.cost_at_quote, l.balance_at_quote, l.price_source, l.need_cost, l.stock_option, l.note, l.price1_at_quote]);
     }
     return qid;
   });

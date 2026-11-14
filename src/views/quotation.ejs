@@ -71,7 +71,7 @@
     <section class="oo-card qt-card" id="step2">
       <h2><span class="qt-step">2</span> Match each item <span class="qt-step">3</span> price &amp; stock</h2>
       <p class="muted small">Pick the item from the Dynamod item master (best 5 matches; change the search words to look again). Nothing fits? Choose <b>Not in the list – I’ll type it</b> and type the description and price.
-        Price = cost + <%= Math.round(s.markup_default * 100) %>%, rounded up to the next 10 sen; type a price to change it. Below <%= Math.round(s.markup_floor * 100) %>% shows amber.</p>
+        Price = Dynamod <b>Price 1</b> (the normal price, not the member price); an item with no Price 1 gets cost + <%= Math.round(s.markup_default * 100) %>%, rounded up to the next 10 sen. Type a price to change it. Below <%= Math.round(s.markup_floor * 100) %>% shows amber.</p>
       <% if (!q.lines.length) { %><p class="muted">No items yet – paste them in “Add more items” above and Save.</p><% } %>
       <% q.lines.forEach(function (l) { const k = 'l[i' + l.id + ']'; const picked = l.need_cost ? 'need' : (l.product_id ? String(l.product_id) : '');
            const matches = (l.matches || []).slice(); const inList = matches.some(function (m) { return String(m.id) === picked; }); %>

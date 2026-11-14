@@ -100,7 +100,7 @@ function quotationRoutes(db, { now }) {
       for (const l of q.lines) {
         l.badge = l.unit_price > 0 ? L.badge(l.unit_price, l.cost_at_quote, s.markup_floor) : null;
         l.markupPct = L.markupOf(l.unit_price, l.cost_at_quote);
-        for (const m of l.matches || []) { m.price = L.autoPrice(m.cost, s.markup_default); }
+        for (const m of l.matches || []) { m.price = L.quotePrice(m.price1, m.cost, s.markup_default); }
       }
       res.render('quotation', { title: q.ref || 'New zakat quotation', q, s, seeCost, L, branchCfg, zakatLinked: D.ZAKAT_BRANCHES.includes(q.outlet), canDeleteLater: D.canDeleteIssued(req.user, q), missing: q.status === 'draft' ? D.missing(q) : [],
         lineTotal: D.lineTotal, total: D.totalOf(q.lines), canDelete: D.canDelete(req.user, q),
